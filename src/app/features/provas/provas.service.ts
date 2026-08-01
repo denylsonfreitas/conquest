@@ -124,6 +124,14 @@ export class ProvasService {
       const pdfPath = caminhoPdf(prova.concurso_id, prova.id);
       await this.subir(pdfPath, pdf);
 
+      // DECISÃO CONSCIENTE, não esquecimento: se o gabarito falhar aqui, o PDF
+      // principal já está no bucket e a reserva será liberada pelo catch. A
+      // prova volta a "só metadados" com um objeto solto no Storage.
+      //
+      // Fica assim de propósito. O caminho é determinístico, então a próxima
+      // tentativa sobrescreve o mesmo objeto: é inconsistência por instantes,
+      // não vazamento. Torná-lo transacional exigiria upload em duas fases ou
+      // limpeza compensatória, complexidade que este caso não paga.
       let gabaritoPath: string | null = null;
       if (gabarito) {
         gabaritoPath = caminhoGabarito(prova.concurso_id, prova.id);

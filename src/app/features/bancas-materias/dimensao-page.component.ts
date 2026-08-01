@@ -9,6 +9,9 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
+import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
+import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
 import { Dimensao, DimensoesService, ItemDimensao } from './dimensoes.service';
 
 /** Os três estados que toda tela que busca dados precisa tratar (docs/04). */
@@ -26,107 +29,9 @@ type Status = 'carregando' | 'ok' | 'erro';
  */
 @Component({
   selector: 'app-dimensao-page',
-  imports: [FormsModule],
+  imports: [FormsModule, EstadoCarregandoComponent, EstadoErroComponent, EstadoVazioComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <header class="mb-6">
-      <h1 class="text-2xl font-semibold text-slate-900">{{ titulo() }}</h1>
-      <p class="mt-1 text-sm text-slate-500">
-        Lista canônica — é daqui que {{ ondeUsa() }} escolhem, nunca texto livre.
-      </p>
-    </header>
-
-    <form class="mb-6 flex gap-2" (ngSubmit)="criar()">
-      <input
-        name="novo"
-        [(ngModel)]="novoNome"
-        [placeholder]="'Adicionar ' + singular()"
-        class="flex-1 rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
-      />
-      <button
-        type="submit"
-        [disabled]="!novoNome().trim() || salvando()"
-        class="rounded-lg bg-slate-900 px-4 py-2 font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        Adicionar
-      </button>
-    </form>
-
-    @if (erroAcao(); as msg) {
-      <p role="alert" class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{{ msg }}</p>
-    }
-
-    <!-- Os três estados, tratados desde a primeira tela e não retrofitados. -->
-    @switch (status()) {
-      @case ('carregando') {
-        <p class="py-12 text-center text-slate-400">Carregando…</p>
-      }
-      @case ('erro') {
-        <div class="rounded-xl bg-red-50 p-6 text-center">
-          <p class="text-sm text-red-700">{{ erroCarga() }}</p>
-          <button
-            type="button"
-            (click)="carregar()"
-            class="mt-3 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-          >
-            Tentar de novo
-          </button>
-        </div>
-      }
-      @case ('ok') {
-        @if (itens().length === 0) {
-          <div class="rounded-xl border border-dashed border-slate-300 p-12 text-center">
-            <p class="text-slate-500">Nenhuma {{ singular() }} cadastrada ainda.</p>
-          </div>
-        } @else {
-          <p class="mb-2 text-sm text-slate-500">{{ itens().length }} {{ titulo().toLowerCase() }}</p>
-          <ul class="divide-y divide-slate-200 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200">
-            @for (item of itens(); track item.id) {
-              <li class="flex items-center gap-3 px-4 py-3">
-                @if (editandoId() === item.id) {
-                  <input
-                    name="edicao"
-                    [(ngModel)]="nomeEditado"
-                    class="flex-1 rounded-lg border border-slate-300 px-2 py-1 outline-none focus:border-slate-900"
-                  />
-                  <button
-                    type="button"
-                    (click)="confirmarEdicao(item)"
-                    class="text-sm font-medium text-slate-900 hover:underline"
-                  >
-                    Salvar
-                  </button>
-                  <button
-                    type="button"
-                    (click)="editandoId.set(null)"
-                    class="text-sm text-slate-500 hover:underline"
-                  >
-                    Cancelar
-                  </button>
-                } @else {
-                  <span class="flex-1 text-slate-900">{{ item.nome }}</span>
-                  <button
-                    type="button"
-                    (click)="iniciarEdicao(item)"
-                    class="text-sm text-slate-500 hover:underline"
-                  >
-                    Renomear
-                  </button>
-                  <button
-                    type="button"
-                    (click)="excluir(item)"
-                    class="text-sm text-red-600 hover:underline"
-                  >
-                    Excluir
-                  </button>
-                }
-              </li>
-            }
-          </ul>
-        }
-      }
-    }
-  `,
+  templateUrl: './dimensao-page.component.html',
 })
 export class DimensaoPageComponent {
   private readonly service = inject(DimensoesService);

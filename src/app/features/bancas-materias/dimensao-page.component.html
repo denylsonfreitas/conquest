@@ -1,0 +1,71 @@
+<header class="mb-6">
+  <h1 class="text-2xl font-semibold text-tinta-900">{{ titulo() }}</h1>
+  <p class="mt-1 text-sm text-tinta-500">
+    Lista canônica — é daqui que {{ ondeUsa() }} escolhem, nunca texto livre.
+  </p>
+</header>
+
+<form class="mb-6 flex gap-2" (ngSubmit)="criar()">
+  <input
+    name="novo"
+    class="campo flex-1"
+    [(ngModel)]="novoNome"
+    [placeholder]="'Adicionar ' + singular()"
+  />
+  <button type="submit" class="btn" [disabled]="!novoNome().trim() || salvando()">Adicionar</button>
+</form>
+
+@if (erroAcao(); as msg) {
+  <p role="alert" class="alerta-erro mb-4">{{ msg }}</p>
+}
+
+<!-- Os três estados, tratados desde a primeira versão da tela (docs/04). -->
+@switch (status()) {
+  @case ('carregando') {
+    <app-estado-carregando />
+  }
+  @case ('erro') {
+    <app-estado-erro [mensagem]="erroCarga() ?? ''" (tentarDeNovo)="carregar()" />
+  }
+  @case ('ok') {
+    @if (itens().length === 0) {
+      <app-estado-vazio [mensagem]="'Nenhuma ' + singular() + ' cadastrada ainda.'" />
+    } @else {
+      <p class="mb-2 text-sm text-tinta-500">
+        {{ itens().length }} {{ titulo().toLowerCase() }}
+      </p>
+
+      <ul class="cartao divide-y divide-tinta-200 overflow-hidden">
+        @for (item of itens(); track item.id) {
+          <li class="flex items-center gap-3 px-4 py-3">
+            @if (editandoId() === item.id) {
+              <input name="edicao" class="campo flex-1 py-1" [(ngModel)]="nomeEditado" />
+              <button
+                type="button"
+                class="acao-inline font-medium text-tinta-900"
+                (click)="confirmarEdicao(item)"
+              >
+                Salvar
+              </button>
+              <button type="button" class="acao-inline" (click)="editandoId.set(null)">
+                Cancelar
+              </button>
+            } @else {
+              <span class="flex-1 text-tinta-900">{{ item.nome }}</span>
+              <button type="button" class="acao-inline" (click)="iniciarEdicao(item)">
+                Renomear
+              </button>
+              <button
+                type="button"
+                class="acao-inline text-red-600"
+                (click)="excluir(item)"
+              >
+                Excluir
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+}

@@ -1,0 +1,39 @@
+<div class="flex min-h-dvh items-center justify-center bg-tinta-50 p-4">
+  <div class="cartao w-full max-w-sm p-8 shadow-sm">
+    <h1 class="text-2xl font-semibold text-tinta-900">Conquest</h1>
+    <p class="mt-1 text-sm text-tinta-500">Entre para acessar seu acervo.</p>
+
+    <form class="mt-6 space-y-4" [formGroup]="form" (ngSubmit)="enviar()">
+      <div>
+        <label for="email" class="rotulo">E-mail</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          autocomplete="username"
+          class="campo mt-1"
+        />
+      </div>
+
+      <div>
+        <label for="senha" class="rotulo">Senha</label>
+        <input
+          id="senha"
+          type="password"
+          formControlName="senha"
+          autocomplete="current-password"
+          class="campo mt-1"
+        />
+      </div>
+
+      <!-- Estado de erro: só aparece quando existe, e some na próxima tentativa. -->
+      @if (erro(); as mensagem) {
+        <p role="alert" class="alerta-erro">{{ mensagem }}</p>
+      }
+
+      <button type="submit" class="btn w-full" [disabled]="enviando() || form.invalid">
+        {{ enviando() ? 'Entrando...' : 'Entrar' }}
+      </button>
+    </form>
+  </div>
+</div>

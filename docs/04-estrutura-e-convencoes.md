@@ -21,12 +21,18 @@ concurso-app/
 │   │   ├── shared/
 │   │   │   ├── schema.ts              # schemas Zod canônicos
 │   │   │   ├── models.ts              # tipos TS derivados dos schemas
-│   │   │   └── ui/                    # componentes reutilizáveis (botão, card)
+│   │   │   ├── database.types.ts      # GERADO por `npm run db:types`
+│   │   │   └── ui/                    # componentes burros reutilizáveis
+│   │   │       ├── estado-carregando.component.{ts,html}
+│   │   │       ├── estado-erro.component.{ts,html}
+│   │   │       └── estado-vazio.component.{ts,html}
+│   │   ├── layout/
+│   │   │   └── shell.component.{ts,html}   # moldura das telas autenticadas
 │   │   ├── features/
 │   │   │   ├── concursos/
 │   │   │   │   ├── concursos.service.ts   # data access (queries Supabase)
-│   │   │   │   ├── lista-concursos.component.ts
-│   │   │   │   └── detalhe-concurso.component.ts
+│   │   │   │   ├── lista-concursos.component.{ts,html}
+│   │   │   │   └── detalhe-concurso.component.{ts,html}
 │   │   │   ├── provas/
 │   │   │   │   ├── provas.service.ts
 │   │   │   │   ├── upload-prova.component.ts
@@ -101,6 +107,65 @@ features. Mapa de telas está no doc `03`.
 Use a sintaxe atual `@if`, `@for`, `@switch` nos templates em vez de
 `*ngIf`/`*ngFor`. É o padrão moderno e mais legível.
 
+### Template sempre em arquivo separado
+**Decisão:** todo componente usa `templateUrl`, nunca `template` inline. Um
+componente são dois ou três arquivos irmãos:
+
+```
+dimensao-page.component.ts     # estado, injeção, handlers
+dimensao-page.component.html   # marcação
+dimensao-page.component.scss   # só se a tela precisar de algo próprio
+```
+
+O motivo é separação de obrigações: a classe cuida de estado e comportamento, o
+HTML cuida de apresentação. Também mantém os arquivos legíveis — template inline
+começa com dez linhas e termina com duzentas, e a partir daí a classe some no
+meio da marcação. A regra vale mesmo para componentes pequenos: a exceção "só
+quando for curto" é justamente a que apodrece.
+
+## Estilo: global primeiro, SCSS por tela só quando precisar
+
+Três camadas, nesta ordem de preferência:
+
+1. **`src/styles.css` — o global.** Fica aqui o Tailwind (`@import "tailwindcss"`),
+   os tokens de design em `@theme` (cores, raios, espaçamentos da marca) e as
+   classes de átomo repetidas em todo lugar: `.btn`, `.btn-secundario`, `.campo`,
+   `.cartao`. É a definição do design system.
+2. **Classes utilitárias do Tailwind no HTML** para layout e ajuste local.
+3. **`*.component.scss`** apenas quando a tela precisa de algo que não cabe nas
+   duas camadas acima — uma animação, um grid específico, um seletor complexo.
+
+**Por que o global continua sendo `.css` e não `.scss`:** o Tailwind v4 é
+CSS-first e `@import "tailwindcss"` dentro de um arquivo Sass quebra — o Sass
+tenta resolver o import como partial antes de o Tailwind rodar. Os estilos *por
+componente* podem ser `.scss` à vontade, porque não importam o Tailwind; eles
+recebem aninhamento, `@use` e variáveis do Sass normalmente.
+
+Antes de escrever um `.scss` de tela, pergunte se aquilo não é (a) uma classe de
+átomo que deveria estar no global ou (b) um componente reutilizável.
+
+## Componentização: extrair na segunda ocorrência
+
+Duplicação de marcação é o que mais apodrece uma UI. A regra:
+
+- **Primeira vez:** escreve direto na tela.
+- **Segunda vez:** extrai para `shared/ui/` antes de duplicar.
+- **Terceira vez:** já era para ter extraído.
+
+`shared/ui/` guarda **componentes burros**: recebem `input()`, emitem `output()`,
+não injetam service nem conhecem o Supabase. Se um componente de `shared/ui`
+precisa saber de onde o dado veio, ele está no lugar errado.
+
+Componentes que já nascem em `shared/ui/` por certeza de repetição:
+
+- `estado-carregando`, `estado-erro` (com "tentar de novo"), `estado-vazio` —
+  toda tela que busca dados usa os três (ver "Estados de loading/erro/vazio").
+
+Para átomos como botão e campo de formulário, prefira **classe global** a
+componente wrapper: `<button class="btn">` é mais simples de manter que um
+`<ui-botao>` que precisa repassar `type`, `disabled`, `aria-*` e eventos.
+Componente só quando houver comportamento junto, não só aparência.
+
 ## O schema canônico é a fonte da verdade
 
 Em `src/app/shared/schema.ts`, defina os schemas Zod uma vez e derive os tipos TS
@@ -152,36 +217,51 @@ estrutura só pelo painel do Supabase.
 
 ## Roadmap de implementação (ordem sugerida)
 
-Construir na ordem que dá feedback cedo e destrava o resto:
+Construir na ordem que dá feedback cedo e destrava o resto.
+
+**Vale para todos os passos** (ver as seções acima): template em arquivo
+separado, estilo no global antes de `.scss` de tela, extração para `shared/ui/`
+na segunda ocorrência, e os três estados de carregamento tratados desde a
+primeira versão da tela — nunca retrofitados.
 
 1. **Fundação** — projeto Angular (standalone), Tailwind, `SupabaseService`,
-   migrations das tabelas (bancas, concursos, provas, questoes, respostas) +
-   view `questoes_completas`, schema Zod. Seed inicial de bancas e matérias.
-2. **Concursos & provas (CRUD básico)** — criar concurso (selecionando banca da
+   migrations das tabelas (bancas, materias, concursos, provas, questoes,
+   respostas) + view `questoes_completas`, schema Zod. Seed inicial de bancas e
+   matérias. Tipos gerados do banco (`npm run db:types`).
+2. **Autenticação** — `AuthService` com a sessão em signals, tela de login,
+   guards funcionais e o usuário semeado para o ambiente local.
+
+   > Este passo não existia no desenho original deste doc e foi descoberto na
+   > prática: as policies de RLS exigem `auth.uid()`, e sem sessão **toda**
+   > query do passo seguinte volta vazia. Sem ele você depura um CRUD correto
+   > que não retorna nada. Auth não é uma feature entre outras — é
+   > pré-requisito de qualquer leitura do banco.
+
+3. **Concursos & provas (CRUD básico)** — criar concurso (selecionando banca da
    lista), listar, criar registro de prova. Sem processamento ainda. Já dá pra
    navegar entre rotas. Inclua o CRUD leve de bancas/matérias aqui — é o primeiro
    exercício simples de standalone component + service + signals.
-3. **Upload + storage** — subir PDF, calcular hash, dedupe, guardar no bucket.
-4. **Edge Function de extração** — o coração. Texto → LLM (detectando tipo e
+4. **Upload + storage** — subir PDF, calcular hash, dedupe, guardar no bucket.
+5. **Edge Function de extração** — o coração. Texto → LLM (detectando tipo e
    `tem_imagem`) → validação → grava rascunho. Testar com uma prova real cedo,
    porque é onde estão as surpresas. (Roda em Deno no Supabase, independente do
    Angular.)
-5. **Tela de revisão** — aprovar/editar questões, confirmar matéria, marcar/anexar
+6. **Tela de revisão** — aprovar/editar questões, confirmar matéria, marcar/anexar
    imagem, comentar. Fecha o pipeline write-side.
-6. **Questões: busca + edição pós-aprovação** — listar/filtrar o acervo e editar
+7. **Questões: busca + edição pós-aprovação** — listar/filtrar o acervo e editar
    questão já aprovada (corrigir campos, anexar imagem, comentar). Garante que
    nada fica preso ao que a extração produziu.
-7. **Montar e responder quiz** — filtros (banca, concurso, matéria), sorteio
+8. **Montar e responder quiz** — filtros (banca, concurso, matéria), sorteio
    (funções puras, respeitando a regra de elegibilidade com imagem), execução com
    signals, registro de respostas.
-8. **Resultado + estatísticas** — placar, desempenho por matéria e por banca,
+9. **Resultado + estatísticas** — placar, desempenho por matéria e por banca,
    progresso global, atalho para editar/comentar questão a partir do resultado.
-9. **Export do acervo** — botão que serializa bancas/concursos/provas/questões
+10. **Export do acervo** — botão que serializa bancas/concursos/provas/questões
    (e opcionalmente respostas) para JSON e baixa. Seguro barato contra perda.
-10. **Polimento** — responsividade do tablet, estados de erro/vazio, modo revisão
+11. **Polimento** — responsividade do tablet, estados de erro/vazio, modo revisão
     de erros.
 
-Ataque o item 4 (extração) com uma prova de verdade assim que possível. Tudo
+Ataque o item 5 (extração) com uma prova de verdade assim que possível. Tudo
 depois dele assume que ele funciona; validar cedo evita retrabalho. Note que a
 Edge Function é Deno/TypeScript puro — bom exercício, mas separado do Angular.
 

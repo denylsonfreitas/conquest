@@ -1,3 +1,77 @@
-/* You can add global styles to this file, and also import other style files */
-
+/**
+ * Design system do app (docs/04 → "Estilo").
+ *
+ * Este arquivo é a PRIMEIRA camada: tokens da marca e classes de átomo usadas
+ * em todo lugar. Só depois vêm as utilitárias do Tailwind no HTML e, por
+ * último, um `.component.scss` quando a tela precisa de algo próprio.
+ *
+ * Continua em .css (e não .scss) de propósito: o Tailwind v4 é CSS-first e o
+ * `@import "tailwindcss"` quebra dentro do Sass, que tenta resolvê-lo como
+ * partial antes de o Tailwind rodar. Estilos POR COMPONENTE podem ser .scss à
+ * vontade — eles não importam o Tailwind.
+ */
 @import 'tailwindcss';
+
+/**
+ * Tokens da marca. Declarados em @theme, viram utilitárias do Tailwind
+ * automaticamente: `--color-tinta-500` habilita `bg-tinta-500`, `text-tinta-500`
+ * etc. É assim que se estende o Tailwind v4 — sem tailwind.config.js.
+ */
+@theme {
+  --color-tinta-50: oklch(0.984 0.003 247.858);
+  --color-tinta-200: oklch(0.929 0.013 255.508);
+  --color-tinta-300: oklch(0.869 0.022 252.894);
+  --color-tinta-500: oklch(0.554 0.046 257.417);
+  --color-tinta-700: oklch(0.372 0.044 257.287);
+  --color-tinta-900: oklch(0.208 0.042 265.755);
+
+  --radius-campo: 0.5rem;
+  --radius-cartao: 0.75rem;
+}
+
+@layer components {
+  /*
+   * Átomos como CLASSE, não como componente wrapper (docs/04): `<button
+   * class="btn">` é mais simples de manter que um <ui-botao> repassando type,
+   * disabled, aria-* e eventos. Componente só quando houver comportamento.
+   */
+  .btn {
+    @apply rounded-campo bg-tinta-900 px-4 py-2 font-medium text-white
+           transition hover:opacity-90
+           disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-secundario {
+    @apply rounded-campo px-3 py-1.5 text-tinta-500 transition hover:bg-tinta-50;
+  }
+
+  /* Ação destrutiva: exige contraste próprio, não é variação de tom. */
+  .btn-perigo {
+    @apply rounded-campo bg-red-600 px-4 py-2 font-medium text-white
+           transition hover:bg-red-700;
+  }
+
+  .campo {
+    @apply w-full rounded-campo border border-tinta-300 px-3 py-2
+           text-tinta-900 outline-none
+           focus:border-tinta-900 focus:ring-1 focus:ring-tinta-900;
+  }
+
+  .rotulo {
+    @apply block text-sm font-medium text-tinta-700;
+  }
+
+  .cartao {
+    @apply rounded-cartao bg-white ring-1 ring-tinta-200;
+  }
+
+  /* Caixa de mensagem de erro — repete em formulário e em ação de lista. */
+  .alerta-erro {
+    @apply rounded-campo bg-red-50 px-3 py-2 text-sm text-red-700;
+  }
+
+  /* Link de ação inline dentro de lista (renomear, excluir). */
+  .acao-inline {
+    @apply text-sm text-tinta-500 hover:underline;
+  }
+}

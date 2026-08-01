@@ -1,0 +1,139 @@
+@switch (status()) {
+  @case ('carregando') {
+    <app-estado-carregando />
+  }
+  @case ('erro') {
+    <app-estado-erro [mensagem]="erroCarga() ?? ''" (tentarDeNovo)="carregar()" />
+  }
+  @case ('ok') {
+    @if (concurso(); as c) {
+      <nav class="mb-4 text-sm">
+        <a routerLink="/concursos" class="text-tinta-500 hover:underline">← Concursos</a>
+      </nav>
+
+      <header class="mb-8">
+        <h1 class="text-2xl font-semibold text-tinta-900">{{ c.nome }}</h1>
+        <p class="mt-1 text-sm text-tinta-500">
+          @if (c.banca_nome) {
+            <span>{{ c.banca_nome }}</span>
+          } @else {
+            <span class="italic">sem banca</span>
+          }
+          @if (c.orgao) {
+            <span> · {{ c.orgao }}</span>
+          }
+        </p>
+      </header>
+
+      <section>
+        <div class="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-semibold text-tinta-900">Provas</h2>
+            <p class="mt-0.5 text-sm text-tinta-500">
+              Registre a prova aqui; o PDF entra na etapa de importação.
+            </p>
+          </div>
+
+          @if (!formAberto()) {
+            <button type="button" class="btn shrink-0" (click)="abrirForm()">Nova prova</button>
+          }
+        </div>
+
+        @if (formAberto()) {
+          <form class="cartao mb-6 space-y-4 p-5" [formGroup]="form" (ngSubmit)="criarProva()">
+            <div>
+              <label for="prova-nome" class="rotulo">Nome</label>
+              <input
+                id="prova-nome"
+                class="campo mt-1"
+                formControlName="nome"
+                placeholder="Analista Judiciário — Área Judiciária"
+              />
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label for="prova-ano" class="rotulo">
+                  Ano <span class="text-tinta-500">(opcional)</span>
+                </label>
+                <input
+                  id="prova-ano"
+                  type="number"
+                  class="campo mt-1"
+                  formControlName="ano"
+                  placeholder="2024"
+                />
+              </div>
+
+              <div>
+                <label for="prova-cargo" class="rotulo">
+                  Cargo <span class="text-tinta-500">(opcional)</span>
+                </label>
+                <input
+                  id="prova-cargo"
+                  class="campo mt-1"
+                  formControlName="cargo"
+                  placeholder="Analista Judiciário"
+                />
+              </div>
+            </div>
+
+            @if (erroAcao(); as msg) {
+              <p role="alert" class="alerta-erro">{{ msg }}</p>
+            }
+
+            <div class="flex gap-2">
+              <button type="submit" class="btn" [disabled]="form.invalid || salvando()">
+                {{ salvando() ? 'Salvando...' : 'Registrar prova' }}
+              </button>
+              <button type="button" class="btn-secundario" (click)="fecharForm()">Cancelar</button>
+            </div>
+          </form>
+        } @else if (erroAcao(); as msg) {
+          <p role="alert" class="alerta-erro mb-4">{{ msg }}</p>
+        }
+
+        @if (provas().length === 0) {
+          <app-estado-vazio mensagem="Nenhuma prova registrada neste concurso ainda." />
+        } @else {
+          <ul class="space-y-3">
+            @for (prova of provas(); track prova.id) {
+              <li class="cartao flex items-center gap-4 p-4">
+                <div class="min-w-0 flex-1">
+                  <p class="font-medium text-tinta-900">{{ prova.nome }}</p>
+                  <p class="mt-0.5 text-sm text-tinta-500">
+                    @if (prova.ano) {
+                      <span>{{ prova.ano }}</span>
+                    }
+                    @if (prova.cargo) {
+                      <span>@if (prova.ano) { · } {{ prova.cargo }}</span>
+                    }
+                    @if (prova.total_questoes) {
+                      <span> · {{ prova.total_questoes }} questões</span>
+                    }
+                  </p>
+                </div>
+
+                <!--
+                  Badge inline: primeira e única ocorrência do status. Vira
+                  componente de shared/ui quando a tela de importação precisar
+                  dele de verdade, não por antecipação (docs/04).
+                -->
+                <span
+                  class="shrink-0 rounded-campo px-2 py-1 text-xs font-medium ring-1"
+                  [class]="corStatus[prova.status]"
+                >
+                  {{ rotuloStatus[prova.status] }}
+                </span>
+
+                <button type="button" class="acao-inline text-red-600" (click)="excluirProva(prova)">
+                  Excluir
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    }
+  }
+}

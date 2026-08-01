@@ -6,11 +6,11 @@ O subsistema write-side. Transforma um PDF numa lista de questões aprovadas.
 ## Visão geral do fluxo
 
 ```
-[1] Upload PDF (tablet)
-      │  calcula hash, checa duplicata
-      ▼
-[2] Storage + registro em `provas` (status: pendente)
+[1] Registro da prova (nome, ano, cargo) — status: pendente, sem arquivo
       │
+      ▼
+[2] Anexar PDF: calcula hash → reivindica → sobe → vincula
+      │  (status continua pendente)
       ▼
 [3] Edge Function dispara (status: processando)
       │  extrai texto bruto do PDF
@@ -30,17 +30,64 @@ O subsistema write-side. Transforma um PDF numa lista de questões aprovadas.
 
 ## Etapa por etapa
 
-### 1–2. Upload e deduplicação
+### 1–2. Registro e anexo do PDF
 
-No tablet, antes de subir: o front lê o arquivo, calcula SHA-256, e consulta se
-já existe `prova` com esse `arquivo_hash` no concurso. Se existir, avisa e não
-sobe. Caso contrário, envia o PDF ao bucket e cria o registro em `provas` com
-`status = 'pendente'`.
+São **dois momentos distintos, um fluxo só**. Primeiro você registra a prova
+com seus metadados (nome, ano, cargo) dentro do concurso; ela nasce `pendente`,
+sem arquivo. Depois, anexa o PDF a essa prova existente — o upload **nunca cria
+uma prova nova**, sempre preenche a linha que já está lá.
 
-**Prova e gabarito separados:** a UI de upload aceita dois arquivos — a prova
-(obrigatório) e o gabarito (opcional). Muitas provas trazem o gabarito num PDF à
-parte. Se vier junto no mesmo PDF, o segundo campo fica vazio e o LLM extrai
-ambos do único arquivo.
+**Ordem do anexo (importa, e não é a óbvia):**
+
+1. o front lê o arquivo e calcula o **SHA-256** no cliente;
+2. consulta se **outra** prova do mesmo concurso já tem esse hash;
+3. **reivindica** o hash gravando `arquivo_hash` na prova — antes de qualquer
+   upload;
+4. sobe o PDF ao bucket;
+5. grava `arquivo_path`, vinculando o arquivo à prova.
+
+O passo 2 é **advisório**: entre consultar e gravar, a linha pode mudar. Quem
+garante a unicidade é a constraint `UNIQUE (concurso_id, arquivo_hash)`, no
+passo 3 — e é por isso que ele vem **antes** do upload. Assim uma duplicata
+falha cedo, sem gastar banda e sem deixar arquivo órfão no bucket.
+
+Esse fluxo só é possível porque `arquivo_hash` é nulável e o CHECK
+`provas_arquivo_exige_hash` exige hash apenas quando há `arquivo_path`: existe
+um estado válido "hash sem arquivo", que é precisamente "reservei, estou
+subindo" (ver `01-banco-de-dados.md`).
+
+**Detalhes que só aparecem em retentativa:**
+
+- A consulta do passo 2 exclui a própria prova. Sem isso, reenviar depois de um
+  upload interrompido bateria no hash que ela mesma reservou, e o app se
+  auto-bloquearia.
+- O caminho no bucket é determinístico (`{concurso_id}/{prova_id}.pdf`) e o
+  upload usa `upsert`. Retentar sobrescreve o mesmo objeto em vez de acumular
+  lixo.
+- Se algo falhar entre o passo 3 e o 5, a reserva é **liberada** (hash e paths
+  voltam a nulo). A prova retorna a "só metadados" e pode receber o arquivo de
+  novo.
+
+**Estados da prova nesta etapa:**
+
+| `arquivo_hash` | `arquivo_path` | significa |
+|---|---|---|
+| ∅ | ∅ | só metadados |
+| ✓ | ∅ | reservado, upload em voo (transitório) |
+| ✓ | ✓ | PDF anexado, aguardando processamento |
+
+O `status` permanece `pendente` durante todo o anexo. Ele só muda quando a Edge
+Function assume (etapa 3).
+
+**Substituir o PDF:** permitido enquanto o status for `pendente` ou `erro`.
+A partir de `processando` é bloqueado — existem questões extraídas penduradas
+naquele arquivo, e trocá-lo as deixaria descrevendo um documento inexistente.
+
+**Prova e gabarito separados:** o formulário de anexo aceita dois arquivos — a
+prova (obrigatório) e o gabarito (opcional). Muitas provas trazem o gabarito num
+PDF à parte. Se vier junto no mesmo PDF, o segundo campo fica vazio e o LLM
+extrai ambos do único arquivo. O gabarito **não entra na deduplicação**: a
+identidade da prova é só o `arquivo_hash` do PDF principal.
 
 ### 3. Extração de texto bruto
 

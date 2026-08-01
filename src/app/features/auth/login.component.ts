@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { AuthService } from '../../core/auth.service';
+import { ROTA_INICIAL } from '../../core/rotas';
 
 /**
  * Login do usuário único. Não há cadastro nem "esqueci minha senha": o usuário
@@ -42,7 +43,7 @@ export class LoginComponent {
     this.enviando.set(false);
 
     if (resultado.ok) {
-      await this.router.navigate(['/materias']);
+      await this.router.navigate([ROTA_INICIAL]);
     } else {
       this.erro.set(resultado.mensagem);
     }

@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 
 import { AuthService } from './auth.service';
+import { ROTA_INICIAL } from './rotas';
 
 /**
  * Protege as rotas do app. Guard FUNCIONAL (`CanActivateFn`), não classe com
@@ -34,5 +35,5 @@ export const visitanteGuard: CanActivateFn = async () => {
 
   await auth.pronto();
 
-  return auth.autenticado() ? router.createUrlTree(['/materias']) : true;
+  return auth.autenticado() ? router.createUrlTree([ROTA_INICIAL]) : true;
 };

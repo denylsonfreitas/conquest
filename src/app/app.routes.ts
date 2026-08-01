@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard, visitanteGuard } from './core/auth.guard';
+import { ROTA_INICIAL } from './core/rotas';
 
 /**
  * Rotas standalone com `loadComponent` (docs/04): cada tela vira um chunk
@@ -22,6 +23,22 @@ export const routes: Routes = [
     loadComponent: () => import('./layout/shell.component').then((m) => m.ShellComponent),
     children: [
       {
+        path: 'concursos',
+        loadComponent: () =>
+          import('./features/concursos/lista-concursos.component').then(
+            (m) => m.ListaConcursosComponent,
+          ),
+      },
+      {
+        // `:id` chega no input() do componente pelo withComponentInputBinding,
+        // mesmo mecanismo que entrega o `data` das rotas de dimensão.
+        path: 'concursos/:id',
+        loadComponent: () =>
+          import('./features/concursos/detalhe-concurso.component').then(
+            (m) => m.DetalheConcursoComponent,
+          ),
+      },
+      {
         path: 'materias',
         // `data` alimenta o input `tabela` do componente via
         // withComponentInputBinding(), então uma tela serve as duas rotas.
@@ -39,7 +56,7 @@ export const routes: Routes = [
             (m) => m.DimensaoPageComponent,
           ),
       },
-      { path: '', pathMatch: 'full', redirectTo: 'materias' },
+      { path: '', pathMatch: 'full', redirectTo: ROTA_INICIAL },
     ],
   },
   { path: '**', redirectTo: '' },

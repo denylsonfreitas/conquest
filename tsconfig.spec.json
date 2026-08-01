@@ -3,7 +3,9 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": ["vitest/globals"],
+    // "node" habilita fs/path nos testes que inspecionam o próprio repo
+    // (ex.: fronteira.spec.ts). Só na config de teste — o app não vê Node.
+    "types": ["vitest/globals", "node"],
     // O Deno exige extensão explícita nos imports (`./x.ts`). Habilitar isto
     // só na config de teste deixa as funções da Edge Function rodarem no mesmo
     // vitest do app, sem afetar o build do Angular.

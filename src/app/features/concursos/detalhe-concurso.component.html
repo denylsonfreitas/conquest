@@ -98,37 +98,117 @@
         } @else {
           <ul class="space-y-3">
             @for (prova of provas(); track prova.id) {
-              <li class="cartao flex items-center gap-4 p-4">
-                <div class="min-w-0 flex-1">
-                  <p class="font-medium text-tinta-900">{{ prova.nome }}</p>
-                  <p class="mt-0.5 text-sm text-tinta-500">
-                    @if (prova.ano) {
-                      <span>{{ prova.ano }}</span>
-                    }
-                    @if (prova.cargo) {
-                      <span>@if (prova.ano) { · } {{ prova.cargo }}</span>
-                    }
-                    @if (prova.total_questoes) {
-                      <span> · {{ prova.total_questoes }} questões</span>
-                    }
-                  </p>
+              <li class="cartao p-4">
+                <div class="flex items-center gap-4">
+                  <div class="min-w-0 flex-1">
+                    <p class="font-medium text-tinta-900">{{ prova.nome }}</p>
+                    <p class="mt-0.5 text-sm text-tinta-500">
+                      @if (prova.ano) {
+                        <span>{{ prova.ano }}</span>
+                      }
+                      @if (prova.cargo) {
+                        <span>@if (prova.ano) { · } {{ prova.cargo }}</span>
+                      }
+                      @if (prova.gabarito_path) {
+                        <span> · gabarito anexado</span>
+                      }
+                      @if (prova.total_questoes) {
+                        <span> · {{ prova.total_questoes }} questões</span>
+                      }
+                    </p>
+                  </div>
+
+                  <!--
+                    Badge inline: primeira e única ocorrência do status. O rótulo
+                    é DERIVADO de arquivo_path — 'pendente' significa "sem PDF"
+                    ou "aguardando processamento" conforme haja arquivo.
+                  -->
+                  <span
+                    class="shrink-0 rounded-campo px-2 py-1 text-xs font-medium ring-1"
+                    [class]="corStatus(prova)"
+                  >
+                    {{ rotuloStatus(prova) }}
+                  </span>
+
+                  @if (prova.arquivo_path) {
+                    <button type="button" class="acao-inline" (click)="abrirPdf(prova)">
+                      Ver PDF
+                    </button>
+                  }
+
+                  @if (podeAnexar(prova.status)) {
+                    <button type="button" class="acao-inline" (click)="abrirAnexo(prova)">
+                      {{ prova.arquivo_path ? 'Substituir PDF' : 'Anexar PDF' }}
+                    </button>
+                  } @else {
+                    <span class="text-sm text-tinta-300" [title]="motivoBloqueio(prova.status) ?? ''"
+                      >PDF travado</span
+                    >
+                  }
+
+                  <button
+                    type="button"
+                    class="acao-inline text-red-600"
+                    (click)="excluirProva(prova)"
+                  >
+                    Excluir
+                  </button>
                 </div>
 
-                <!--
-                  Badge inline: primeira e única ocorrência do status. Vira
-                  componente de shared/ui quando a tela de importação precisar
-                  dele de verdade, não por antecipação (docs/04).
-                -->
-                <span
-                  class="shrink-0 rounded-campo px-2 py-1 text-xs font-medium ring-1"
-                  [class]="corStatus[prova.status]"
-                >
-                  {{ rotuloStatus[prova.status] }}
-                </span>
+                @if (anexandoEm() === prova.id) {
+                  <div class="mt-4 space-y-3 border-t border-tinta-200 pt-4">
+                    <div>
+                      <label [for]="'pdf-' + prova.id" class="rotulo">PDF da prova</label>
+                      <input
+                        [id]="'pdf-' + prova.id"
+                        type="file"
+                        accept="application/pdf"
+                        class="campo mt-1 file:mr-3 file:rounded file:border-0 file:bg-tinta-50 file:px-3 file:py-1 file:text-tinta-700"
+                        (change)="escolherArquivo($event, 'pdf')"
+                      />
+                    </div>
 
-                <button type="button" class="acao-inline text-red-600" (click)="excluirProva(prova)">
-                  Excluir
-                </button>
+                    <div>
+                      <label [for]="'gab-' + prova.id" class="rotulo">
+                        Gabarito <span class="text-tinta-500">(opcional, PDF separado)</span>
+                      </label>
+                      <input
+                        [id]="'gab-' + prova.id"
+                        type="file"
+                        accept="application/pdf"
+                        class="campo mt-1 file:mr-3 file:rounded file:border-0 file:bg-tinta-50 file:px-3 file:py-1 file:text-tinta-700"
+                        (change)="escolherArquivo($event, 'gabarito')"
+                      />
+                    </div>
+
+                    @if (fase(); as f) {
+                      <p role="status" class="text-sm text-tinta-500">{{ rotuloFase[f] }}</p>
+                    }
+
+                    @if (erroAnexo(); as msg) {
+                      <p role="alert" class="alerta-erro">{{ msg }}</p>
+                    }
+
+                    <div class="flex gap-2">
+                      <button
+                        type="button"
+                        class="btn"
+                        [disabled]="!pdfEscolhido() || fase() !== null"
+                        (click)="anexar(prova)"
+                      >
+                        {{ fase() ? 'Enviando...' : 'Enviar' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-secundario"
+                        [disabled]="fase() !== null"
+                        (click)="fecharAnexo()"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                }
               </li>
             }
           </ul>

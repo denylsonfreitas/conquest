@@ -24,7 +24,16 @@ const PROVA: Prova = {
   status: 'pendente',
   total_questoes: null,
   arquivo_path: null,
+  arquivo_hash: null,
+  gabarito_path: null,
   created_at: '2026-08-01T12:00:00+00:00',
+};
+
+/** A mesma prova depois do anexo: hash e caminho preenchidos, status intacto. */
+const PROVA_COM_PDF: Prova = {
+  ...PROVA,
+  arquivo_path: 'c1/p1.pdf',
+  arquivo_hash: 'a'.repeat(64),
 };
 
 function montar(concursos: Partial<ConcursosService>, provas: Partial<ProvasService>) {
@@ -105,6 +114,71 @@ describe('DetalheConcursoComponent', () => {
       cargo: 'Área Judiciária',
     });
     expect(await assentar(fixture, 'Analista Judiciário')).toContain('Sem PDF');
+  });
+
+  it('rotula prova com PDF como aguardando processamento, sem sair de pendente', async () => {
+    const fixture = montar({}, { listarPorConcurso: async () => [PROVA_COM_PDF] });
+    const texto = await assentar(fixture, 'Aguardando processamento');
+    expect(texto).not.toContain('Sem PDF');
+    // O passo 4 termina aqui: nada foi processado ainda.
+    expect(PROVA_COM_PDF.status).toBe('pendente');
+  });
+
+  it('oferece anexar quando não há PDF e substituir quando há', async () => {
+    const semPdf = montar({}, { listarPorConcurso: async () => [PROVA] });
+    expect(await assentar(semPdf, 'Anexar PDF')).not.toContain('Substituir PDF');
+
+    const comPdf = montar({}, { listarPorConcurso: async () => [PROVA_COM_PDF] });
+    const texto = await assentar(comPdf, 'Substituir PDF');
+    expect(texto).toContain('Ver PDF');
+  });
+
+  it('trava a troca de PDF a partir de processando', async () => {
+    const emProcessamento: Prova = { ...PROVA_COM_PDF, status: 'processando' };
+    const fixture = montar({}, { listarPorConcurso: async () => [emProcessamento] });
+    const texto = await assentar(fixture, 'PDF travado');
+    expect(texto).not.toContain('Substituir PDF');
+  });
+
+  it('anexa o PDF escolhido e atualiza a prova na lista', async () => {
+    const anexarArquivos = vi.fn(async () => PROVA_COM_PDF);
+    const fixture = montar({}, { listarPorConcurso: async () => [PROVA], anexarArquivos });
+    await assentar(fixture, 'Anexar PDF');
+
+    const c = fixture.componentInstance as unknown as {
+      abrirAnexo: (p: Prova) => void;
+      pdfEscolhido: { set: (f: File) => void };
+      anexar: (p: Prova) => Promise<void>;
+    };
+    const pdf = new File(['%PDF-1.4'], 'prova.pdf', { type: 'application/pdf' });
+    c.abrirAnexo(PROVA);
+    c.pdfEscolhido.set(pdf);
+    await c.anexar(PROVA);
+
+    expect(anexarArquivos).toHaveBeenCalledWith(PROVA, pdf, null, expect.any(Function));
+    expect(await assentar(fixture, 'Aguardando processamento')).toContain('Ver PDF');
+  });
+
+  it('mostra a mensagem de duplicidade sem quebrar a tela', async () => {
+    const anexarArquivos = vi.fn(async () => {
+      throw new Error('Este PDF já foi importado em "Prova antiga".');
+    });
+    const fixture = montar({}, { listarPorConcurso: async () => [PROVA], anexarArquivos });
+    await assentar(fixture, 'Anexar PDF');
+
+    const c = fixture.componentInstance as unknown as {
+      abrirAnexo: (p: Prova) => void;
+      pdfEscolhido: { set: (f: File) => void };
+      anexar: (p: Prova) => Promise<void>;
+    };
+    c.abrirAnexo(PROVA);
+    c.pdfEscolhido.set(new File(['x'], 'p.pdf'));
+    await c.anexar(PROVA);
+
+    const texto = await assentar(fixture, 'já foi importado');
+    expect(texto).toContain('Prova antiga');
+    // A prova continua sem PDF: nada foi vinculado.
+    expect(texto).toContain('Sem PDF');
   });
 
   it('aceita prova sem ano em vez de gravar NaN', async () => {

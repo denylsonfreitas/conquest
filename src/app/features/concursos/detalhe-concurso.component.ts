@@ -2,11 +2,16 @@ import { ChangeDetectionStrategy, Component, effect, inject, input, signal } fro
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
-import { StatusProva } from '../../shared/models';
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
 import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
-import { Prova, ProvasService } from '../provas/provas.service';
+import { FaseAnexo, Prova, ProvasService } from '../provas/provas.service';
+import {
+  corStatusProva,
+  motivoBloqueioAnexo,
+  podeAnexarPdf,
+  rotuloStatusProva,
+} from '../provas/regras-prova';
 import { ConcursoComBanca, ConcursosService } from './concursos.service';
 
 type Status = 'carregando' | 'ok' | 'erro';
@@ -121,35 +126,87 @@ export class DetalheConcursoComponent {
   protected async excluirProva(prova: Prova): Promise<void> {
     this.erroAcao.set(null);
     try {
-      await this.provasService.excluir(prova.id);
+      await this.provasService.excluir(prova);
       this.provas.update((atual) => atual.filter((p) => p.id !== prova.id));
     } catch (e) {
       this.erroAcao.set(mensagem(e));
     }
   }
 
-  /**
-   * Rótulo do status da prova.
-   *
-   * Fica inline nesta tela de propósito: é a primeira e única ocorrência. Vira
-   * componente de shared/ui quando a segunda tela precisar dele de verdade
-   * (docs/04 → extrair na segunda ocorrência), não por previsão.
-   */
-  protected readonly rotuloStatus: Record<StatusProva, string> = {
-    pendente: 'Sem PDF',
-    processando: 'Processando',
-    aguardando_revisao: 'Aguardando revisão',
-    pronta: 'Pronta',
-    erro: 'Erro',
+  // --- anexo de PDF -----------------------------------------------------------
+
+  /** Id da prova cujo painel de anexo está aberto; null = nenhum. */
+  protected readonly anexandoEm = signal<string | null>(null);
+  protected readonly pdfEscolhido = signal<File | null>(null);
+  protected readonly gabaritoEscolhido = signal<File | null>(null);
+  protected readonly fase = signal<FaseAnexo | null>(null);
+  protected readonly erroAnexo = signal<string | null>(null);
+
+  protected readonly rotuloFase: Record<FaseAnexo, string> = {
+    hash: 'Calculando identidade do arquivo…',
+    verificando: 'Verificando duplicidade…',
+    enviando: 'Enviando PDF…',
+    vinculando: 'Vinculando à prova…',
   };
 
-  protected readonly corStatus: Record<StatusProva, string> = {
-    pendente: 'bg-tinta-50 text-tinta-500 ring-tinta-200',
-    processando: 'bg-blue-50 text-blue-700 ring-blue-200',
-    aguardando_revisao: 'bg-amber-50 text-amber-700 ring-amber-200',
-    pronta: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-    erro: 'bg-red-50 text-red-700 ring-red-200',
-  };
+  protected abrirAnexo(prova: Prova): void {
+    this.anexandoEm.set(prova.id);
+    this.pdfEscolhido.set(null);
+    this.gabaritoEscolhido.set(null);
+    this.erroAnexo.set(null);
+  }
+
+  protected fecharAnexo(): void {
+    this.anexandoEm.set(null);
+    this.pdfEscolhido.set(null);
+    this.gabaritoEscolhido.set(null);
+    this.erroAnexo.set(null);
+  }
+
+  protected escolherArquivo(evento: Event, alvo: 'pdf' | 'gabarito'): void {
+    const arquivo = (evento.target as HTMLInputElement).files?.[0] ?? null;
+    if (alvo === 'pdf') this.pdfEscolhido.set(arquivo);
+    else this.gabaritoEscolhido.set(arquivo);
+    this.erroAnexo.set(null);
+  }
+
+  protected async anexar(prova: Prova): Promise<void> {
+    const pdf = this.pdfEscolhido();
+    if (!pdf || this.fase()) return;
+
+    this.erroAnexo.set(null);
+    try {
+      const atualizada = await this.provasService.anexarArquivos(
+        prova,
+        pdf,
+        this.gabaritoEscolhido(),
+        (f) => this.fase.set(f),
+      );
+      this.provas.update((atual) => atual.map((p) => (p.id === atualizada.id ? atualizada : p)));
+      this.fecharAnexo();
+    } catch (e) {
+      this.erroAnexo.set(mensagem(e));
+    } finally {
+      this.fase.set(null);
+    }
+  }
+
+  protected async abrirPdf(prova: Prova): Promise<void> {
+    if (!prova.arquivo_path) return;
+    this.erroAcao.set(null);
+    try {
+      // Bucket privado: precisa de URL assinada, não dá para linkar direto.
+      window.open(await this.provasService.urlTemporaria(prova.arquivo_path), '_blank');
+    } catch (e) {
+      this.erroAcao.set(mensagem(e));
+    }
+  }
+
+  // Regras puras reexpostas para o template (docs/04: decisão fora do componente).
+  protected readonly rotuloStatus = rotuloStatusProva;
+  protected readonly corStatus = corStatusProva;
+  protected readonly podeAnexar = podeAnexarPdf;
+  protected readonly motivoBloqueio = motivoBloqueioAnexo;
 }
 
 /** Aceita vazio; ignora ano fora de uma faixa plausível de concurso. */

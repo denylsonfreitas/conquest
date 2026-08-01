@@ -111,6 +111,8 @@ export const ProvaSchema = z.object({
   status: StatusProvaSchema,
   erro_msg: textoOpcional,
   total_questoes: z.number().int().nonnegative().nullable(),
+  /** Carimbo de início do processamento; detecta prova travada. */
+  processando_desde: timestamp.nullable(),
   created_at: timestamp,
 });
 
@@ -124,6 +126,7 @@ export const ProvaNovaSchema = ProvaSchema.omit({ id: true, created_at: true })
     status: true,
     erro_msg: true,
     total_questoes: true,
+    processando_desde: true,
   })
   // Espelha a CHECK `provas_arquivo_exige_hash`: prova com PDF anexado precisa
   // do hash, senão vira um registro impossível de deduplicar.
@@ -154,13 +157,18 @@ const questaoCampos = z.object({
   assunto: textoOpcional,
   enunciado: textoObrigatorio,
   alternativas: z.array(AlternativaSchema).min(2, { error: 'questão precisa de ao menos 2 alternativas' }),
-  gabarito: LetraSchema,
+  // nullable: a extração pode não casar o gabarito (PDF separado ilegível,
+  // bloco de respostas ambíguo). A questão entra em rascunho sinalizada em vez
+  // de barrar a prova inteira — ver `revisadaExigeGabarito` abaixo.
+  gabarito: LetraSchema.nullable(),
   tipo: TipoQuestaoSchema,
   tem_imagem: z.boolean(),
   imagem_path: textoOpcional,
   comentario: textoOpcional,
   anulada: z.boolean(),
   revisada: z.boolean(),
+  /** Extração marcou como duvidosa; aparece destacada na revisão (docs/02). */
+  incerto: z.boolean(),
 });
 
 // --- Regras estruturais da questão --------------------------------------------
@@ -168,16 +176,24 @@ const questaoCampos = z.object({
 // fora dos schemas para poderem ser aplicadas igualmente à linha e ao payload.
 
 type CamposVerificaveis = {
-  readonly gabarito: string;
+  readonly gabarito?: string | null;
   readonly alternativas: readonly { readonly letra: string }[];
   // opcional (`?`) porque no payload de inserção a chave pode nem existir.
   readonly materia_id?: string | null;
   readonly revisada: boolean;
 };
 
-/** O gabarito precisa apontar para uma alternativa que existe. */
+/**
+ * O gabarito precisa apontar para uma alternativa que existe.
+ * Ausente é caso válido (não casado ainda) — quem exige presença é
+ * `revisadaExigeGabarito`.
+ */
 const gabaritoExisteNasAlternativas = (q: CamposVerificaveis): boolean =>
-  q.alternativas.some((a) => a.letra === q.gabarito);
+  q.gabarito == null || q.alternativas.some((a) => a.letra === q.gabarito);
+
+/** Espelha a CHECK `questoes_revisada_exige_gabarito` do banco. */
+const revisadaExigeGabarito = (q: CamposVerificaveis): boolean =>
+  !q.revisada || q.gabarito != null;
 
 /** Duas alternativas 'B' quebrariam o quiz silenciosamente. */
 const letrasNaoRepetem = (q: CamposVerificaveis): boolean =>
@@ -211,6 +227,10 @@ export const QuestaoSchema = questaoCampos
   .refine(revisadaExigeMateria, {
     error: 'questão revisada precisa ter matéria atribuída',
     path: ['materia_id'],
+  })
+  .refine(revisadaExigeGabarito, {
+    error: 'questão revisada precisa ter gabarito',
+    path: ['gabarito'],
   });
 
 /** Payload de inserção — é o que a Edge Function valida antes de gravar. */
@@ -220,15 +240,17 @@ export const QuestaoNovaSchema = questaoCampos
     numero: true,
     materia_id: true,
     assunto: true,
+    gabarito: true,
     imagem_path: true,
     comentario: true,
   })
   .extend({
-    // O banco tem default para os três; aqui o default explícito deixa o
+    // O banco tem default para os quatro; aqui o default explícito deixa o
     // payload da Edge Function mais enxuto e o tipo continua não-opcional.
     tem_imagem: z.boolean().default(false),
     anulada: z.boolean().default(false),
     revisada: z.boolean().default(false),
+    incerto: z.boolean().default(false),
   })
   .refine(gabaritoExisteNasAlternativas, {
     error: 'gabarito não corresponde a nenhuma alternativa',
@@ -241,6 +263,10 @@ export const QuestaoNovaSchema = questaoCampos
   .refine(revisadaExigeMateria, {
     error: 'questão revisada precisa ter matéria atribuída',
     path: ['materia_id'],
+  })
+  .refine(revisadaExigeGabarito, {
+    error: 'questão revisada precisa ter gabarito',
+    path: ['gabarito'],
   });
 
 // -----------------------------------------------------------------------------
@@ -281,3 +307,14 @@ export const QuestaoCompletaSchema = questaoCampos.extend({
   /** Calculado pela view: revisada && !anulada && (!tem_imagem || tem arquivo). */
   elegivel: z.boolean(),
 });
+
+// -----------------------------------------------------------------------------
+// Predicados exportados para reuso (a Edge Function valida antes de gravar)
+// -----------------------------------------------------------------------------
+
+export const REGRAS_QUESTAO = {
+  gabaritoExisteNasAlternativas,
+  letrasNaoRepetem,
+  revisadaExigeMateria,
+  revisadaExigeGabarito,
+} as const;

@@ -56,10 +56,33 @@ describe('schema canônico', () => {
       comentario: null,
       anulada: false,
       revisada: false,
+      incerto: false,
       created_at: '2026-08-01T12:00:00+00:00',
       updated_at: '2026-08-01T12:00:00.123456+00:00',
     });
     expect(r.success, JSON.stringify(r.error?.issues)).toBe(true);
+  });
+
+  it('aceita questão sem gabarito casado — sinaliza, não barra', () => {
+    // Caso central do passo 5: o gabarito veio em PDF separado e não casou.
+    // A questão precisa entrar em rascunho, senão a prova inteira se perde.
+    const r = QuestaoNovaSchema.safeParse({ ...base, gabarito: null, incerto: true });
+    expect(r.success, JSON.stringify(r.error?.issues)).toBe(true);
+    expect(r.data?.incerto).toBe(true);
+  });
+
+  it('recusa aprovar questão sem gabarito', () => {
+    const semGabarito = QuestaoNovaSchema.safeParse({
+      ...base,
+      gabarito: null,
+      revisada: true,
+      materia_id: '22222222-2222-4222-8222-222222222222',
+    });
+    expect(semGabarito.success).toBe(false);
+  });
+
+  it('mantém a checagem de gabarito válido quando ele existe', () => {
+    expect(QuestaoNovaSchema.safeParse({ ...base, gabarito: 'D' }).success).toBe(false);
   });
 
   it('rejeita hash que não é SHA-256', () => {

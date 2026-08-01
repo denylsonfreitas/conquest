@@ -51,3 +51,5 @@ Thumbs.db
 
 # Documentation
 CLAUDE.md
+# PDFs de provas usados em testes locais (material de terceiros, arquivos grandes)
+/provas/

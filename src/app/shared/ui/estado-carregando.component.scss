@@ -1,0 +1,31 @@
+/**
+ * Exemplo real da terceira camada de estilo (docs/04): keyframes e aninhamento
+ * são específicos deste componente e não pertencem ao global.
+ *
+ * Note que este arquivo NÃO importa o Tailwind — por isso pode ser .scss sem
+ * conflito. Ele usa os tokens do @theme como variáveis CSS normais.
+ */
+:host {
+  display: block;
+
+  p {
+    animation: pulsar 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes pulsar {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Respeita quem pediu menos movimento no sistema. */
+@media (prefers-reduced-motion: reduce) {
+  :host p {
+    animation: none;
+  }
+}

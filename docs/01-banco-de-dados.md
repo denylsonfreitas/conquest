@@ -104,7 +104,7 @@ Cada PDF importado é uma prova. Núcleo da rastreabilidade e da idempotência.
 | ano | int | |
 | cargo | text | opcional |
 | arquivo_path | text | caminho no Storage |
-| arquivo_hash | text NOT NULL | SHA-256 do PDF; ver constraint abaixo |
+| arquivo_hash | text | SHA-256 do PDF; nulo até o arquivo existir (ver nota) |
 | gabarito_path | text | se o gabarito vier em PDF separado |
 | status | text NOT NULL | enum de processamento (ver abaixo) |
 | erro_msg | text | preenchido se status = 'erro' |
@@ -114,6 +114,17 @@ Cada PDF importado é uma prova. Núcleo da rastreabilidade e da idempotência.
 **Constraint de idempotência:**
 `UNIQUE (concurso_id, arquivo_hash)` — o mesmo arquivo não entra duas vezes no
 mesmo concurso. O app checa o hash antes de subir e avisa "já importada".
+
+> Ajuste feito durante a implementação: `arquivo_hash` deixou de ser NOT NULL.
+> O registro da prova (nome, ano, cargo) é criado **antes** do upload do PDF —
+> são passos separados do roadmap — e não existe hash antes de existir arquivo.
+> Preencher com placeholder sujaria justamente a coluna da idempotência.
+>
+> O `UNIQUE` não muda: no Postgres NULLs são distintos entre si, então várias
+> provas sem arquivo convivem no mesmo concurso e a idempotência passa a valer
+> a partir do momento em que há hash — que é quando ela faz sentido. Um CHECK
+> (`provas_arquivo_exige_hash`) mantém a invariante real: se há `arquivo_path`,
+> há `arquivo_hash`.
 
 **Enum de status** (como CHECK ou tipo enum):
 `'pendente' | 'processando' | 'aguardando_revisao' | 'pronta' | 'erro'`

@@ -99,10 +99,14 @@ export const ProvaSchema = z.object({
   ano: z.number().int().min(1900).max(2200).nullable(),
   cargo: textoOpcional,
   arquivo_path: textoOpcional,
-  /** SHA-256 do PDF em hex minúsculo — é a chave da idempotência (docs/00). */
+  /**
+   * SHA-256 do PDF em hex minúsculo — é a chave da idempotência (docs/00).
+   * Nulo enquanto a prova é só um registro de metadados, antes do upload.
+   */
   arquivo_hash: z
     .string()
-    .regex(/^[0-9a-f]{64}$/, { error: 'arquivo_hash deve ser um SHA-256 em hex minúsculo' }),
+    .regex(/^[0-9a-f]{64}$/, { error: 'arquivo_hash deve ser um SHA-256 em hex minúsculo' })
+    .nullable(),
   gabarito_path: textoOpcional,
   status: StatusProvaSchema,
   erro_msg: textoOpcional,
@@ -110,15 +114,23 @@ export const ProvaSchema = z.object({
   created_at: timestamp,
 });
 
-export const ProvaNovaSchema = ProvaSchema.omit({ id: true, created_at: true }).partial({
-  ano: true,
-  cargo: true,
-  arquivo_path: true,
-  gabarito_path: true,
-  status: true,
-  erro_msg: true,
-  total_questoes: true,
-});
+export const ProvaNovaSchema = ProvaSchema.omit({ id: true, created_at: true })
+  .partial({
+    ano: true,
+    cargo: true,
+    arquivo_path: true,
+    arquivo_hash: true,
+    gabarito_path: true,
+    status: true,
+    erro_msg: true,
+    total_questoes: true,
+  })
+  // Espelha a CHECK `provas_arquivo_exige_hash`: prova com PDF anexado precisa
+  // do hash, senão vira um registro impossível de deduplicar.
+  .refine((p) => !p.arquivo_path || !!p.arquivo_hash, {
+    error: 'prova com arquivo precisa do hash',
+    path: ['arquivo_hash'],
+  });
 
 // -----------------------------------------------------------------------------
 // alternativas + questões

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { authGuard, visitanteGuard } from './auth.guard';
 import { AuthService } from './auth.service';
+import { ROTA_INICIAL } from './rotas';
 
 /**
  * O guard é a fronteira entre "logado" e "não logado". Errar o sentido dele
@@ -60,6 +61,6 @@ describe('visitanteGuard', () => {
     const router = comAuth(true);
     const resultado = await rodar(visitanteGuard);
     expect(resultado).toBeInstanceOf(UrlTree);
-    expect(router.serializeUrl(resultado as UrlTree)).toBe('/materias');
+    expect(router.serializeUrl(resultado as UrlTree)).toBe(ROTA_INICIAL);
   });
 });

@@ -105,7 +105,7 @@ export type Database = {
       provas: {
         Row: {
           ano: number | null
-          arquivo_hash: string
+          arquivo_hash: string | null
           arquivo_path: string | null
           cargo: string | null
           concurso_id: string
@@ -119,7 +119,7 @@ export type Database = {
         }
         Insert: {
           ano?: number | null
-          arquivo_hash: string
+          arquivo_hash?: string | null
           arquivo_path?: string | null
           cargo?: string | null
           concurso_id: string
@@ -133,7 +133,7 @@ export type Database = {
         }
         Update: {
           ano?: number | null
-          arquivo_hash?: string
+          arquivo_hash?: string | null
           arquivo_path?: string | null
           cargo?: string | null
           concurso_id?: string

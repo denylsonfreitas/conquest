@@ -85,14 +85,17 @@ describe('estaTravada', () => {
 
   it('não acusa processamento saudável', () => {
     // A extração real leva ~1,5 min; destravar aqui apagaria trabalho vivo.
-    expect(
-      estaTravada({ status: 'processando', processando_desde: haMinutos(2) }, agora),
-    ).toBe(false);
+    expect(estaTravada({ status: 'processando', processando_desde: haMinutos(2) }, agora)).toBe(
+      false,
+    );
   });
 
   it('acusa quando passa do limite — o caso do worker morto', () => {
     expect(
-      estaTravada({ status: 'processando', processando_desde: haMinutos(MINUTOS_ATE_TRAVADA) }, agora),
+      estaTravada(
+        { status: 'processando', processando_desde: haMinutos(MINUTOS_ATE_TRAVADA) },
+        agora,
+      ),
     ).toBe(true);
   });
 
@@ -103,7 +106,9 @@ describe('estaTravada', () => {
   });
 
   it('conta os minutos para a UI explicar a espera', () => {
-    expect(minutosProcessando({ status: 'processando', processando_desde: haMinutos(7) }, agora)).toBe(7);
+    expect(
+      minutosProcessando({ status: 'processando', processando_desde: haMinutos(7) }, agora),
+    ).toBe(7);
     expect(minutosProcessando({ status: 'pendente', processando_desde: null }, agora)).toBeNull();
   });
 });

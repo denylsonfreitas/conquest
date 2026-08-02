@@ -82,9 +82,7 @@ export function podeAnexarPdf(status: StatusProva): boolean {
  */
 export function rotuloBloqueioAnexo(status: StatusProva): string | null {
   if (podeAnexarPdf(status)) return null;
-  return status === 'processando'
-    ? 'Processando…'
-    : 'Extraída — apague a prova para trocar o PDF';
+  return status === 'processando' ? 'Processando…' : 'Extraída — apague a prova para trocar o PDF';
 }
 
 export function motivoBloqueioAnexo(status: StatusProva): string | null {

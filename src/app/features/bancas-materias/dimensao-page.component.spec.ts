@@ -84,9 +84,7 @@ describe('DimensaoPageComponent', () => {
   it('recarrega ao trocar de dimensão sem recriar o componente', async () => {
     const listar = vi
       .fn<(t: 'bancas' | 'materias') => Promise<ItemDimensao[]>>()
-      .mockImplementation(async (t) =>
-        t === 'materias' ? DUAS : [{ id: '9', nome: 'Cebraspe' }],
-      );
+      .mockImplementation(async (t) => (t === 'materias' ? DUAS : [{ id: '9', nome: 'Cebraspe' }]));
 
     const fixture = montar({ listar });
     await assentar(fixture, 'Direito Constitucional');

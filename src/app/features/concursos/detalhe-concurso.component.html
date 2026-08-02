@@ -156,6 +156,14 @@
                     </button>
                   }
 
+                  @if (prova.status === 'aguardando_revisao' || prova.status === 'pronta') {
+                    <a
+                      [routerLink]="['/provas', prova.id, 'revisao']"
+                      class="acao-inline font-medium text-tinta-900"
+                      >Revisar</a
+                    >
+                  }
+
                   @if (podeProcessar(prova)) {
                     <button
                       type="button"

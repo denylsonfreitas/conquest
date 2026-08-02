@@ -4,8 +4,12 @@ import {
   caminhoGabarito,
   caminhoPdf,
   corStatusProva,
+  estaTravada,
+  MINUTOS_ATE_TRAVADA,
+  minutosProcessando,
   motivoBloqueioAnexo,
   podeAnexarPdf,
+  podeProcessar,
   rotuloStatusProva,
 } from './regras-prova';
 
@@ -47,6 +51,52 @@ describe('rotuloStatusProva', () => {
     const semPdf = corStatusProva({ status: 'pendente', arquivo_path: null });
     const comPdf = corStatusProva({ status: 'pendente', arquivo_path: 'x' });
     expect(semPdf).not.toBe(comPdf);
+  });
+});
+
+describe('podeProcessar', () => {
+  it('exige PDF anexado', () => {
+    expect(podeProcessar({ status: 'pendente', arquivo_path: null })).toBe(false);
+    expect(podeProcessar({ status: 'pendente', arquivo_path: 'c/p.pdf' })).toBe(true);
+  });
+
+  it('permite tentar de novo depois de erro', () => {
+    expect(podeProcessar({ status: 'erro', arquivo_path: 'c/p.pdf' })).toBe(true);
+  });
+
+  it('não redispara sobre prova já processada ou em curso', () => {
+    for (const status of ['processando', 'aguardando_revisao', 'pronta'] as const) {
+      expect(podeProcessar({ status, arquivo_path: 'c/p.pdf' })).toBe(false);
+    }
+  });
+});
+
+describe('estaTravada', () => {
+  const agora = new Date('2026-08-01T12:00:00Z');
+  const haMinutos = (m: number) => new Date(agora.getTime() - m * 60_000).toISOString();
+
+  it('não acusa processamento saudável', () => {
+    // A extração real leva ~1,5 min; destravar aqui apagaria trabalho vivo.
+    expect(
+      estaTravada({ status: 'processando', processando_desde: haMinutos(2) }, agora),
+    ).toBe(false);
+  });
+
+  it('acusa quando passa do limite — o caso do worker morto', () => {
+    expect(
+      estaTravada({ status: 'processando', processando_desde: haMinutos(MINUTOS_ATE_TRAVADA) }, agora),
+    ).toBe(true);
+  });
+
+  it('não acusa prova que não está processando', () => {
+    expect(estaTravada({ status: 'erro', processando_desde: null }, agora)).toBe(false);
+    // Carimbo velho sem status processando não deve disparar o alerta.
+    expect(estaTravada({ status: 'pronta', processando_desde: haMinutos(999) }, agora)).toBe(false);
+  });
+
+  it('conta os minutos para a UI explicar a espera', () => {
+    expect(minutosProcessando({ status: 'processando', processando_desde: haMinutos(7) }, agora)).toBe(7);
+    expect(minutosProcessando({ status: 'pendente', processando_desde: null }, agora)).toBeNull();
   });
 });
 

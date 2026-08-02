@@ -248,6 +248,28 @@ primeira versão da tela — nunca retrofitados.
    Angular.)
 6. **Tela de revisão** — aprovar/editar questões, confirmar matéria, marcar/anexar
    imagem, comentar. Fecha o pipeline write-side.
+
+   > Pendências herdadas do passo 5, medidas na primeira prova real (DATAPREV,
+   > 70 questões):
+   >
+   > - **41 questões sem matéria casada**, porque a seção da prova não existe na
+   >   lista canônica: `Conhecimentos Específicos` (30), `Raciocínio Lógico
+   >   Matemático` (6) e `Legislação Acerca de Segurança da Informação e Proteção
+   >   de Dados` (5). O nome lido ficou em `assunto` e a questão em `incerto`.
+   >   Casar uma a uma seriam 30 cliques idênticos — a revisão precisa de
+   >   atribuição em lote para não ser penosa.
+   > - **`Conhecimentos Específicos` é genérico** e precisa virar a matéria real
+   >   do cargo (ex.: "Desenvolvimento de Software").
+   > - **Blocos de código se perdem na extração de texto.** A questão 49 diz
+   >   "foi implementado o seguinte código em Java:" e o código não veio. O LLM
+   >   marcou `tem_imagem = true`, o que revelou que essa flag significa, na
+   >   prática, *"depende de conteúdo que o texto extraído não captura"* — não
+   >   só figuras.
+   > - **Reprocessar uma prova já extraída** ainda não é possível: `podeProcessar`
+   >   só aceita `pendente` e `erro`, então uma extração ruim só se corrige
+   >   apagando a prova. Avaliar aceitar `aguardando_revisao` **enquanto nenhuma
+   >   questão estiver `revisada = true`** — reprocessar sobrescreve as questões,
+   >   e não pode apagar curadoria já feita.
 7. **Questões: busca + edição pós-aprovação** — listar/filtrar o acervo e editar
    questão já aprovada (corrigir campos, anexar imagem, comentar). Garante que
    nada fica preso ao que a extração produziu.

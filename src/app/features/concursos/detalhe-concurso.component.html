@@ -116,6 +116,26 @@
                         <span> · {{ prova.total_questoes }} questões</span>
                       }
                     </p>
+
+                    @if (processandoId() === prova.id && faseProcessamento(); as fase) {
+                      <p role="status" class="mt-1 text-sm text-sky-700">
+                        {{ rotuloFaseProcessamento[fase] }}
+                      </p>
+                    }
+
+                    @if (prova.status === 'processando' && processandoId() !== prova.id) {
+                      <p class="mt-1 text-sm text-tinta-500">
+                        Em processamento há {{ minutosProcessando(prova) }} min.
+                        @if (estaTravada(prova)) {
+                          <span class="text-amber-700">Parece travada.</span>
+                        }
+                      </p>
+                    }
+
+                    <!-- erro_msg carrega o motivo acionável, não um erro genérico. -->
+                    @if (prova.erro_msg) {
+                      <p class="mt-1 text-sm text-red-700">{{ prova.erro_msg }}</p>
+                    }
                   </div>
 
                   <!--
@@ -136,13 +156,42 @@
                     </button>
                   }
 
+                  @if (podeProcessar(prova)) {
+                    <button
+                      type="button"
+                      class="acao-inline font-medium text-tinta-900"
+                      [disabled]="processandoId() !== null"
+                      (click)="processar(prova)"
+                    >
+                      {{ prova.status === 'erro' ? 'Tentar de novo' : 'Processar' }}
+                    </button>
+                  }
+
+                  <!--
+                    Só aparece quando a prova passou do limite em 'processando':
+                    a função morreu sem rodar o catch e ninguém mais vai
+                    reescrever o status. Sem isto, a prova ficaria inutilizável
+                    para sempre, inclusive impedindo trocar o PDF.
+                  -->
+                  @if (estaTravada(prova)) {
+                    <button
+                      type="button"
+                      class="acao-inline text-amber-700"
+                      (click)="destravar(prova)"
+                    >
+                      Destravar
+                    </button>
+                  }
+
                   @if (podeAnexar(prova.status)) {
                     <button type="button" class="acao-inline" (click)="abrirAnexo(prova)">
                       {{ prova.arquivo_path ? 'Substituir PDF' : 'Anexar PDF' }}
                     </button>
                   } @else {
-                    <span class="text-sm text-tinta-300" [title]="motivoBloqueio(prova.status) ?? ''"
-                      >PDF travado</span
+                    <span
+                      class="text-sm text-tinta-500"
+                      [title]="motivoBloqueio(prova.status) ?? ''"
+                      >{{ rotuloBloqueio(prova.status) }}</span
                     >
                   }
 

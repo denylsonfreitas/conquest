@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 
 import { SupabaseService } from '../../core/supabase.service';
 import { StatusProva } from '../../shared/models';
+import { extrairTextoPdf } from './extrair-texto-pdf';
 import { calcularSha256 } from './hash-arquivo';
 import { caminhoGabarito, caminhoPdf, motivoBloqueioAnexo } from './regras-prova';
 
@@ -17,6 +18,9 @@ export interface Prova {
   arquivo_path: string | null;
   arquivo_hash: string | null;
   gabarito_path: string | null;
+  erro_msg: string | null;
+  /** Carimbo de início; é o que permite detectar prova travada. */
+  processando_desde: string | null;
   created_at: string;
 }
 
@@ -30,8 +34,11 @@ export interface ProvaNovaForm {
 /** Fases do anexo, para a UI dizer o que está acontecendo. */
 export type FaseAnexo = 'hash' | 'verificando' | 'enviando' | 'vinculando';
 
+/** Fases do processamento. A última leva ~1,5 min: o LLM lê a prova inteira. */
+export type FaseProcessamento = 'baixando' | 'extraindo' | 'processando';
+
 const COLUNAS =
-  'id, concurso_id, nome, ano, cargo, status, total_questoes, arquivo_path, arquivo_hash, gabarito_path, created_at';
+  'id, concurso_id, nome, ano, cargo, status, total_questoes, arquivo_path, arquivo_hash, gabarito_path, erro_msg, processando_desde, created_at';
 
 /** Postgres: violação de UNIQUE — aqui, o hash já pertence a outra prova. */
 const HASH_DUPLICADO = '23505';
@@ -164,6 +171,78 @@ export class ProvasService {
       (c): c is string => c !== null,
     );
     if (caminhos.length > 0) await this.supabase.provasPdf.remove(caminhos);
+  }
+
+    /**
+   * Dispara a extração.
+   *
+   * O texto é extraído AQUI, no navegador, e enviado à função — pdf.js não
+   * cabe no orçamento de CPU do Edge Runtime (medido: ~2,4s para 16 páginas).
+   *
+   * A retentativa passa por este mesmo caminho: relê o PDF do bucket e extrai
+   * de novo. Não há reupload, e não existe cópia do texto no banco — o PDF é o
+   * artefato durável, o texto é derivado e descartável.
+   */
+  async processar(prova: Prova, aoMudarFase?: (fase: FaseProcessamento) => void): Promise<void> {
+    if (!prova.arquivo_path) throw new Error('A prova não tem PDF anexado.');
+
+    aoMudarFase?.('baixando');
+    const pdf = await this.baixar(prova.arquivo_path);
+    const gabarito = prova.gabarito_path ? await this.baixar(prova.gabarito_path) : null;
+
+    aoMudarFase?.('extraindo');
+    const texto = await extrairTextoPdf(pdf);
+    const textoGabarito = gabarito ? await extrairTextoPdf(gabarito) : undefined;
+
+    aoMudarFase?.('processando');
+    const { error } = await this.supabase.client.functions.invoke('processar-prova', {
+      body: { prova_id: prova.id, texto, texto_gabarito: textoGabarito },
+    });
+
+    // O erro detalhado fica em `provas.erro_msg`, gravado pela própria função;
+    // a tela recarrega e mostra de lá.
+    if (error) throw new Error(`Falha ao processar: ${error.message}`);
+  }
+
+  /**
+   * Devolve uma prova travada em 'processando' ao estado de erro, para poder
+   * ser reprocessada ou ter o PDF trocado.
+   *
+   * O CHECK do banco exige `processando_desde` nulo fora de 'processando', e é
+   * justamente zerar o carimbo que reabre o caminho.
+   */
+  async destravar(prova: Prova): Promise<Prova> {
+    const { data, error } = await this.supabase.client
+      .from('provas')
+      .update({
+        status: 'erro',
+        processando_desde: null,
+        erro_msg:
+          'Processamento interrompido sem retorno (a função pode ter excedido tempo ou memória). Destravada manualmente; o PDF foi preservado.',
+      })
+      .eq('id', prova.id)
+      .select(COLUNAS)
+      .single();
+
+    if (error) throw new Error(`Não foi possível destravar: ${error.message}`);
+    return data as Prova;
+  }
+
+  async buscar(id: string): Promise<Prova> {
+    const { data, error } = await this.supabase.client
+      .from('provas')
+      .select(COLUNAS)
+      .eq('id', id)
+      .single();
+
+    if (error) throw new Error(`Não foi possível recarregar a prova: ${error.message}`);
+    return data as Prova;
+  }
+
+  private async baixar(caminho: string): Promise<Blob> {
+    const { data, error } = await this.supabase.provasPdf.download(caminho);
+    if (error || !data) throw new Error(`Não foi possível baixar o PDF: ${error?.message}`);
+    return data;
   }
 
   /** URL temporária para conferir o PDF anexado. O bucket é privado. */

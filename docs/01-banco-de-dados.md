@@ -108,6 +108,7 @@ Cada PDF importado é uma prova. Núcleo da rastreabilidade e da idempotência.
 | gabarito_path | text | se o gabarito vier em PDF separado |
 | status | text NOT NULL | enum de processamento (ver abaixo) |
 | erro_msg | text | preenchido se status = 'erro' |
+| processando_desde | timestamptz | carimbo de início; detecta prova travada (ver nota) |
 | total_questoes | int | contagem após extração, pra UI |
 | created_at | timestamptz | default `now()` |
 
@@ -129,6 +130,15 @@ mesmo concurso. O app checa o hash antes de subir e avisa "já importada".
 **Enum de status** (como CHECK ou tipo enum):
 `'pendente' | 'processando' | 'aguardando_revisao' | 'pronta' | 'erro'`
 
+> **`processando_desde`** (adicionada na implementação): o `try/catch` da Edge
+> Function cobre exceções, mas não cobre a função morrer por timeout, OOM ou
+> deploy no meio — nesses casos o `catch` nunca roda e a prova fica em
+> `processando` para sempre. Como a regra de anexo bloqueia trocar o PDF a
+> partir de `processando`, isso seria um beco sem saída já no primeiro crash.
+> Com o carimbo, a UI sabe há quanto tempo está processando e oferece
+> "destravar". Um CHECK garante que o carimbo existe se, e somente se, o status
+> é `processando`.
+
 ### `questoes`
 A unidade de estudo. Formato canônico validado por Zod antes de inserir.
 
@@ -141,13 +151,14 @@ A unidade de estudo. Formato canônico validado por Zod antes de inserir.
 | assunto | text | subtópico, opcional e livre: "Controle de constitucionalidade" |
 | enunciado | text NOT NULL | |
 | alternativas | jsonb NOT NULL | `[{"letra":"A","texto":"..."}, ...]` |
-| gabarito | text NOT NULL | letra correta: "C" |
+| gabarito | text | letra correta: "C"; nulo até ser casado (ver nota) |
 | tipo | text NOT NULL | `'multipla_escolha' | 'certo_errado'` |
 | tem_imagem | boolean | default false; questão depende de figura/gráfico (ver regra) |
 | imagem_path | text | opcional; caminho no Storage se você anexar a imagem |
 | comentario | text | opcional; sua justificativa/anotação de estudo |
 | anulada | boolean | default false; questões anuladas ficam fora dos quizzes |
 | revisada | boolean | default false; vira true quando você aprova |
+| incerto | boolean | default false; extração marcou como duvidosa (ver nota) |
 | created_at | timestamptz | default `now()` |
 | updated_at | timestamptz | default `now()`; atualiza a cada edição (ver abaixo) |
 
@@ -169,6 +180,21 @@ custo zero de modelagem.
 **`updated_at`:** questões aprovadas podem ser editadas depois (corrigir matéria,
 gabarito, anexar imagem). Este carimbo permite saber o que foi tocado. Um trigger
 simples no Postgres atualiza `updated_at = now()` a cada UPDATE.
+
+> Ajustes feitos durante a implementação do pipeline (docs/02). O schema
+> original descrevia o estado FINAL da questão; a extração vive nos
+> intermediários:
+>
+> - **`gabarito` deixou de ser NOT NULL.** Quando o gabarito vem em PDF
+>   separado e não casa, a questão precisa entrar em rascunho **sinalizada** em
+>   vez de barrar a prova — barrar perderia as outras 69. Um CHECK
+>   (`questoes_revisada_exige_gabarito`) exige o gabarito para aprovar. É o
+>   mesmo padrão de `materia_id` e de `provas.arquivo_hash`: opcional no
+>   rascunho, obrigatório depois.
+> - **`incerto` foi adicionada.** O docs/02 já mandava o LLM marcar questões
+>   ilegíveis ou ambíguas, mas não havia onde guardar. É o que faz a questão
+>   duvidosa aparecer destacada no topo da revisão em vez de se perder no meio
+>   de setenta.
 
 **Regra de elegibilidade (atualizada):** só entram em quizzes questões com
 `revisada = true AND anulada = false AND (tem_imagem = false OR imagem_path IS NOT NULL)`.

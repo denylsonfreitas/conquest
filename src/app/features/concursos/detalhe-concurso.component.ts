@@ -5,11 +5,15 @@ import { RouterLink } from '@angular/router';
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
 import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
-import { FaseAnexo, Prova, ProvasService } from '../provas/provas.service';
+import { FaseAnexo, FaseProcessamento, Prova, ProvasService } from '../provas/provas.service';
 import {
   corStatusProva,
+  estaTravada,
+  minutosProcessando,
   motivoBloqueioAnexo,
   podeAnexarPdf,
+  podeProcessar,
+  rotuloBloqueioAnexo,
   rotuloStatusProva,
 } from '../provas/regras-prova';
 import { ConcursoComBanca, ConcursosService } from './concursos.service';
@@ -202,11 +206,60 @@ export class DetalheConcursoComponent {
     }
   }
 
+  // --- processamento ----------------------------------------------------------
+
+  protected readonly processandoId = signal<string | null>(null);
+  protected readonly faseProcessamento = signal<FaseProcessamento | null>(null);
+
+  protected readonly rotuloFaseProcessamento: Record<FaseProcessamento, string> = {
+    baixando: 'Baixando o PDF…',
+    extraindo: 'Extraindo o texto…',
+    processando: 'Extraindo questões com IA — pode levar mais de um minuto…',
+  };
+
+  protected async processar(prova: Prova): Promise<void> {
+    if (this.processandoId()) return;
+
+    this.processandoId.set(prova.id);
+    this.erroAcao.set(null);
+    try {
+      await this.provasService.processar(prova, (f) => this.faseProcessamento.set(f));
+      await this.atualizarProva(prova.id);
+    } catch (e) {
+      this.erroAcao.set(mensagem(e));
+      // Recarrega mesmo em falha: a função grava o motivo em erro_msg, e é
+      // essa mensagem — não a genérica do HTTP — que ajuda a agir.
+      await this.atualizarProva(prova.id).catch(() => undefined);
+    } finally {
+      this.processandoId.set(null);
+      this.faseProcessamento.set(null);
+    }
+  }
+
+  protected async destravar(prova: Prova): Promise<void> {
+    this.erroAcao.set(null);
+    try {
+      const atualizada = await this.provasService.destravar(prova);
+      this.provas.update((atual) => atual.map((p) => (p.id === atualizada.id ? atualizada : p)));
+    } catch (e) {
+      this.erroAcao.set(mensagem(e));
+    }
+  }
+
+  private async atualizarProva(id: string): Promise<void> {
+    const atualizada = await this.provasService.buscar(id);
+    this.provas.update((atual) => atual.map((p) => (p.id === id ? atualizada : p)));
+  }
+
   // Regras puras reexpostas para o template (docs/04: decisão fora do componente).
   protected readonly rotuloStatus = rotuloStatusProva;
   protected readonly corStatus = corStatusProva;
   protected readonly podeAnexar = podeAnexarPdf;
   protected readonly motivoBloqueio = motivoBloqueioAnexo;
+  protected readonly rotuloBloqueio = rotuloBloqueioAnexo;
+  protected readonly podeProcessar = podeProcessar;
+  protected readonly estaTravada = estaTravada;
+  protected readonly minutosProcessando = minutosProcessando;
 }
 
 /** Aceita vazio; ignora ano fora de uma faixa plausível de concurso. */

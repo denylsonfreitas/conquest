@@ -12,8 +12,9 @@ O subsistema write-side. Transforma um PDF numa lista de questões aprovadas.
 [2] Anexar PDF: calcula hash → reivindica → sobe → vincula
       │  (status continua pendente)
       ▼
-[3] Edge Function dispara (status: processando)
-      │  extrai texto bruto do PDF
+[3] Você clica "Processar"
+      │  o NAVEGADOR extrai o texto do PDF (ver nota de CPU)
+      │  Edge Function recebe o texto (status: processando)
       ▼
 [4] LLM estrutura → JSON de questões
       │  casa com gabarito
@@ -89,15 +90,51 @@ PDF à parte. Se vier junto no mesmo PDF, o segundo campo fica vazio e o LLM
 extrai ambos do único arquivo. O gabarito **não entra na deduplicação**: a
 identidade da prova é só o `arquivo_hash` do PDF principal.
 
-### 3. Extração de texto bruto
+### 3. Extração de texto bruto — **no navegador**
 
-A Edge Function baixa o PDF do storage e extrai o texto com `unpdf` (leve, feito
-pra serverless) ou `pdf.js`. Saída: texto por página. Não tente parsear a
-estrutura aqui — só obtenha o texto. A inteligência fica no LLM.
+O texto é extraído com `unpdf` (que embute o pdf.js) **no cliente**, não na Edge
+Function. Saída: texto por página. Não tente parsear a estrutura aqui — só
+obtenha o texto. A inteligência fica no LLM.
 
-**Caso PDF escaneado (imagem):** se a extração vier vazia/curta, o PDF
-provavelmente é imagem. Marque `status = 'erro'` com mensagem clara ("PDF parece
-escaneado, precisa de OCR"). OCR fica fora do MVP — anote como evolução futura.
+> **Por que não na Edge Function** (medido, não suposto): extrair as 16 páginas
+> da prova da DATAPREV custa **2.390 ms de CPU**; o gabarito, mais 1.235 ms. O
+> Edge Runtime corta bem antes — a primeira execução real morreu com
+> `CPU time hard limit reached` / `WORKER_LIMIT`. É limite estrutural da
+> plataforma, não do ambiente local.
+>
+> O navegador não tem esse teto e **já lê o arquivo** para calcular o hash no
+> anexo, então extrair ali reaproveita trabalho. A alternativa seria fatiar em
+> ~16 invocações, multiplicando complexidade e estado para contornar um limite
+> que a extração no cliente simplesmente elimina.
+
+**A privacidade não se move para o cliente.** O navegador manda o texto **cru**;
+é o servidor que remove a marca d'água e verifica, nesta ordem, antes de
+qualquer chamada externa:
+
+```
+texto recebido → removerMarcaDagua → checa se sobrou conteúdo
+              → garantirSemMarcaDagua → só então o LLM
+```
+
+Uma única guarda, no processo que fala com a API. Texto vindo do cliente é
+entrada não confiável por princípio, mesmo num app de um usuário só.
+
+**Caso PDF escaneado (imagem):** se depois da limpeza sobrar menos que um mínimo
+plausível de texto, o PDF é imagem. `status = 'erro'` com mensagem clara ("PDF
+parece escaneado, precisa de OCR"). A checagem vem **depois** da limpeza porque
+um PDF escaneado só tem a marca d'água como texto, e antes de limpar ele
+pareceria ter conteúdo. OCR fica fora do MVP.
+
+**Retentativa:** o botão "Tentar de novo" refaz o mesmo caminho — o cliente
+**baixa o PDF do bucket**, extrai de novo e reenvia. Sem reupload. O texto não é
+guardado no banco de propósito: o PDF é o artefato durável, o texto é valor
+derivado e descartável, e uma cópia precisaria ser invalidada toda vez que o PDF
+fosse substituído.
+
+**Prova travada:** se a função morrer por timeout, OOM ou deploy, o `catch` não
+roda e ninguém reescreve o status. A coluna `provas.processando_desde` permite
+detectar isso, e a UI oferece **"Destravar"** após o limite, devolvendo a prova
+a `erro` com o PDF preservado.
 
 ### 4. Estruturação via LLM
 
@@ -107,20 +144,59 @@ canônico. Pontos críticos do prompt:
 - Peça o formato exato: array de objetos com `numero`, `enunciado`,
   `alternativas` (array de `{letra, texto}`), `tipo`.
 - Instrua a **não inventar** questões nem alternativas; se algo estiver ilegível,
-  marcar com um campo `incerto: true` para a revisão pegar.
+  marcar com um campo `incerto: true` para a revisão pegar (gravado na coluna
+  `questoes.incerto`).
+- **A matéria vem do cabeçalho de seção, não de palpite.** O texto da prova traz
+  "Língua Portuguesa", "Raciocínio Lógico Matemático", "Conhecimentos
+  Específicos" etc.; toda questão pertence ao último cabeçalho antes dela.
+  Instrua a copiar esse cabeçalho, remontando-o se vier quebrado em duas linhas,
+  e a só chutar quando não houver cabeçalho nenhum — marcando `incerto`. Na
+  prova real isso casou 29 de 70 matérias direto com a lista canônica; as demais
+  ficaram sinalizadas por a seção não existir no seed, não por erro do modelo.
+- Use `responseSchema` da API em vez de pedir JSON no texto do prompt: elimina a
+  classe inteira de falhas de "o modelo devolveu markdown em volta do JSON".
+  Temperatura **zero** — extração é transcrição, não criação.
 - Detectar tipo: múltipla escolha (A–E) vs certo/errado (estilo Cebraspe).
 - **Detectar dependência de imagem:** instrua o LLM a marcar `tem_imagem: true`
   quando o enunciado referencia um elemento visual ausente do texto ("observe a
   figura", "com base no gráfico", "a imagem acima", mapa, tabela-imagem). Como a
   extração é só de texto, essas questões chegam incompletas — a flag garante que a
   revisão as pegue.
+
+  > Aprendido na prova real: a flag cobre uma categoria **mais ampla** que
+  > figuras. Uma das duas questões marcadas dizia "foi implementado o seguinte
+  > código em Java:" — o bloco de código se perdeu na extração de texto. Ou
+  > seja: `tem_imagem` significa na prática *"depende de conteúdo que o texto
+  > extraído não captura"*. Um grep por "figura|gráfico|imagem" não teria
+  > encontrado esse caso; o LLM encontrou.
 - Não incluir o gabarito ainda se ele está em texto separado — casa no passo
   seguinte.
 
-**Casamento com gabarito:** se o gabarito veio separado ("1-C, 2-A, 3-D..."),
-parseie esse mapa (número → letra) e aplique a cada questão pelo `numero`. Se
-veio junto, o LLM já devolve o gabarito por questão. Sempre valide que **toda**
-questão recebeu um gabarito; as que ficarem sem entram na revisão sinalizadas.
+**Casamento com gabarito:** na prática o PDF de gabarito de um concurso cobre
+**todos os cargos e tipos de caderno** — o da DATAPREV tem 35 blocos, sendo 4 só
+do cargo em questão, cada um com 70 respostas. Escolher o bloco errado
+produziria 70 gabaritos errados **em silêncio**, que é o pior defeito possível
+num app de estudo: você estuda errado por semanas sem aviso.
+
+Por isso o casamento tem duas etapas e uma trava:
+
+1. `identificarProva` lê cargo, tipo e cor do próprio texto da prova (a capa
+   traz "TIPO 1 – BRANCA"; o cabeçalho se repete em toda página);
+2. `casarGabarito` seleciona o bloco por cargo + tipo e zipa os pares de linhas
+   (números / letras) da grade.
+
+**Trava inegociável:** só aplica se a seleção for **inequívoca** — um único
+bloco casando E a contagem de respostas batendo com a de questões extraídas.
+Essa segunda checagem é validação cruzada: dois caminhos independentes chegando
+ao mesmo número; se discordam, um está errado e não há como saber qual.
+Qualquer ambiguidade → grava sem gabarito, com `incerto = true`.
+
+Gabarito ausente é visível e recuperável na revisão; gabarito errado é
+invisível. Trocar o segundo pelo primeiro é sempre a decisão certa.
+
+Se o gabarito veio junto no mesmo PDF, o LLM já devolve por questão. Falha no
+gabarito **não interrompe** a extração: o texto das questões é o trabalho caro e
+não depende dele.
 
 **Volume:** provas grandes podem estourar o contexto do modelo. Se necessário,
 divida o texto em blocos (por página ou por faixa de questões) e junte os

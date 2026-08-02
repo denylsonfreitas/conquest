@@ -114,6 +114,7 @@ export type Database = {
           gabarito_path: string | null
           id: string
           nome: string
+          processando_desde: string | null
           status: string
           total_questoes: number | null
         }
@@ -128,6 +129,7 @@ export type Database = {
           gabarito_path?: string | null
           id?: string
           nome: string
+          processando_desde?: string | null
           status?: string
           total_questoes?: number | null
         }
@@ -142,6 +144,7 @@ export type Database = {
           gabarito_path?: string | null
           id?: string
           nome?: string
+          processando_desde?: string | null
           status?: string
           total_questoes?: number | null
         }
@@ -163,9 +166,10 @@ export type Database = {
           comentario: string | null
           created_at: string
           enunciado: string
-          gabarito: string
+          gabarito: string | null
           id: string
           imagem_path: string | null
+          incerto: boolean
           materia_id: string | null
           numero: number | null
           prova_id: string
@@ -181,9 +185,10 @@ export type Database = {
           comentario?: string | null
           created_at?: string
           enunciado: string
-          gabarito: string
+          gabarito?: string | null
           id?: string
           imagem_path?: string | null
+          incerto?: boolean
           materia_id?: string | null
           numero?: number | null
           prova_id: string
@@ -199,9 +204,10 @@ export type Database = {
           comentario?: string | null
           created_at?: string
           enunciado?: string
-          gabarito?: string
+          gabarito?: string | null
           id?: string
           imagem_path?: string | null
+          incerto?: boolean
           materia_id?: string | null
           numero?: number | null
           prova_id?: string

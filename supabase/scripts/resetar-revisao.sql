@@ -3,8 +3,8 @@
 -- Serve para exercitar a tela de revisão de novo sem gastar uma rodada do LLM
 -- (~1,5 min e uma chamada paga) e sem apagar a prova e o PDF.
 --
---   npm run db:revisao-reset
---   npm run db:revisao-reset -- -v prova='ATI - Desenvolvimento de Software'
+--   npm run db:revisao-reset                          # a única prova com questões
+--   npm run db:revisao-reset -- -v prova='<nome ou uuid>'
 --
 -- Quase tudo aqui é DERIVADO, não adivinhado — é por isso que o reset é fiel:
 --
@@ -20,9 +20,11 @@
 -- consome, e nenhuma outra coluna o reconstrói. Só o reprocessamento traria de
 -- volta a verdade; aqui ele é reposto a partir da lista abaixo.
 
+-- Sem argumento, o alvo é a única prova que tem questões. Nome fixo aqui
+-- envelhece: basta recriar a prova para o script parar de achá-la.
 \if :{?prova}
 \else
-\set prova 'ATI - Desenvolvimento de Software'
+\set prova ''
 \endif
 
 \if :{?incertas}
@@ -36,8 +38,12 @@
 begin;
 
 create temporary table alvo on commit drop as
-select id from public.provas
- where nome = :'prova' or id::text = :'prova';
+select p.id from public.provas p
+ where case
+         when :'prova' = ''
+           then exists (select 1 from public.questoes q where q.prova_id = p.id)
+         else p.nome = :'prova' or p.id::text = :'prova'
+       end;
 
 do $$
 begin
@@ -91,5 +97,4 @@ select p.nome,
        count(*) filter (where q.revisada)                as aprovadas
   from public.provas p
   join public.questoes q on q.prova_id = p.id
- where p.nome = :'prova' or p.id::text = :'prova'
  group by p.nome, p.status;

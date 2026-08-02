@@ -285,6 +285,17 @@ primeira versão da tela — nunca retrofitados.
 11. **Polimento** — responsividade do tablet, estados de erro/vazio, modo revisão
     de erros.
 
+    > Registrado durante o passo 6, deliberadamente adiado:
+    >
+    > - **Ícones nas ações** (Abrir/Aprovar/Remover). Melhora a varredura da
+    >   lista, mas é acabamento — não segurou o merge do passo 6.
+    > - **Objetos órfãos no bucket.** Apagar uma prova faz CASCADE nas questões,
+    >   mas não toca no Storage: os PDFs e as imagens ficam lá para sempre.
+    >   Achado ao investigar a imagem da questão 29, com quatro objetos em
+    >   `questao-imagens` para duas questões vivas. Não é cosmético — é
+    >   vazamento de espaço e de conteúdo já apagado do banco. Candidato a
+    >   trigger `after delete` ou a uma rotina de varredura.
+
 Ataque o item 5 (extração) com uma prova de verdade assim que possível. Tudo
 depois dele assume que ele funciona; validar cedo evita retrabalho. Note que a
 Edge Function é Deno/TypeScript puro — bom exercício, mas separado do Angular.

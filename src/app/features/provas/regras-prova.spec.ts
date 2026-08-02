@@ -64,10 +64,18 @@ describe('podeProcessar', () => {
     expect(podeProcessar({ status: 'erro', arquivo_path: 'c/p.pdf' })).toBe(true);
   });
 
-  it('não redispara sobre prova já processada ou em curso', () => {
-    for (const status of ['processando', 'aguardando_revisao', 'pronta'] as const) {
+  it('não redispara enquanto processa nem depois de pronta', () => {
+    for (const status of ['processando', 'pronta'] as const) {
       expect(podeProcessar({ status, arquivo_path: 'c/p.pdf' })).toBe(false);
     }
+  });
+
+  it('permite reprocessar extração ruim enquanto nada foi aprovado', () => {
+    const prova = { status: 'aguardando_revisao', arquivo_path: 'c/p.pdf' } as const;
+    expect(podeProcessar(prova, false)).toBe(true);
+    // Reprocessar sobrescreve as questões: curadoria já feita não pode ser
+    // apagada por um clique.
+    expect(podeProcessar(prova, true)).toBe(false);
   });
 });
 

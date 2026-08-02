@@ -23,7 +23,7 @@ import {
   podeAprovar,
   precisaAtencao,
 } from './regras-revisao';
-import { QuestaoRevisao, RevisaoService } from './revisao.service';
+import { EdicaoQuestao, QuestaoRevisao, RevisaoService } from './revisao.service';
 
 type Status = 'carregando' | 'ok' | 'erro';
 
@@ -40,10 +40,11 @@ type Status = 'carregando' | 'ok' | 'erro';
  *    embaralharia os números e impediria conferir a questão contra o PDF.
  * 3. **Aprovar em lote** o que não tem pendência, com contagem explícita.
  *
- * As edições de uma questão salvam no `change` do campo, sem botão de
- * confirmar, e cada questão mostra "Salvando…" → "Salvo". A alternativa —
- * um botão por questão — reintroduziria a pergunta "cliquei em salvar?" a
- * cada uma das 70; aqui a resposta fica na tela sem ninguém precisar agir.
+ * As ações em massa (mapear, aprovar em lote) gravam na hora: são um clique
+ * deliberado sobre um conjunto nomeado. A **edição de uma questão** é a
+ * exceção — acumula num rascunho e só vai ao banco no "Salvar", numa
+ * requisição só. São as 2 ou 3 questões problemáticas de uma prova, não as 70:
+ * o custo do botão é desprezível e ele agrupa as mudanças.
  */
 @Component({
   selector: 'app-revisao-questoes',
@@ -77,9 +78,19 @@ export class RevisaoQuestoesComponent {
   protected readonly escolhaMateria = signal<Record<string, string>>({});
   protected readonly novaMateria = signal<Record<string, string>>({});
 
-  /** Feedback de gravação por questão: some sozinho alguns segundos depois. */
-  protected readonly salvamento = signal<Record<string, 'salvando' | 'salvo'>>({});
-  private readonly temporizadores = new Map<string, ReturnType<typeof setTimeout>>();
+  /**
+   * Mudanças pendentes por questão — só os campos que realmente diferem do que
+   * está gravado. É o que permite o "Salvar" mandar uma requisição com tudo, e
+   * é o que sabe se há algo a perder ao fechar a questão.
+   */
+  protected readonly rascunhos = signal<Record<string, EdicaoQuestao>>({});
+
+  /** Questão cujo fechamento foi barrado por ter rascunho. */
+  protected readonly avisoNaoSalvo = signal<string | null>(null);
+
+  /** Confirmação efêmera. Fica longe dos botões para não virar um deles. */
+  protected readonly toast = signal<string | null>(null);
+  private temporizadorToast?: ReturnType<typeof setTimeout>;
 
   protected readonly grupos = computed(() => agruparParaRevisao(this.questoes()));
   protected readonly paraMapear = computed(() => assuntosParaMapear(this.questoes()));
@@ -98,34 +109,7 @@ export class RevisaoQuestoesComponent {
       void this.carregar(id);
     });
 
-    inject(DestroyRef).onDestroy(() => {
-      for (const t of this.temporizadores.values()) clearTimeout(t);
-    });
-  }
-
-  /** Duração do "Salvo" antes de sumir. Curto o bastante para não virar ruído. */
-  private static readonly MS_SALVO_VISIVEL = 3000;
-
-  private marcarSalvamento(id: string, estado: 'salvando' | 'salvo' | null): void {
-    clearTimeout(this.temporizadores.get(id));
-    this.temporizadores.delete(id);
-
-    this.salvamento.update((atual) => {
-      const proximo = { ...atual };
-      if (estado) proximo[id] = estado;
-      else delete proximo[id];
-      return proximo;
-    });
-
-    if (estado === 'salvo') {
-      this.temporizadores.set(
-        id,
-        setTimeout(
-          () => this.marcarSalvamento(id, null),
-          RevisaoQuestoesComponent.MS_SALVO_VISIVEL,
-        ),
-      );
-    }
+    inject(DestroyRef).onDestroy(() => clearTimeout(this.temporizadorToast));
   }
 
   protected async carregar(provaId: string = this.id()): Promise<void> {
@@ -144,6 +128,18 @@ export class RevisaoQuestoesComponent {
       this.erroCarga.set(mensagem(e));
       this.status.set('erro');
     }
+  }
+
+  /** Quanto tempo a confirmação fica na tela. */
+  private static readonly MS_TOAST = 2500;
+
+  private mostrarToast(texto: string): void {
+    clearTimeout(this.temporizadorToast);
+    this.toast.set(texto);
+    this.temporizadorToast = setTimeout(
+      () => this.toast.set(null),
+      RevisaoQuestoesComponent.MS_TOAST,
+    );
   }
 
   // --- fase 1: mapeamento de matérias -----------------------------------------
@@ -174,6 +170,9 @@ export class RevisaoQuestoesComponent {
       this.questoes.update((atual) =>
         atual.map((q) => (ids.has(q.id) ? { ...q, materia_id: materiaId } : q)),
       );
+      this.mostrarToast(
+        `${questaoIds.length} em ${this.nomesMateria().get(materiaId) ?? 'matéria nova'}`,
+      );
     } catch (e) {
       this.erroAcao.set(mensagem(e));
     } finally {
@@ -203,6 +202,7 @@ export class RevisaoQuestoesComponent {
       this.questoes.update((atual) =>
         atual.map((q) => (set.has(q.id) ? { ...q, revisada: true } : q)),
       );
+      this.mostrarToast(`${ids.length} aprovadas`);
     } catch (e) {
       this.erroAcao.set(mensagem(e));
     } finally {
@@ -210,76 +210,121 @@ export class RevisaoQuestoesComponent {
     }
   }
 
+  /** Ação de um clique só, sem campo envolvido: grava direto. */
   protected async alternarAprovacao(q: QuestaoRevisao): Promise<void> {
     // Desaprovar devolve a prova a aguardando_revisao pelo trigger do banco.
-    await this.aplicar(q, { revisada: !q.revisada });
+    this.erroAcao.set(null);
+    try {
+      this.substituir(await this.service.editar(q.id, { revisada: !q.revisada }));
+      this.mostrarToast(q.revisada ? 'Aprovação desfeita' : 'Aprovada');
+    } catch (e) {
+      this.erroAcao.set(mensagem(e));
+    }
   }
 
-  // --- edição de uma questão ---------------------------------------------------
+  // --- edição de uma questão: rascunho + Salvar --------------------------------
 
-  protected async definirMateria(q: QuestaoRevisao, materiaId: string): Promise<void> {
-    await this.aplicar(q, { materia_id: materiaId || null });
+  /** Valor em vigor no formulário: o do rascunho se houver, senão o gravado. */
+  protected valor<K extends keyof QuestaoRevisao>(q: QuestaoRevisao, campo: K): QuestaoRevisao[K] {
+    const rascunho = this.rascunhos()[q.id] as Partial<QuestaoRevisao> | undefined;
+    return rascunho && campo in rascunho ? (rascunho[campo] as QuestaoRevisao[K]) : q[campo];
   }
 
-  protected async definirGabarito(q: QuestaoRevisao, letra: string): Promise<void> {
-    await this.aplicar(q, { gabarito: (letra || null) as QuestaoRevisao['gabarito'] });
+  /**
+   * Registra a mudança de um campo — e a REMOVE se o valor voltar ao original.
+   * Sem isso, editar e desfazer deixaria a questão eternamente "não salva".
+   */
+  protected mudar<K extends keyof EdicaoQuestao>(
+    q: QuestaoRevisao,
+    campo: K,
+    valor: QuestaoRevisao[K],
+  ): void {
+    this.avisoNaoSalvo.set(null);
+    this.rascunhos.update((atual) => {
+      const rascunho: Record<string, unknown> = { ...(atual[q.id] ?? {}) };
+      if (Object.is(valor, q[campo])) delete rascunho[campo];
+      else rascunho[campo] = valor;
+
+      const proximo = { ...atual };
+      if (Object.keys(rascunho).length === 0) delete proximo[q.id];
+      else proximo[q.id] = rascunho as EdicaoQuestao;
+      return proximo;
+    });
   }
 
-  protected async definirComentario(q: QuestaoRevisao, texto: string): Promise<void> {
-    await this.aplicar(q, { comentario: texto.trim() || null });
+  protected temRascunho(id: string): boolean {
+    return this.rascunhos()[id] !== undefined;
   }
 
-  protected async alternarAnulada(q: QuestaoRevisao): Promise<void> {
-    await this.aplicar(q, { anulada: !q.anulada });
+  /** Uma requisição com tudo que mudou, em vez de uma por campo. */
+  protected async salvar(q: QuestaoRevisao): Promise<void> {
+    const mudancas = this.rascunhos()[q.id];
+    if (!mudancas || this.salvando()) return;
+
+    this.salvando.set(true);
+    this.erroAcao.set(null);
+    try {
+      this.substituir(await this.service.editar(q.id, mudancas));
+      this.descartar(q.id);
+      this.mostrarToast('Salvo');
+    } catch (e) {
+      // O rascunho SOBREVIVE ao erro: o texto digitado é o trabalho, e jogá-lo
+      // fora junto com a mensagem de falha seria a pior hora de perdê-lo.
+      this.erroAcao.set(mensagem(e));
+    } finally {
+      this.salvando.set(false);
+    }
   }
 
-  protected async alternarTemImagem(q: QuestaoRevisao): Promise<void> {
-    await this.aplicar(q, { tem_imagem: !q.tem_imagem });
+  protected descartar(id: string): void {
+    this.avisoNaoSalvo.set(null);
+    this.rascunhos.update((atual) => {
+      const proximo = { ...atual };
+      delete proximo[id];
+      return proximo;
+    });
   }
 
-  protected async limparIncerto(q: QuestaoRevisao): Promise<void> {
-    await this.aplicar(q, { incerto: false });
+  protected descartarEFechar(id: string): void {
+    this.descartar(id);
+    this.expandidaId.set(null);
   }
 
+  /**
+   * Fechar com rascunho pendente é barrado, não silencioso.
+   *
+   * Salvar exige um clique, então perder a edição também precisa exigir um:
+   * "Descartar" está ao lado do aviso. É o preço de ter botão em vez de
+   * gravação automática — e o único jeito de não pagar em edição perdida.
+   */
+  protected alternarExpansao(id: string): void {
+    const aberta = this.expandidaId();
+
+    if (aberta !== null && this.temRascunho(aberta)) {
+      this.avisoNaoSalvo.set(aberta);
+      return;
+    }
+
+    this.avisoNaoSalvo.set(null);
+    this.expandidaId.set(aberta === id ? null : id);
+  }
+
+  /** Enviar o arquivo JÁ É o gesto explícito; não faria sentido pedir outro. */
   protected async anexarImagem(q: QuestaoRevisao, evento: Event): Promise<void> {
     const arquivo = (evento.target as HTMLInputElement).files?.[0];
     if (!arquivo) return;
 
     this.erroAcao.set(null);
-    this.marcarSalvamento(q.id, 'salvando');
     try {
-      const atualizada = await this.service.anexarImagem(q, arquivo);
-      this.substituir(atualizada);
-      this.marcarSalvamento(q.id, 'salvo');
+      this.substituir(await this.service.anexarImagem(q, arquivo));
+      this.mostrarToast('Imagem anexada');
     } catch (e) {
-      this.marcarSalvamento(q.id, null);
-      this.erroAcao.set(mensagem(e));
-    }
-  }
-
-  /**
-   * Toda edição de campo passa por aqui — é o único lugar que precisa saber
-   * mostrar "Salvando…" e "Salvo", em vez de cada handler repetir o par.
-   */
-  private async aplicar(q: QuestaoRevisao, mudancas: Parameters<RevisaoService['editar']>[1]) {
-    this.erroAcao.set(null);
-    this.marcarSalvamento(q.id, 'salvando');
-    try {
-      this.substituir(await this.service.editar(q.id, mudancas));
-      this.marcarSalvamento(q.id, 'salvo');
-    } catch (e) {
-      // Sem "Salvo" fantasma: some o indicador e o erro aparece no alerta.
-      this.marcarSalvamento(q.id, null);
       this.erroAcao.set(mensagem(e));
     }
   }
 
   private substituir(q: QuestaoRevisao): void {
     this.questoes.update((atual) => atual.map((x) => (x.id === q.id ? q : x)));
-  }
-
-  protected alternarExpansao(id: string): void {
-    this.expandidaId.update((atual) => (atual === id ? null : id));
   }
 
   // Regras puras reexpostas ao template.

@@ -30,11 +30,7 @@
       <!-- FASE 1: mapeamento. Três decisões resolvem dezenas de questões. -->
       @if (paraMapear().length > 0) {
         <section class="cartao mb-8 p-5">
-          <h2 class="font-semibold text-tinta-900">Matérias a mapear</h2>
-          <p class="mt-1 mb-4 text-sm text-tinta-500">
-            A prova nomeia as seções do jeito dela. Mapeie cada nome para a matéria canônica —
-            uma escolha resolve todas as questões daquela seção.
-          </p>
+          <h2 class="mb-4 font-semibold text-tinta-900">Matérias a mapear</h2>
 
           <ul class="space-y-3">
             @for (grupo of paraMapear(); track grupo.assunto) {
@@ -79,18 +75,10 @@
 
       <!-- FASE 2: aprovação em lote do que não tem pendência. -->
       @if (grupos().semPendencia.length > 0) {
-        <div class="mb-6 flex items-center gap-3">
-          <button
-            type="button"
-            class="btn"
-            [disabled]="salvando()"
-            (click)="aprovarSemPendencia()"
-          >
+        <div class="mb-6">
+          <button type="button" class="btn" [disabled]="salvando()" (click)="aprovarSemPendencia()">
             Aprovar as {{ grupos().semPendencia.length }} questões sem pendência
           </button>
-          <span class="text-sm text-tinta-500">
-            Matéria, gabarito e imagem conferidos — os CHECKs do banco recusam o que faltar.
-          </span>
         </div>
       }
 
@@ -128,6 +116,19 @@
       }
     }
   }
+}
+
+<!--
+  Confirmação efêmera, longe dos botões. Enquanto era um selo na linha das
+  ações, ficava com cara de terceiro botão — status ocupando lugar de ação.
+-->
+@if (toast(); as texto) {
+  <div
+    role="status"
+    class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-campo bg-tinta-900 px-4 py-2 text-sm font-medium text-white shadow-lg"
+  >
+    {{ texto }}
+  </div>
 }
 
 <!--
@@ -176,23 +177,6 @@
         </p>
       </div>
 
-      <!--
-        Resposta permanente à pergunta "meu trabalho foi salvo?". Fica no
-        cabeçalho, não dentro da área expandida, para continuar visível se a
-        questão for fechada logo depois da edição.
-      -->
-      @if (salvamento()[q.id]; as estado) {
-        <span
-          role="status"
-          class="shrink-0 rounded-campo px-2 py-0.5 text-xs font-medium"
-          [class]="
-            estado === 'salvo' ? 'bg-emerald-50 text-emerald-700' : 'bg-tinta-50 text-tinta-500'
-          "
-        >
-          {{ estado === 'salvo' ? '✓ Salvo' : 'Salvando…' }}
-        </span>
-      }
-
       <button type="button" class="acao-inline" (click)="alternarExpansao(q.id)">
         {{ expandidaId() === q.id ? 'Fechar' : 'Abrir' }}
       </button>
@@ -213,24 +197,19 @@
       <div class="mt-4 space-y-4 border-t border-tinta-200 pt-4">
         <ul class="space-y-1 text-sm">
           @for (alt of q.alternativas; track alt.letra) {
-            <li [class.font-medium]="alt.letra === q.gabarito">
+            <li [class.font-medium]="alt.letra === valor(q, 'gabarito')">
               ({{ alt.letra }}) {{ alt.texto }}
             </li>
           }
         </ul>
-
-        <p class="text-xs text-tinta-500">
-          Não há botão de salvar: cada campo grava ao mudar, e o selo “Salvo”
-          aparece ao lado do número da questão.
-        </p>
 
         <div class="grid gap-3 sm:grid-cols-2">
           <div>
             <label class="rotulo">Matéria</label>
             <select
               class="campo mt-1"
-              [value]="q.materia_id ?? ''"
-              (change)="definirMateria(q, $any($event.target).value)"
+              [value]="valor(q, 'materia_id') ?? ''"
+              (change)="mudar(q, 'materia_id', $any($event.target).value || null)"
             >
               <option value="">— sem matéria —</option>
               @for (m of materias(); track m.id) {
@@ -243,8 +222,8 @@
             <label class="rotulo">Gabarito</label>
             <select
               class="campo mt-1"
-              [value]="q.gabarito ?? ''"
-              (change)="definirGabarito(q, $any($event.target).value)"
+              [value]="valor(q, 'gabarito') ?? ''"
+              (change)="mudar(q, 'gabarito', $any($event.target).value || null)"
             >
               <option value="">— sem gabarito —</option>
               @for (letra of LETRAS; track letra) {
@@ -255,45 +234,75 @@
         </div>
 
         <div>
-          <label class="rotulo">Comentário <span class="text-tinta-500">(sua anotação)</span></label>
+          <label class="rotulo">Comentário</label>
+          <!--
+            `change` (no blur), não `input`: com `[value]` ligado ao rascunho,
+            reescrever o campo a cada tecla joga o cursor para o fim quando a
+            edição é no meio do texto.
+          -->
           <textarea
             class="campo mt-1"
             rows="2"
-            [value]="q.comentario ?? ''"
-            (change)="definirComentario(q, $any($event.target).value)"
+            [value]="valor(q, 'comentario') ?? ''"
+            (change)="mudar(q, 'comentario', $any($event.target).value || null)"
           ></textarea>
         </div>
 
-        @if (q.tem_imagem) {
+        @if (valor(q, 'tem_imagem')) {
           <div>
-            <label class="rotulo">
-              Imagem
-              @if (!q.imagem_path) {
-                <span class="text-amber-700">— sem ela a questão não entra em quizzes</span>
-              }
-            </label>
+            <label class="rotulo">Imagem</label>
             <input
               type="file"
               accept="image/*"
               class="campo mt-1"
               (change)="anexarImagem(q, $event)"
             />
-            @if (q.imagem_path) {
-              <p class="mt-1 text-sm text-emerald-700">Imagem anexada.</p>
-            }
           </div>
         }
 
         <div class="flex flex-wrap gap-3 text-sm">
-          <button type="button" class="acao-inline" (click)="alternarTemImagem(q)">
-            {{ q.tem_imagem ? 'Não depende de imagem' : 'Depende de imagem' }}
+          <button
+            type="button"
+            class="acao-inline"
+            (click)="mudar(q, 'tem_imagem', !valor(q, 'tem_imagem'))"
+          >
+            {{ valor(q, 'tem_imagem') ? 'Não depende de imagem' : 'Depende de imagem' }}
           </button>
-          <button type="button" class="acao-inline" (click)="alternarAnulada(q)">
-            {{ q.anulada ? 'Desanular' : 'Marcar anulada' }}
+          <button
+            type="button"
+            class="acao-inline"
+            (click)="mudar(q, 'anulada', !valor(q, 'anulada'))"
+          >
+            {{ valor(q, 'anulada') ? 'Desanular' : 'Marcar anulada' }}
           </button>
-          @if (q.incerto) {
-            <button type="button" class="acao-inline" (click)="limparIncerto(q)">
+          @if (valor(q, 'incerto')) {
+            <button type="button" class="acao-inline" (click)="mudar(q, 'incerto', false)">
               Conferi — remover marca de dúvida
+            </button>
+          }
+        </div>
+
+        <!--
+          Fechar com rascunho pendente é barrado aqui: salvar exige um clique,
+          então perder o trabalho também precisa exigir um.
+        -->
+        @if (avisoNaoSalvo() === q.id) {
+          <p role="alert" class="text-sm font-medium text-amber-800">Mudanças não salvas.</p>
+        }
+
+        <div class="flex items-center gap-3 border-t border-tinta-200 pt-4">
+          <button
+            type="button"
+            class="btn"
+            [disabled]="!temRascunho(q.id) || salvando()"
+            (click)="salvar(q)"
+          >
+            {{ salvando() ? 'Salvando…' : 'Salvar' }}
+          </button>
+
+          @if (temRascunho(q.id)) {
+            <button type="button" class="btn-secundario" (click)="descartarEFechar(q.id)">
+              Descartar
             </button>
           }
         </div>

@@ -1,9 +1,6 @@
 <header class="mb-6 flex items-start justify-between gap-4">
   <div>
     <h1 class="text-2xl font-semibold text-tinta-900">Concursos</h1>
-    <p class="mt-1 text-sm text-tinta-500">
-      Cada concurso reúne as provas de um mesmo edital.
-    </p>
   </div>
 
   @if (!formAberto()) {
@@ -20,7 +17,9 @@
 
     <div class="grid gap-4 sm:grid-cols-2">
       <div>
-        <label for="orgao" class="rotulo">Órgão <span class="text-tinta-500">(opcional)</span></label>
+        <label for="orgao" class="rotulo"
+          >Órgão <span class="text-tinta-500">(opcional)</span></label
+        >
         <input id="orgao" class="campo mt-1" formControlName="orgao" placeholder="TRT15" />
       </div>
 
@@ -63,7 +62,9 @@
   }
   @case ('ok') {
     @if (concursos().length === 0) {
-      <app-estado-vazio mensagem="Nenhum concurso ainda. Crie o primeiro para começar a importar provas." />
+      <app-estado-vazio
+        mensagem="Nenhum concurso ainda. Crie o primeiro para começar a importar provas."
+      />
     } @else {
       <ul class="space-y-3">
         @for (concurso of concursos(); track concurso.id) {

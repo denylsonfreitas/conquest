@@ -60,6 +60,18 @@ async function assentar(fixture: ComponentFixture<RevisaoQuestoesComponent>, tex
   return (fixture.nativeElement as HTMLElement).textContent ?? '';
 }
 
+/** Os membros da edição são `protected`: o template os vê, o teste precisa deles. */
+function editor(fixture: ComponentFixture<RevisaoQuestoesComponent>) {
+  return fixture.componentInstance as unknown as {
+    mudar: (q: QuestaoRevisao, campo: keyof QuestaoRevisao, valor: unknown) => void;
+    salvar: (q: QuestaoRevisao) => Promise<void>;
+    temRascunho: (id: string) => boolean;
+    descartarEFechar: (id: string) => void;
+    alternarExpansao: (id: string) => void;
+    expandidaId: () => string | null;
+  };
+}
+
 describe('RevisaoQuestoesComponent', () => {
   beforeEach(() => TestBed.resetTestingModule());
 
@@ -92,7 +104,12 @@ describe('RevisaoQuestoesComponent', () => {
   it('abre na fase de mapeamento, com a contagem de cada assunto', async () => {
     const questoes = [
       ...Array.from({ length: 30 }, (_, i) =>
-        base({ id: `e${i}`, numero: i + 1, materia_id: null, assunto: 'Conhecimentos Específicos' }),
+        base({
+          id: `e${i}`,
+          numero: i + 1,
+          materia_id: null,
+          assunto: 'Conhecimentos Específicos',
+        }),
       ),
       base({ id: 'ok', numero: 60 }),
     ];
@@ -177,7 +194,7 @@ describe('RevisaoQuestoesComponent', () => {
     expect(texto).toContain('sem matéria');
     expect(texto).toContain('extração duvidou');
     // Nada foi expandido: os selos vêm da lista fechada.
-    expect(texto).not.toContain('Não há botão de salvar');
+    expect(texto).not.toContain('Comentário');
   });
 
   it('distingue "tem imagem" de "precisa de imagem"', async () => {
@@ -188,36 +205,69 @@ describe('RevisaoQuestoesComponent', () => {
     expect(texto).not.toContain('precisa de imagem');
   });
 
-  it('confirma na tela que a edição foi gravada', async () => {
-    // Sem isto, mudar a matéria no select não dá sinal nenhum e a pergunta
-    // "salvou?" fica sem resposta.
+  it('junta os campos alterados numa requisição só', async () => {
+    // O ponto do botão: uma edição manual mexe em dois ou três campos e vai ao
+    // banco uma vez, em vez de um PATCH por tecla de select.
     const editar = vi.fn(async (_id: string, m: Partial<QuestaoRevisao>) => base({ ...m }));
     const fixture = montar({ listar: async () => [base()], editar });
     await assentar(fixture, 'Enunciado da questão');
 
-    const c = fixture.componentInstance as unknown as {
-      definirMateria: (q: QuestaoRevisao, id: string) => Promise<void>;
-    };
-    await c.definirMateria(base(), 'm2');
+    const c = editor(fixture);
+    c.mudar(base(), 'materia_id', 'm2');
+    c.mudar(base(), 'gabarito', 'B');
+    await c.salvar(base());
 
-    expect(editar).toHaveBeenCalledWith('q1', { materia_id: 'm2' });
+    expect(editar).toHaveBeenCalledTimes(1);
+    expect(editar).toHaveBeenCalledWith('q1', { materia_id: 'm2', gabarito: 'B' });
     expect(await assentar(fixture, 'Salvo')).toContain('Salvo');
   });
 
-  it('não mostra "Salvo" quando a gravação falha', async () => {
+  it('esquece a mudança que volta ao valor original', async () => {
+    // Editar e desfazer não pode deixar a questão eternamente "não salva".
+    const fixture = montar({ listar: async () => [base()] });
+    await assentar(fixture, 'Enunciado da questão');
+
+    const c = editor(fixture);
+    c.mudar(base(), 'gabarito', 'B');
+    expect(c.temRascunho('q1')).toBe(true);
+    c.mudar(base(), 'gabarito', 'A');
+    expect(c.temRascunho('q1')).toBe(false);
+  });
+
+  it('barra o fechamento com mudança não salva, em vez de perdê-la', async () => {
+    const fixture = montar({ listar: async () => [base()] });
+    await assentar(fixture, 'Enunciado da questão');
+
+    const c = editor(fixture);
+    c.alternarExpansao('q1');
+    c.mudar(base(), 'gabarito', 'B');
+    c.alternarExpansao('q1');
+
+    expect(c.expandidaId()).toBe('q1');
+    expect(await assentar(fixture, 'Mudanças não salvas')).toContain('Mudanças não salvas');
+
+    // Descartar é a saída — explícita, como salvar.
+    c.descartarEFechar('q1');
+    expect(c.expandidaId()).toBeNull();
+    expect(c.temRascunho('q1')).toBe(false);
+  });
+
+  it('preserva o rascunho quando a gravação falha', async () => {
+    // O texto digitado é o trabalho; jogá-lo fora junto com a mensagem de erro
+    // seria a pior hora de perdê-lo.
     const editar = vi.fn(async () => {
       throw new Error('Não dá para aprovar sem matéria atribuída.');
     });
     const fixture = montar({ listar: async () => [base()], editar });
     await assentar(fixture, 'Enunciado da questão');
 
-    const c = fixture.componentInstance as unknown as {
-      definirMateria: (q: QuestaoRevisao, id: string) => Promise<void>;
-    };
-    await c.definirMateria(base(), '');
+    const c = editor(fixture);
+    c.mudar(base(), 'materia_id', null);
+    await c.salvar(base());
 
     const texto = await assentar(fixture, 'Não dá para aprovar');
     expect(texto).not.toContain('Salvo');
+    expect(c.temRascunho('q1')).toBe(true);
   });
 
   it('mostra a mensagem do CHECK quando a aprovação é recusada', async () => {

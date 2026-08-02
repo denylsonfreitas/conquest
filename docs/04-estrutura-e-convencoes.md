@@ -272,17 +272,56 @@ primeira versão da tela — nunca retrofitados.
    >   apagando a prova. Avaliar aceitar `aguardando_revisao` **enquanto nenhuma
    >   questão estiver `revisada = true`** — reprocessar sobrescreve as questões,
    >   e não pode apagar curadoria já feita.
-7. **Questões: busca + edição pós-aprovação** — listar/filtrar o acervo e editar
-   questão já aprovada (corrigir campos, anexar imagem, comentar). Garante que
-   nada fica preso ao que a extração produziu.
-8. **Montar e responder quiz** — filtros (banca, concurso, matéria), sorteio
+7. **Montar e responder quiz** — filtros (banca, concurso, matéria), sorteio
    (funções puras, respeitando a regra de elegibilidade com imagem), execução com
    signals, registro de respostas.
-9. **Resultado + estatísticas** — placar, desempenho por matéria e por banca,
-   progresso global, atalho para editar/comentar questão a partir do resultado.
-10. **Export do acervo** — botão que serializa bancas/concursos/provas/questões
-   (e opcionalmente respostas) para JSON e baixa. Seguro barato contra perda.
-11. **Polimento** — responsividade do tablet, estados de erro/vazio, modo revisão
+
+   > Feito ANTES da gestão de acervo, invertendo a ordem original deste doc.
+   > Decisão consciente: o quiz é o que dá sentido a tudo que veio antes, e
+   > adiá-lo mais deixaria o acervo revisado sem uso. O custo apareceu logo —
+   > ver o passo 8.
+
+8. **Acervo: busca, edição pós-aprovação e recirculação** — era o passo 7
+   original, adiado e trazido de volta com escopo maior. Quatro peças que são a
+   mesma máquina (filtrar o acervo e agir sobre o recorte):
+
+   - listar/filtrar o acervo;
+   - editar questão já aprovada (corrigir campos, anexar imagem, comentar);
+   - **o modo que não esgota** — ordenar por menos respondidas / respondidas há
+     mais tempo, em vez de excluir as já vistas;
+   - o **atalho de editar/comentar a partir do resultado** do quiz.
+
+   > Duas telas prontas ficaram com buraco por este passo ter sido pulado, e é
+   > o que motivou trazê-lo de volta:
+   >
+   > - "Só não respondidas" esvazia a fila com um acervo pequeno, e não há como
+   >   recircular.
+   > - A tela de resultado não deixa editar nem comentar a questão ali mesmo,
+   >   embora o `docs/03` peça — "útil quando você percebe o erro respondendo".
+   >
+   > **Apagar histórico por filtro foi decidido e recusado.** São dois pedidos
+   > diferentes: "quero praticar de novo" (o caso comum, resolvido pela
+   > recirculação, sem perder nada) e "essas respostas não me representam mais"
+   > (raro). Só o segundo justifica apagar, e as `respostas` são a única
+   > matéria-prima das estatísticas do passo 10. Pela regra da segunda
+   > ocorrência, o apagar entra quando um caso real aparecer — e aí com escopo
+   > visível e contagem antes ("isso vai apagar 47 respostas de Português").
+
+9. **Modo prova (simulado)** — segundo modo de execução, escolhido na montagem.
+   O atual vira "modo estudo": grava no clique, feedback imediato, sem remarcar
+   — o valor é o compromisso. O modo prova marca e remarca à vontade, mostra o
+   resultado só na entrega e **grava tudo na entrega**, não a cada clique.
+
+   > É modo de EXECUÇÃO, não gestão de acervo: por isso é um passo separado do
+   > 8, e não um retoque do 7. O "feedback só no fim" que o passo 7 já oferece é
+   > metade disto; falta a resposta editável até entregar.
+10. **Estatísticas globais** — desempenho por matéria e por banca ao longo do
+    tempo, progresso global, matérias mais fracas. Tudo derivado de `respostas`
+    subindo a árvore; o placar e o desempenho por matéria do quiz em si já saem
+    no passo 7.
+11. **Export do acervo** — botão que serializa bancas/concursos/provas/questões
+    (e opcionalmente respostas) para JSON e baixa. Seguro barato contra perda.
+12. **Polimento** — responsividade do tablet, estados de erro/vazio, modo revisão
     de erros.
 
     > Registrado durante o passo 6: **ícones nas ações** (Abrir/Aprovar/

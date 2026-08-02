@@ -18,31 +18,34 @@ export interface QuestaoParaRevisao {
 }
 
 /**
- * Uma questão exige atenção quando algo impede aprová-la ou quando a extração
- * declarou dúvida.
+ * Motivos legíveis pelos quais uma questão exige atenção — a lista COMPLETA,
+ * não o primeiro que aparecer.
  *
- * É a regra de elegibilidade do docs/03 lida ao contrário — o que impediria a
+ * É a regra de elegibilidade do docs/03 lida ao contrário: o que impediria a
  * questão de entrar num quiz é exatamente o que a revisão precisa resolver.
- * Deriva da mesma expressão em vez de duplicá-la com outras palavras.
+ *
+ * Cada motivo vira um selo na lista fechada. Por isso todos precisam sair
+ * juntos: o agrupamento diz que HÁ pendência, o selo diz QUAL — e abrir 70
+ * questões para descobrir qual é derrota a revisão em lote inteira.
  */
-export function precisaAtencao(q: QuestaoParaRevisao): boolean {
-  if (q.anulada) return false; // anulada é decisão tomada, não pendência
-  return (
-    q.incerto ||
-    q.materia_id === null ||
-    q.gabarito === null ||
-    (q.tem_imagem && q.imagem_path === null)
-  );
-}
-
-/** Motivos legíveis, para a tela dizer o que falta em vez de só destacar. */
 export function motivosAtencao(q: QuestaoParaRevisao): string[] {
+  if (q.anulada) return []; // anulada é decisão tomada, não pendência
+
   const motivos: string[] = [];
   if (q.materia_id === null) motivos.push('sem matéria');
   if (q.gabarito === null) motivos.push('sem gabarito');
-  if (q.tem_imagem && q.imagem_path === null) motivos.push('depende de imagem não anexada');
-  if (q.incerto && motivos.length === 0) motivos.push('extração marcou como duvidosa');
+  if (q.tem_imagem && q.imagem_path === null) motivos.push('precisa de imagem');
+  if (q.incerto) motivos.push('extração duvidou');
   return motivos;
+}
+
+/**
+ * Derivado de `motivosAtencao` de propósito: se as duas expressões existissem
+ * lado a lado, um selo poderia aparecer sem que a questão caísse no grupo de
+ * atenção (ou o contrário) na primeira vez que uma delas mudasse.
+ */
+export function precisaAtencao(q: QuestaoParaRevisao): boolean {
+  return motivosAtencao(q).length > 0;
 }
 
 /** Pode ser aprovada: nada pendente e ainda não aprovada. */

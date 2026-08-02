@@ -158,8 +158,66 @@ describe('RevisaoQuestoesComponent', () => {
     const fixture = montar({
       listar: async () => [base({ id: 'a', numero: 1, tem_imagem: true, imagem_path: null })],
     });
-    const texto = await assentar(fixture, 'depende de imagem');
+    const texto = await assentar(fixture, 'precisa de imagem');
     expect(texto).not.toContain('Aprovar as');
+  });
+
+  it('mostra cada pendência como selo na lista FECHADA', async () => {
+    // O ponto do agrupamento morre se for preciso abrir 70 questões para
+    // descobrir qual delas depende de imagem.
+    const fixture = montar({
+      listar: async () => [
+        base({ id: 'a', numero: 29, tem_imagem: true, imagem_path: null }),
+        base({ id: 'b', numero: 49, materia_id: null, assunto: null, incerto: true }),
+      ],
+    });
+    const texto = await assentar(fixture, 'precisa de imagem');
+
+    expect(texto).toContain('precisa de imagem');
+    expect(texto).toContain('sem matéria');
+    expect(texto).toContain('extração duvidou');
+    // Nada foi expandido: os selos vêm da lista fechada.
+    expect(texto).not.toContain('Não há botão de salvar');
+  });
+
+  it('distingue "tem imagem" de "precisa de imagem"', async () => {
+    const fixture = montar({
+      listar: async () => [base({ id: 'a', tem_imagem: true, imagem_path: 'p/q.png' })],
+    });
+    const texto = await assentar(fixture, 'tem imagem');
+    expect(texto).not.toContain('precisa de imagem');
+  });
+
+  it('confirma na tela que a edição foi gravada', async () => {
+    // Sem isto, mudar a matéria no select não dá sinal nenhum e a pergunta
+    // "salvou?" fica sem resposta.
+    const editar = vi.fn(async (_id: string, m: Partial<QuestaoRevisao>) => base({ ...m }));
+    const fixture = montar({ listar: async () => [base()], editar });
+    await assentar(fixture, 'Enunciado da questão');
+
+    const c = fixture.componentInstance as unknown as {
+      definirMateria: (q: QuestaoRevisao, id: string) => Promise<void>;
+    };
+    await c.definirMateria(base(), 'm2');
+
+    expect(editar).toHaveBeenCalledWith('q1', { materia_id: 'm2' });
+    expect(await assentar(fixture, 'Salvo')).toContain('Salvo');
+  });
+
+  it('não mostra "Salvo" quando a gravação falha', async () => {
+    const editar = vi.fn(async () => {
+      throw new Error('Não dá para aprovar sem matéria atribuída.');
+    });
+    const fixture = montar({ listar: async () => [base()], editar });
+    await assentar(fixture, 'Enunciado da questão');
+
+    const c = fixture.componentInstance as unknown as {
+      definirMateria: (q: QuestaoRevisao, id: string) => Promise<void>;
+    };
+    await c.definirMateria(base(), '');
+
+    const texto = await assentar(fixture, 'Não dá para aprovar');
+    expect(texto).not.toContain('Salvo');
   });
 
   it('mostra a mensagem do CHECK quando a aprovação é recusada', async () => {

@@ -48,10 +48,50 @@ describe('precisaAtencao', () => {
     // seria trabalho sem destino.
     expect(precisaAtencao(limpa({ anulada: true, materia_id: null, gabarito: null }))).toBe(false);
   });
+});
 
+describe('motivosAtencao', () => {
   it('explica o que falta em vez de só destacar', () => {
     const motivos = motivosAtencao(limpa({ materia_id: null, gabarito: null }));
     expect(motivos).toEqual(['sem matéria', 'sem gabarito']);
+  });
+
+  it('lista TODOS os motivos, não só o primeiro', () => {
+    // Cada motivo vira um selo na lista fechada. Esconder um deles obrigaria a
+    // abrir a questão para descobrir o que ainda falta — o que a lista existe
+    // justamente para evitar.
+    const motivos = motivosAtencao(
+      limpa({ materia_id: null, gabarito: null, tem_imagem: true, incerto: true }),
+    );
+    expect(motivos).toEqual([
+      'sem matéria',
+      'sem gabarito',
+      'precisa de imagem',
+      'extração duvidou',
+    ]);
+  });
+
+  it('acusa a imagem faltante mesmo com o resto completo', () => {
+    expect(motivosAtencao(limpa({ tem_imagem: true }))).toEqual(['precisa de imagem']);
+    expect(motivosAtencao(limpa({ tem_imagem: true, imagem_path: 'p/q.png' }))).toEqual([]);
+  });
+
+  it('não acusa nada numa questão anulada', () => {
+    expect(motivosAtencao(limpa({ anulada: true, materia_id: null }))).toEqual([]);
+  });
+
+  it('concorda sempre com precisaAtencao — o selo e o grupo não podem divergir', () => {
+    const casos = [
+      limpa(),
+      limpa({ materia_id: null }),
+      limpa({ gabarito: null }),
+      limpa({ tem_imagem: true }),
+      limpa({ incerto: true }),
+      limpa({ anulada: true, materia_id: null, gabarito: null }),
+    ];
+    for (const q of casos) {
+      expect(precisaAtencao(q)).toBe(motivosAtencao(q).length > 0);
+    }
   });
 });
 

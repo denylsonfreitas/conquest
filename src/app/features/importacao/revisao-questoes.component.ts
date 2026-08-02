@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   input,
@@ -38,6 +39,11 @@ type Status = 'carregando' | 'ok' | 'erro';
  *    original preservada dentro de cada — um sort global por gravidade
  *    embaralharia os números e impediria conferir a questão contra o PDF.
  * 3. **Aprovar em lote** o que não tem pendência, com contagem explícita.
+ *
+ * As edições de uma questão salvam no `change` do campo, sem botão de
+ * confirmar, e cada questão mostra "Salvando…" → "Salvo". A alternativa —
+ * um botão por questão — reintroduziria a pergunta "cliquei em salvar?" a
+ * cada uma das 70; aqui a resposta fica na tela sem ninguém precisar agir.
  */
 @Component({
   selector: 'app-revisao-questoes',
@@ -71,6 +77,10 @@ export class RevisaoQuestoesComponent {
   protected readonly escolhaMateria = signal<Record<string, string>>({});
   protected readonly novaMateria = signal<Record<string, string>>({});
 
+  /** Feedback de gravação por questão: some sozinho alguns segundos depois. */
+  protected readonly salvamento = signal<Record<string, 'salvando' | 'salvo'>>({});
+  private readonly temporizadores = new Map<string, ReturnType<typeof setTimeout>>();
+
   protected readonly grupos = computed(() => agruparParaRevisao(this.questoes()));
   protected readonly paraMapear = computed(() => assuntosParaMapear(this.questoes()));
   protected readonly nomesMateria = computed(
@@ -87,6 +97,35 @@ export class RevisaoQuestoesComponent {
       const id = this.id();
       void this.carregar(id);
     });
+
+    inject(DestroyRef).onDestroy(() => {
+      for (const t of this.temporizadores.values()) clearTimeout(t);
+    });
+  }
+
+  /** Duração do "Salvo" antes de sumir. Curto o bastante para não virar ruído. */
+  private static readonly MS_SALVO_VISIVEL = 3000;
+
+  private marcarSalvamento(id: string, estado: 'salvando' | 'salvo' | null): void {
+    clearTimeout(this.temporizadores.get(id));
+    this.temporizadores.delete(id);
+
+    this.salvamento.update((atual) => {
+      const proximo = { ...atual };
+      if (estado) proximo[id] = estado;
+      else delete proximo[id];
+      return proximo;
+    });
+
+    if (estado === 'salvo') {
+      this.temporizadores.set(
+        id,
+        setTimeout(
+          () => this.marcarSalvamento(id, null),
+          RevisaoQuestoesComponent.MS_SALVO_VISIVEL,
+        ),
+      );
+    }
   }
 
   protected async carregar(provaId: string = this.id()): Promise<void> {
@@ -207,19 +246,30 @@ export class RevisaoQuestoesComponent {
     if (!arquivo) return;
 
     this.erroAcao.set(null);
+    this.marcarSalvamento(q.id, 'salvando');
     try {
       const atualizada = await this.service.anexarImagem(q, arquivo);
       this.substituir(atualizada);
+      this.marcarSalvamento(q.id, 'salvo');
     } catch (e) {
+      this.marcarSalvamento(q.id, null);
       this.erroAcao.set(mensagem(e));
     }
   }
 
+  /**
+   * Toda edição de campo passa por aqui — é o único lugar que precisa saber
+   * mostrar "Salvando…" e "Salvo", em vez de cada handler repetir o par.
+   */
   private async aplicar(q: QuestaoRevisao, mudancas: Parameters<RevisaoService['editar']>[1]) {
     this.erroAcao.set(null);
+    this.marcarSalvamento(q.id, 'salvando');
     try {
       this.substituir(await this.service.editar(q.id, mudancas));
+      this.marcarSalvamento(q.id, 'salvo');
     } catch (e) {
+      // Sem "Salvo" fantasma: some o indicador e o erro aparece no alerta.
+      this.marcarSalvamento(q.id, null);
       this.erroAcao.set(mensagem(e));
     }
   }

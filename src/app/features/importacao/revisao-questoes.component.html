@@ -145,6 +145,11 @@
           {{ q.enunciado }}
         </p>
 
+        <!--
+          Selos da lista FECHADA. Cada pendência tem o seu: o grupo diz que há
+          algo a resolver, o selo diz o quê. Sem isto a única forma de saber
+          qual questão precisa de imagem era abrir as 70, uma a uma.
+        -->
         <p class="mt-1 flex flex-wrap gap-2 text-xs">
           @if (q.materia_id) {
             <span class="rounded-campo bg-tinta-50 px-2 py-0.5 text-tinta-700">
@@ -156,14 +161,37 @@
               gabarito {{ q.gabarito }}
             </span>
           }
+          <!-- Fato, não pendência: a imagem já está lá. -->
+          @if (q.tem_imagem && q.imagem_path) {
+            <span class="rounded-campo bg-sky-50 px-2 py-0.5 text-sky-700">tem imagem</span>
+          }
           @if (q.anulada) {
             <span class="rounded-campo bg-tinta-50 px-2 py-0.5 text-tinta-500">anulada</span>
           }
           @for (motivo of motivosAtencao(q); track motivo) {
-            <span class="rounded-campo bg-amber-50 px-2 py-0.5 text-amber-700">{{ motivo }}</span>
+            <span class="rounded-campo bg-amber-50 px-2 py-0.5 font-medium text-amber-800">
+              {{ motivo }}
+            </span>
           }
         </p>
       </div>
+
+      <!--
+        Resposta permanente à pergunta "meu trabalho foi salvo?". Fica no
+        cabeçalho, não dentro da área expandida, para continuar visível se a
+        questão for fechada logo depois da edição.
+      -->
+      @if (salvamento()[q.id]; as estado) {
+        <span
+          role="status"
+          class="shrink-0 rounded-campo px-2 py-0.5 text-xs font-medium"
+          [class]="
+            estado === 'salvo' ? 'bg-emerald-50 text-emerald-700' : 'bg-tinta-50 text-tinta-500'
+          "
+        >
+          {{ estado === 'salvo' ? '✓ Salvo' : 'Salvando…' }}
+        </span>
+      }
 
       <button type="button" class="acao-inline" (click)="alternarExpansao(q.id)">
         {{ expandidaId() === q.id ? 'Fechar' : 'Abrir' }}
@@ -190,6 +218,11 @@
             </li>
           }
         </ul>
+
+        <p class="text-xs text-tinta-500">
+          Não há botão de salvar: cada campo grava ao mudar, e o selo “Salvo”
+          aparece ao lado do número da questão.
+        </p>
 
         <div class="grid gap-3 sm:grid-cols-2">
           <div>

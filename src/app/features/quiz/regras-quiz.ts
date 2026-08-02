@@ -204,6 +204,24 @@ export function sortear<T>(
   return embaralhar(candidatas, rng).slice(0, quantidade);
 }
 
+/** Limites da quantidade pedida. O teto existe para o quiz caber numa sessão. */
+export const QUANTIDADE_MIN = 1;
+export const QUANTIDADE_MAX = 200;
+
+/**
+ * O que o campo de quantidade aceita, e o que fazer com o resto.
+ *
+ * Um campo livre recebe vazio, zero, negativo, decimal e texto. Nenhum desses
+ * é erro do usuário digitando — é o estado natural de um campo no meio da
+ * edição. Por isso a entrada inválida NÃO zera o quiz nem trava o botão: cai
+ * no último valor válido, e o campo se corrige ao sair dele.
+ */
+export function normalizarQuantidade(texto: string, anterior: number): number {
+  const numero = Number(texto.trim());
+  if (texto.trim() === '' || !Number.isFinite(numero)) return anterior;
+  return Math.min(QUANTIDADE_MAX, Math.max(QUANTIDADE_MIN, Math.floor(numero)));
+}
+
 // -----------------------------------------------------------------------------
 // Por que o conjunto ficou vazio
 // -----------------------------------------------------------------------------

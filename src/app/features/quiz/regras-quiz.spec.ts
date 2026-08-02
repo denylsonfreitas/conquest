@@ -9,7 +9,10 @@ import {
   embaralhar,
   FILTROS_VAZIOS,
   motivoConjuntoVazio,
+  normalizarQuantidade,
   opcoesDeFiltro,
+  QUANTIDADE_MAX,
+  QUANTIDADE_MIN,
   placar,
   RespostaHistorico,
   sortear,
@@ -200,6 +203,30 @@ describe('embaralhar', () => {
   it('preserva todos os itens', () => {
     const r = embaralhar([1, 2, 3, 4, 5], rngFixo([0.2, 0.8, 0.4, 0.6]));
     expect([...r].sort()).toEqual([1, 2, 3, 4, 5]);
+  });
+});
+
+describe('normalizarQuantidade', () => {
+  it('aceita um número dentro dos limites', () => {
+    expect(normalizarQuantidade('35', 10)).toBe(35);
+    expect(normalizarQuantidade(' 20 ', 10)).toBe(20);
+  });
+
+  it('prende ao teto e ao piso em vez de recusar', () => {
+    expect(normalizarQuantidade('500', 10)).toBe(QUANTIDADE_MAX);
+    expect(normalizarQuantidade('0', 10)).toBe(QUANTIDADE_MIN);
+    expect(normalizarQuantidade('-3', 10)).toBe(QUANTIDADE_MIN);
+  });
+
+  it('cai no último valor válido quando não dá para ler número', () => {
+    // Campo vazio é o estado natural de quem está apagando para redigitar —
+    // zerar o quiz nesse instante seria punir a edição.
+    expect(normalizarQuantidade('', 25)).toBe(25);
+    expect(normalizarQuantidade('abc', 25)).toBe(25);
+  });
+
+  it('trunca decimal — não existe meia questão', () => {
+    expect(normalizarQuantidade('5.7', 10)).toBe(5);
   });
 });
 

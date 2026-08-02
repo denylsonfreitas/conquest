@@ -13,7 +13,10 @@ import {
   FILTROS_VAZIOS,
   ModoQuiz,
   motivoConjuntoVazio,
+  normalizarQuantidade,
   opcoesDeFiltro,
+  QUANTIDADE_MAX,
+  QUANTIDADE_MIN,
   ROTULO_MODO,
   RespostaHistorico,
   sortear,
@@ -71,8 +74,27 @@ export class MontarQuizComponent {
   protected readonly vaiMontarCom = computed(() => Math.min(this.quantidade(), this.disponiveis()));
 
   protected readonly MODOS: ModoQuiz[] = ['aleatorio', 'nao_respondidas', 'revisao_erros'];
-  protected readonly QUANTIDADES = [10, 20, 50];
   protected readonly ROTULO_MODO = ROTULO_MODO;
+  protected readonly QUANTIDADE_MIN = QUANTIDADE_MIN;
+  protected readonly QUANTIDADE_MAX = QUANTIDADE_MAX;
+
+  /**
+   * O que o campo MOSTRA, separado do valor em vigor.
+   *
+   * Só muda ao sair do campo. Reescrever o input a cada tecla jogaria o cursor
+   * para o fim ao editar no meio do número — o mesmo problema do comentário na
+   * revisão.
+   */
+  protected readonly quantidadeExibida = signal('10');
+
+  protected digitarQuantidade(texto: string): void {
+    this.quantidade.set(normalizarQuantidade(texto, this.quantidade()));
+  }
+
+  /** Ao sair do campo, ele passa a mostrar o número que de fato será usado. */
+  protected normalizarCampo(): void {
+    this.quantidadeExibida.set(String(this.quantidade()));
+  }
 
   constructor() {
     void this.carregar();

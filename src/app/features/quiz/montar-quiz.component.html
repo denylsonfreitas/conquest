@@ -90,23 +90,22 @@
 
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
-          <span class="rotulo">Quantidade</span>
-          <div class="mt-1 flex gap-2">
-            @for (n of QUANTIDADES; track n) {
-              <button
-                type="button"
-                class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
-                [class]="
-                  quantidade() === n
-                    ? 'bg-tinta-900 text-white ring-tinta-900'
-                    : 'bg-white text-tinta-700 ring-tinta-200 hover:bg-tinta-50'
-                "
-                (click)="quantidade.set(n)"
-              >
-                {{ n }}
-              </button>
-            }
-          </div>
+          <label for="quantidade" class="rotulo">Quantidade</label>
+          <!--
+            `[value]` ligado ao que o campo EXIBE, que só muda no blur: o valor
+            em vigor acompanha cada tecla, mas reescrever o input a cada uma
+            jogaria o cursor para o fim ao editar no meio do número.
+          -->
+          <input
+            id="quantidade"
+            type="number"
+            class="campo mt-1 w-28"
+            [min]="QUANTIDADE_MIN"
+            [max]="QUANTIDADE_MAX"
+            [value]="quantidadeExibida()"
+            (input)="digitarQuantidade($any($event.target).value)"
+            (change)="normalizarCampo()"
+          />
         </div>
 
         <div>

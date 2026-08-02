@@ -42,7 +42,9 @@ async function assentar(fixture: ComponentFixture<MontarQuizComponent>, texto: s
 const controles = (fixture: ComponentFixture<MontarQuizComponent>) =>
   fixture.componentInstance as unknown as {
     modo: { set: (m: string) => void };
-    quantidade: { set: (n: number) => void };
+    quantidade: () => number;
+    digitarQuantidade: (texto: string) => void;
+    normalizarCampo: () => void;
     escolherBanca: (id: string) => void;
     alternarMateria: (id: string) => void;
     disponiveis: () => number;
@@ -102,9 +104,28 @@ describe('MontarQuizComponent', () => {
     const fixture = montar({ acervoElegivel: async () => acervoDe(3), historico: async () => [] });
     await assentar(fixture, 'disponíveis');
 
-    controles(fixture).quantidade.set(50);
+    controles(fixture).digitarQuantidade('50');
     const texto = await assentar(fixture, 'vai começar com');
     expect(texto).toContain('vai começar com 3, não 50');
+  });
+
+  it('digitar lixo na quantidade não quebra a montagem', async () => {
+    const fixture = montar({ acervoElegivel: async () => acervoDe(5), historico: async () => [] });
+    await assentar(fixture, 'disponíveis');
+    const c = controles(fixture);
+
+    c.digitarQuantidade('35');
+    c.digitarQuantidade(''); // apagando para redigitar
+    expect(c.quantidade()).toBe(35);
+
+    c.digitarQuantidade('999');
+    expect(c.quantidade()).toBe(200);
+
+    // O campo passa a mostrar o que de fato será usado ao sair dele.
+    c.normalizarCampo();
+    fixture.detectChanges();
+    const campo = (fixture.nativeElement as HTMLElement).querySelector('input[type=number]');
+    expect((campo as HTMLInputElement).value).toBe('200');
   });
 
   it('não oferece começar com zero, e diz qual filtro esvaziou', async () => {
@@ -153,7 +174,7 @@ describe('MontarQuizComponent', () => {
     await assentar(fixture, 'disponíveis');
 
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    controles(fixture).quantidade.set(10);
+    controles(fixture).digitarQuantidade('10');
     await controles(fixture).comecar();
 
     // Sorteou 5 (tinha menos que os 10 pedidos) e só então buscou as completas.

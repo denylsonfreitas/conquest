@@ -3,9 +3,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { QuestaoNovaSchema } from '../../../src/app/shared/schema.ts';
 import { casarGabarito } from './casar-gabarito.ts';
 import { extrairQuestoes, QuestaoBruta } from './extrair-questoes.ts';
-import { extrairTexto } from './extrair-texto.ts';
 import { identificarProva, normalizar } from './identificar-prova.ts';
-import { garantirSemMarcaDagua, removerMarcaDagua } from './marca-dagua.ts';
+import { prepararTexto } from './preparar-texto.ts';
 
 /**
  * Edge Function de extração — o coração do write-side (docs/02).
@@ -93,14 +92,16 @@ interface Resultado {
  * roda aqui, no servidor, antes de qualquer chamada ao LLM.
  */
 interface TextoDoCliente {
+  /** Texto bruto da prova, como o pdf.js devolveu. Obrigatório. */
   texto?: string;
+  /** Texto bruto do gabarito, se houver PDF separado. */
   textoGabarito?: string;
 }
 
 async function processar(
   admin: SupabaseClient,
   provaId: string,
-  recebido: TextoDoCliente = {},
+  recebido: TextoDoCliente,
 ): Promise<Resultado> {
   const { data: prova, error } = await admin
     .from('provas')
@@ -111,6 +112,7 @@ async function processar(
   if (error || !prova) throw new Error('Prova não encontrada.');
   if (!prova.arquivo_path) throw new Error('A prova não tem PDF anexado.');
   if (prova.status === 'processando') throw new Error('A prova já está sendo processada.');
+  if (!recebido.texto) throw new Error('O texto extraído da prova não foi enviado.');
 
   // Reprocessar apaga as questões anteriores: a extração é idempotente por
   // reconstrução, não por merge. Merge deixaria órfãs de uma extração antiga.
@@ -126,9 +128,9 @@ async function processar(
     })
     .eq('id', provaId);
 
-  const textoProva = recebido.texto
-    ? prepararTextoRecebido(recebido.texto)
-    : (await baixarEExtrair(admin, prova.arquivo_path)).texto;
+  // Ordem inegociável: limpa a marca d'água, confere que sobrou conteúdo e
+  // confere que nada escapou — só então o texto pode tocar a API do LLM.
+  const textoProva = prepararTexto(recebido.texto);
 
   const brutas = await extrairQuestoes(textoProva);
   if (brutas.length === 0) throw new Error('Nenhuma questão reconhecida no PDF.');
@@ -139,14 +141,10 @@ async function processar(
   let respostas: ReadonlyMap<number, string> | null = null;
   let motivoGabarito: string | undefined;
 
-  if (recebido.textoGabarito || prova.gabarito_path) {
+  if (recebido.textoGabarito) {
     try {
-      const textoGabarito = recebido.textoGabarito
-        ? prepararTextoRecebido(recebido.textoGabarito)
-        : (await baixarEExtrair(admin, prova.gabarito_path!)).texto;
-
       const casamento = casarGabarito(
-        textoGabarito,
+        prepararTexto(recebido.textoGabarito),
         identificarProva(textoProva),
         brutas.length,
       );
@@ -191,23 +189,6 @@ async function processar(
     gabarito_aplicado: respostas !== null,
     motivo_gabarito: motivoGabarito,
   };
-}
-
-/**
- * Aplica a limpeza ao texto vindo do cliente e confere. Nunca confia no que
- * chega: a remoção da marca d'água é reexecutada e verificada aqui, porque é
- * este processo que fala com a API externa.
- */
-function prepararTextoRecebido(texto: string): string {
-  const limpo = removerMarcaDagua(texto);
-  garantirSemMarcaDagua(limpo);
-  return limpo;
-}
-
-async function baixarEExtrair(admin: SupabaseClient, caminho: string) {
-  const { data, error } = await admin.storage.from('provas-pdf').download(caminho);
-  if (error || !data) throw new Error(`Não foi possível baixar o PDF: ${error?.message}`);
-  return extrairTexto(await data.arrayBuffer());
 }
 
 /** Matérias canônicas indexadas por nome normalizado, para casar o palpite do LLM. */

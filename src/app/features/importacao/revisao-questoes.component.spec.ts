@@ -205,6 +205,53 @@ describe('RevisaoQuestoesComponent', () => {
     expect(texto).not.toContain('precisa de imagem');
   });
 
+  it('abre os campos já preenchidos com o valor da questão', async () => {
+    // O bug: `[value]` no <select> corria antes de o @for criar as <option>, o
+    // navegador descartava o valor sem opção correspondente, e o campo abria
+    // "— sem matéria —" enquanto o selo do cabeçalho mostrava a matéria.
+    const fixture = montar({ listar: async () => [base({ materia_id: 'm2', gabarito: 'B' })] });
+    await assentar(fixture, 'Enunciado da questão');
+
+    editor(fixture).alternarExpansao('q1');
+    await assentar(fixture, 'Comentário');
+
+    const selects = (fixture.nativeElement as HTMLElement).querySelectorAll('select');
+    const selecionado = (s: HTMLSelectElement) => s.options[s.selectedIndex]?.textContent?.trim();
+
+    expect(selecionado(selects[0])).toBe('Raciocínio Lógico');
+    expect(selecionado(selects[1])).toBe('B');
+  });
+
+  it('mostra a imagem anexada e deixa removê-la', async () => {
+    // `imagem_path` preenchido e upload perdido eram indistinguíveis na tela:
+    // nenhum dos dois mostrava figura nenhuma.
+    const removerImagem = vi.fn(async () => base({ tem_imagem: true, imagem_path: null }));
+    const fixture = montar({
+      listar: async () => [base({ tem_imagem: true, imagem_path: 'p1/q1' })],
+      urlImagem: async () => 'https://local/assinada.png',
+      removerImagem,
+    });
+    await assentar(fixture, 'Enunciado da questão');
+
+    editor(fixture).alternarExpansao('q1');
+    await assentar(fixture, 'Remover');
+
+    const img = () => (fixture.nativeElement as HTMLElement).querySelector('img');
+    for (let i = 0; i < 50 && !img(); i++) {
+      await new Promise((r) => setTimeout(r, 5));
+      fixture.detectChanges();
+    }
+    expect(img()?.getAttribute('src')).toBe('https://local/assinada.png');
+
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
+      .find((b) => b.textContent?.includes('Remover'))
+      ?.click();
+    await assentar(fixture, 'Imagem removida');
+
+    expect(removerImagem).toHaveBeenCalled();
+    expect(img()).toBeNull();
+  });
+
   it('junta os campos alterados numa requisição só', async () => {
     // O ponto do botão: uma edição manual mexe em dois ou três campos e vai ao
     // banco uma vez, em vez de um PATCH por tecla de select.

@@ -203,17 +203,24 @@
           }
         </ul>
 
+        <!--
+          `ngModel` + `ngValue`, não `[value]`: o binding cru roda ANTES de o
+          `@for` criar as <option>, então o navegador descartava o valor por
+          não haver opção correspondente e o campo abria vazio mesmo com o selo
+          mostrando a matéria. O CVA do Angular reaplica quando as opções
+          aparecem — e `ngValue` carrega `null` de verdade, em vez de string.
+        -->
         <div class="grid gap-3 sm:grid-cols-2">
           <div>
             <label class="rotulo">Matéria</label>
             <select
               class="campo mt-1"
-              [value]="valor(q, 'materia_id') ?? ''"
-              (change)="mudar(q, 'materia_id', $any($event.target).value || null)"
+              [ngModel]="valor(q, 'materia_id')"
+              (ngModelChange)="mudar(q, 'materia_id', $event)"
             >
-              <option value="">— sem matéria —</option>
+              <option [ngValue]="null">— sem matéria —</option>
               @for (m of materias(); track m.id) {
-                <option [value]="m.id">{{ m.nome }}</option>
+                <option [ngValue]="m.id">{{ m.nome }}</option>
               }
             </select>
           </div>
@@ -222,12 +229,12 @@
             <label class="rotulo">Gabarito</label>
             <select
               class="campo mt-1"
-              [value]="valor(q, 'gabarito') ?? ''"
-              (change)="mudar(q, 'gabarito', $any($event.target).value || null)"
+              [ngModel]="valor(q, 'gabarito')"
+              (ngModelChange)="mudar(q, 'gabarito', $event)"
             >
-              <option value="">— sem gabarito —</option>
+              <option [ngValue]="null">— sem gabarito —</option>
               @for (letra of LETRAS; track letra) {
-                <option [value]="letra">{{ letra }}</option>
+                <option [ngValue]="letra">{{ letra }}</option>
               }
             </select>
           </div>
@@ -251,10 +258,31 @@
         @if (valor(q, 'tem_imagem')) {
           <div>
             <label class="rotulo">Imagem</label>
+
+            <!--
+              Ver o que está anexado é o que permite perceber que subiu a
+              figura errada. Sem a miniatura, `imagem_path` preenchido e upload
+              perdido eram indistinguíveis na tela.
+            -->
+            @if (q.imagem_path) {
+              <div class="mt-1 flex items-start gap-3">
+                @if (urlsPorCaminho()[q.imagem_path]; as url) {
+                  <img
+                    [src]="url"
+                    [alt]="'Imagem da questão ' + q.numero"
+                    class="max-h-40 rounded-campo border border-tinta-200"
+                  />
+                }
+                <button type="button" class="acao-inline text-red-600" (click)="removerImagem(q)">
+                  Remover
+                </button>
+              </div>
+            }
+
             <input
               type="file"
               accept="image/*"
-              class="campo mt-1"
+              class="campo mt-2"
               (change)="anexarImagem(q, $event)"
             />
           </div>

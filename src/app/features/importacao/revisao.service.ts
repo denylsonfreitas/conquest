@@ -123,6 +123,21 @@ export class RevisaoService {
     return this.editar(questao.id, { imagem_path: caminho, tem_imagem: true });
   }
 
+  /**
+   * Desfaz o anexo.
+   *
+   * O ponteiro cai PRIMEIRO: é ele que a revisão enxerga, e um ponteiro para
+   * um objeto que não existe mais seria pior que um objeto órfão. Se a remoção
+   * no bucket falhar depois disso, o caminho é determinístico e o próximo
+   * upload sobrescreve — o estranho seria abortar uma remoção já concluída aos
+   * olhos de quem pediu.
+   */
+  async removerImagem(questao: QuestaoRevisao): Promise<QuestaoRevisao> {
+    const atualizada = await this.editar(questao.id, { imagem_path: null });
+    if (questao.imagem_path) await this.supabase.questaoImagens.remove([questao.imagem_path]);
+    return atualizada;
+  }
+
   async urlImagem(caminho: string, segundos = 300): Promise<string> {
     const { data, error } = await this.supabase.questaoImagens.createSignedUrl(caminho, segundos);
     if (error || !data) throw new Error(`Não foi possível abrir a imagem: ${error?.message}`);

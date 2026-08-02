@@ -92,6 +92,9 @@ export class RevisaoQuestoesComponent {
   protected readonly toast = signal<string | null>(null);
   private temporizadorToast?: ReturnType<typeof setTimeout>;
 
+  /** URLs assinadas das imagens já anexadas, por caminho no bucket. */
+  protected readonly urlsPorCaminho = signal<Record<string, string>>({});
+
   protected readonly grupos = computed(() => agruparParaRevisao(this.questoes()));
   protected readonly paraMapear = computed(() => assuntosParaMapear(this.questoes()));
   protected readonly nomesMateria = computed(
@@ -109,7 +112,26 @@ export class RevisaoQuestoesComponent {
       void this.carregar(id);
     });
 
+    // O bucket é privado: a imagem só aparece atrás de uma URL assinada, e
+    // pedi-la para as 70 questões seria desperdício. Busca sob demanda, quando
+    // a questão é aberta.
+    effect(() => {
+      const id = this.expandidaId();
+      const questao = this.questoes().find((q) => q.id === id);
+      const caminho = questao?.imagem_path;
+      if (caminho && !this.urlsPorCaminho()[caminho]) void this.assinarImagem(caminho);
+    });
+
     inject(DestroyRef).onDestroy(() => clearTimeout(this.temporizadorToast));
+  }
+
+  private async assinarImagem(caminho: string): Promise<void> {
+    try {
+      const url = await this.service.urlImagem(caminho);
+      this.urlsPorCaminho.update((atual) => ({ ...atual, [caminho]: url }));
+    } catch (e) {
+      this.erroAcao.set(mensagem(e));
+    }
   }
 
   protected async carregar(provaId: string = this.id()): Promise<void> {
@@ -311,16 +333,43 @@ export class RevisaoQuestoesComponent {
 
   /** Enviar o arquivo JÁ É o gesto explícito; não faria sentido pedir outro. */
   protected async anexarImagem(q: QuestaoRevisao, evento: Event): Promise<void> {
-    const arquivo = (evento.target as HTMLInputElement).files?.[0];
+    const entrada = evento.target as HTMLInputElement;
+    const arquivo = entrada.files?.[0];
     if (!arquivo) return;
 
     this.erroAcao.set(null);
     try {
-      this.substituir(await this.service.anexarImagem(q, arquivo));
-      this.mostrarToast('Imagem anexada');
+      const atualizada = await this.service.anexarImagem(q, arquivo);
+      // O caminho no bucket é determinístico, então trocar a imagem reaproveita
+      // o mesmo endereço: sem invalidar, a miniatura continuaria mostrando a
+      // figura antiga com uma URL assinada ainda válida.
+      if (atualizada.imagem_path) this.esquecerUrl(atualizada.imagem_path);
+      this.substituir(atualizada);
+      entrada.value = ''; // permite reenviar o mesmo arquivo depois de remover
+      this.mostrarToast(q.imagem_path ? 'Imagem trocada' : 'Imagem anexada');
     } catch (e) {
       this.erroAcao.set(mensagem(e));
     }
+  }
+
+  protected async removerImagem(q: QuestaoRevisao): Promise<void> {
+    this.erroAcao.set(null);
+    try {
+      const atualizada = await this.service.removerImagem(q);
+      if (q.imagem_path) this.esquecerUrl(q.imagem_path);
+      this.substituir(atualizada);
+      this.mostrarToast('Imagem removida');
+    } catch (e) {
+      this.erroAcao.set(mensagem(e));
+    }
+  }
+
+  private esquecerUrl(caminho: string): void {
+    this.urlsPorCaminho.update((atual) => {
+      const proximo = { ...atual };
+      delete proximo[caminho];
+      return proximo;
+    });
   }
 
   private substituir(q: QuestaoRevisao): void {

@@ -46,6 +46,23 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'quiz',
+        loadComponent: () =>
+          import('./features/quiz/montar-quiz.component').then((m) => m.MontarQuizComponent),
+      },
+      {
+        // A sessão vive em memória (o quiz é efêmero, docs/01): entrar por aqui
+        // sem ter montado devolve para /quiz, não quebra.
+        path: 'quiz/executar',
+        loadComponent: () =>
+          import('./features/quiz/quiz-execucao.component').then((m) => m.QuizExecucaoComponent),
+      },
+      {
+        path: 'quiz/resultado',
+        loadComponent: () =>
+          import('./features/quiz/resultado-quiz.component').then((m) => m.ResultadoQuizComponent),
+      },
+      {
         path: 'materias',
         // `data` alimenta o input `tabela` do componente via
         // withComponentInputBinding(), então uma tela serve as duas rotas.

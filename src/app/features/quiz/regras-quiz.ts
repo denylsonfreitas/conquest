@@ -12,22 +12,9 @@
  * esconderia a regra dos testes.
  */
 
-export type ModoQuiz = 'aleatorio' | 'nao_respondidas' | 'revisao_erros';
+import { aplicarFiltros, FiltrosAcervo, ItemFiltravel } from '../../shared/filtros-acervo';
 
-/** O mínimo que o sorteio precisa saber de uma questão. */
-export interface CandidataQuiz {
-  readonly id: string;
-  readonly materia_id: string | null;
-  readonly banca_id: string | null;
-  readonly concurso_id: string;
-}
-
-/** A candidata com os nomes que a tela de montagem precisa exibir. */
-export interface CandidataComNomes extends CandidataQuiz {
-  readonly materia: string | null;
-  readonly banca_nome: string | null;
-  readonly concurso_nome: string;
-}
+export type ModoQuiz = 'aleatorio' | 'menos_vistas' | 'revisao_erros';
 
 /** Uma linha de `respostas`, como o histórico chega do banco. */
 export interface RespostaHistorico {
@@ -36,18 +23,9 @@ export interface RespostaHistorico {
   readonly respondido_em: string;
 }
 
-export interface FiltrosQuiz {
-  readonly bancaId: string | null;
-  readonly concursoId: string | null;
-  /** Vazio significa "todas" — multi-seleção, ao contrário de banca/concurso. */
-  readonly materiaIds: readonly string[];
-}
-
-export const FILTROS_VAZIOS: FiltrosQuiz = { bancaId: null, concursoId: null, materiaIds: [] };
-
 export const ROTULO_MODO: Record<ModoQuiz, string> = {
   aleatorio: 'Aleatório',
-  nao_respondidas: 'Só não respondidas',
+  menos_vistas: 'Menos vistas',
   revisao_erros: 'Revisão de erros',
 };
 
@@ -78,92 +56,82 @@ export function ultimaRespostaPorQuestao(
   return ultima;
 }
 
-// -----------------------------------------------------------------------------
-// Filtros
-// -----------------------------------------------------------------------------
-
-/**
- * Banca e concurso são independentes e combináveis (docs/03): filtrar por banca
- * reúne questões de todos os concursos daquela banca. Matéria é multi-seleção.
- * Nulo/vazio significa "todas" em cada eixo.
- */
-export function aplicarFiltros<T extends CandidataQuiz>(
-  candidatas: readonly T[],
-  filtros: FiltrosQuiz,
-): T[] {
-  const materias = new Set(filtros.materiaIds);
-  return candidatas.filter(
-    (q) =>
-      (filtros.bancaId === null || q.banca_id === filtros.bancaId) &&
-      (filtros.concursoId === null || q.concurso_id === filtros.concursoId) &&
-      (materias.size === 0 || (q.materia_id !== null && materias.has(q.materia_id))),
-  );
+export interface UsoDaQuestao {
+  readonly vezes: number;
+  /** Carimbo da resposta mais recente. */
+  readonly ultimaEm: string;
 }
 
-export interface OpcaoFiltro {
-  readonly id: string;
-  readonly nome: string;
-}
+/** Quantas vezes cada questão foi respondida, e quando foi a última. */
+export function usoPorQuestao(historico: readonly RespostaHistorico[]): Map<string, UsoDaQuestao> {
+  const uso = new Map<string, UsoDaQuestao>();
 
-export interface OpcoesFiltro {
-  readonly bancas: OpcaoFiltro[];
-  readonly concursos: OpcaoFiltro[];
-  readonly materias: OpcaoFiltro[];
-}
-
-/**
- * As opções de cada filtro saem do PRÓPRIO acervo, não das tabelas de dimensão.
- *
- * Duas consequências que valem o desvio: nenhuma opção oferecida leva a zero
- * sozinha (uma banca sem questão aprovada simplesmente não aparece), e a lista
- * encolhe conforme você escolhe — os concursos são os daquela banca, as
- * matérias são as daquele recorte. Filtro que oferece beco sem saída é o que
- * faz o "0 questões" parecer defeito do app.
- */
-export function opcoesDeFiltro(
-  acervo: readonly CandidataComNomes[],
-  filtros: FiltrosQuiz,
-): OpcoesFiltro {
-  const soBanca = { ...FILTROS_VAZIOS, bancaId: filtros.bancaId };
-  const bancaEConcurso = { ...soBanca, concursoId: filtros.concursoId };
-
-  return {
-    bancas: distintas(acervo, (q) => [q.banca_id, q.banca_nome]),
-    concursos: distintas(aplicarFiltros(acervo, soBanca), (q) => [q.concurso_id, q.concurso_nome]),
-    materias: distintas(aplicarFiltros(acervo, bancaEConcurso), (q) => [q.materia_id, q.materia]),
-  };
-}
-
-function distintas(
-  acervo: readonly CandidataComNomes[],
-  extrair: (q: CandidataComNomes) => [string | null, string | null],
-): OpcaoFiltro[] {
-  const mapa = new Map<string, string>();
-  for (const q of acervo) {
-    const [id, nome] = extrair(q);
-    // Sem id não há como filtrar por ele: questão sem banca não vira opção.
-    if (id) mapa.set(id, nome ?? '—');
+  for (const r of historico) {
+    const atual = uso.get(r.questao_id);
+    uso.set(r.questao_id, {
+      vezes: (atual?.vezes ?? 0) + 1,
+      ultimaEm: !atual || r.respondido_em > atual.ultimaEm ? r.respondido_em : atual.ultimaEm,
+    });
   }
-  return [...mapa.entries()]
-    .map(([id, nome]) => ({ id, nome }))
-    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
+  return uso;
 }
 
-/** O filtro de histórico — é aqui que o modo mora. */
-export function aplicarModo<T extends CandidataQuiz>(
+/**
+ * O filtro de histórico — quem o modo DEIXA entrar.
+ *
+ * Só "revisão de erros" exclui alguém. "Menos vistas" não filtra nada: ele se
+ * distingue do aleatório pela ORDEM (ver `filaDoModo`), não pelo conjunto. É
+ * essa separação que faz o modo nunca esgotar — não há o que acabar quando
+ * nada é excluído.
+ */
+export function aplicarModo<T extends ItemFiltravel>(
   candidatas: readonly T[],
   historico: readonly RespostaHistorico[],
   modo: ModoQuiz,
 ): T[] {
-  if (modo === 'aleatorio') return [...candidatas]; // a identidade
+  if (modo !== 'revisao_erros') return [...candidatas];
 
+  // A ÚLTIMA resposta foi errada. Questão nunca respondida não entra — não há
+  // erro a revisar. Este modo PODE esvaziar, e esvaziar aqui é sucesso: quer
+  // dizer que não sobrou erro pendente.
   const ultima = ultimaRespostaPorQuestao(historico);
-
-  if (modo === 'nao_respondidas') return candidatas.filter((q) => !ultima.has(q.id));
-
-  // revisao_erros: a ÚLTIMA resposta foi errada. Questão nunca respondida não
-  // entra — não há erro a revisar.
   return candidatas.filter((q) => ultima.get(q.id)?.acertou === false);
+}
+
+/**
+ * A fila do modo: quem entra, e em que ordem.
+ *
+ * "Menos vistas" substituiu "só não respondidas" porque é o mesmo modo sem o
+ * precipício. Enquanto houver questão nunca respondida, a sensação é idêntica
+ * — elas vêm primeiro. Quando acabam, a fila continua em vez de zerar.
+ *
+ * As nunca respondidas são embaralhadas entre si (não há critério que as
+ * distinga). As já respondidas seguem ordem DETERMINÍSTICA: menos vezes
+ * primeiro, empate desfeito pela mais antiga. O determinismo é o mecanismo da
+ * rotação — responder uma questão atualiza a contagem e a data dela, e isso
+ * sozinho a joga para o fim da fila.
+ */
+export function filaDoModo<T extends ItemFiltravel>(
+  candidatas: readonly T[],
+  historico: readonly RespostaHistorico[],
+  modo: ModoQuiz,
+  rng: Rng = Math.random,
+): T[] {
+  const admitidas = aplicarModo(candidatas, historico, modo);
+  if (modo !== 'menos_vistas') return embaralhar(admitidas, rng);
+
+  const uso = usoPorQuestao(historico);
+  const nunca = admitidas.filter((q) => !uso.has(q.id));
+  const vistas = admitidas
+    .filter((q) => uso.has(q.id))
+    .sort((a, b) => {
+      const ua = uso.get(a.id)!;
+      const ub = uso.get(b.id)!;
+      return ua.vezes - ub.vezes || ua.ultimaEm.localeCompare(ub.ultimaEm);
+    });
+
+  return [...embaralhar(nunca, rng), ...vistas];
 }
 
 // -----------------------------------------------------------------------------
@@ -190,18 +158,17 @@ export function embaralhar<T>(itens: readonly T[], rng: Rng = Math.random): T[] 
 }
 
 /**
- * Sorteia até `quantidade` questões, sem repetir.
+ * Corta a fila em `quantidade`.
+ *
+ * O sorteio agora vive em `filaDoModo` — aqui só se tira do topo, porque a
+ * ordem já significa alguma coisa e embaralhar de novo a destruiria.
  *
  * Pedir mais do que existe NÃO é erro: monta com o que houver (docs/03). Quem
  * avisa é a tela, com a contagem na mão antes de começar.
  */
-export function sortear<T>(
-  candidatas: readonly T[],
-  quantidade: number,
-  rng: Rng = Math.random,
-): T[] {
+export function primeiras<T>(fila: readonly T[], quantidade: number): T[] {
   if (quantidade <= 0) return [];
-  return embaralhar(candidatas, rng).slice(0, quantidade);
+  return fila.slice(0, quantidade);
 }
 
 /** Limites da quantidade pedida. O teto existe para o quiz caber numa sessão. */
@@ -234,15 +201,15 @@ export function normalizarQuantidade(texto: string, anterior: number): number {
  * aponta o primeiro que, sozinho, destrava o conjunto.
  */
 export function motivoConjuntoVazio(
-  acervo: readonly CandidataQuiz[],
+  acervo: readonly ItemFiltravel[],
   historico: readonly RespostaHistorico[],
-  filtros: FiltrosQuiz,
+  filtros: FiltrosAcervo,
   modo: ModoQuiz,
 ): string | null {
   if (aplicarModo(aplicarFiltros(acervo, filtros), historico, modo).length > 0) return null;
   if (acervo.length === 0) return 'Nenhuma questão aprovada ainda. Revise uma prova primeiro.';
 
-  const eixos: { rotulo: string; sem: FiltrosQuiz }[] = [
+  const eixos: { rotulo: string; sem: FiltrosAcervo }[] = [
     { rotulo: 'a banca', sem: { ...filtros, bancaId: null } },
     { rotulo: 'o concurso', sem: { ...filtros, concursoId: null } },
     { rotulo: 'a matéria', sem: { ...filtros, materiaIds: [] } },
@@ -256,10 +223,10 @@ export function motivoConjuntoVazio(
   }
 
   // Nenhum eixo isolado resolve: ou é a combinação, ou é o próprio modo.
+  // "Menos vistas" nunca chega aqui por conta própria — ele não exclui
+  // ninguém, então só zera se os filtros já tiverem zerado.
   if (aplicarFiltros(acervo, filtros).length > 0) {
-    return modo === 'nao_respondidas'
-      ? 'Você já respondeu todas as questões desses filtros.'
-      : 'Nenhuma questão errada na última tentativa com esses filtros.';
+    return 'Nenhuma questão errada na última tentativa com esses filtros.';
   }
   return 'Nenhuma questão com essa combinação de filtros.';
 }

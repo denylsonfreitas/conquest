@@ -1,48 +1,26 @@
-import { describe, expect, it } from 'vitest';
-
 import {
-  aplicarFiltros,
   aplicarModo,
-  CandidataComNomes,
-  CandidataQuiz,
   desempenhoPorMateria,
   embaralhar,
-  FILTROS_VAZIOS,
+  filaDoModo,
   motivoConjuntoVazio,
   normalizarQuantidade,
-  opcoesDeFiltro,
+  placar,
+  primeiras,
   QUANTIDADE_MAX,
   QUANTIDADE_MIN,
-  placar,
   RespostaHistorico,
-  sortear,
   ultimaRespostaPorQuestao,
+  usoPorQuestao,
 } from './regras-quiz';
+import { FILTROS_VAZIOS, ItemFiltravel } from '../../shared/filtros-acervo';
 
-const q = (id: string, over: Partial<CandidataQuiz> = {}): CandidataQuiz => ({
+const q = (id: string, over: Partial<ItemFiltravel> = {}): ItemFiltravel => ({
   id,
   materia_id: 'port',
   banca_id: 'fcc',
   concurso_id: 'trt15',
   ...over,
-});
-
-const comNomes = (
-  id: string,
-  banca_id: string,
-  banca_nome: string,
-  concurso_id: string,
-  concurso_nome: string,
-  materia_id: string,
-  materia: string,
-): CandidataComNomes => ({
-  id,
-  banca_id,
-  banca_nome,
-  concurso_id,
-  concurso_nome,
-  materia_id,
-  materia,
 });
 
 const resp = (questao_id: string, acertou: boolean, dia: string): RespostaHistorico => ({
@@ -81,9 +59,9 @@ describe('aplicarModo', () => {
     expect(aplicarModo(candidatas, [resp('a', false, '01')], 'aleatorio')).toHaveLength(3);
   });
 
-  it('não respondidas exclui tudo que já tem resposta, certa ou errada', () => {
+  it('menos vistas não exclui ninguém — é por isso que não esgota', () => {
     const historico = [resp('a', true, '01'), resp('b', false, '01')];
-    expect(aplicarModo(candidatas, historico, 'nao_respondidas').map((x) => x.id)).toEqual(['c']);
+    expect(aplicarModo(candidatas, historico, 'menos_vistas')).toHaveLength(3);
   });
 
   it('revisão de erros usa a ÚLTIMA resposta, não "existe alguma errada"', () => {
@@ -103,99 +81,104 @@ describe('aplicarModo', () => {
   });
 });
 
-describe('aplicarFiltros', () => {
-  const acervo = [
-    q('a', { banca_id: 'fcc', concurso_id: 'trt15', materia_id: 'port' }),
-    q('b', { banca_id: 'fcc', concurso_id: 'tre', materia_id: 'rlm' }),
-    q('c', { banca_id: 'cespe', concurso_id: 'pf', materia_id: 'port' }),
-  ];
-
-  it('sem filtro nenhum, o acervo inteiro', () => {
-    expect(aplicarFiltros(acervo, FILTROS_VAZIOS)).toHaveLength(3);
-  });
-
-  it('banca reúne todos os concursos dela — é o caso de uso central', () => {
-    const r = aplicarFiltros(acervo, { ...FILTROS_VAZIOS, bancaId: 'fcc' });
-    expect(r.map((x) => x.id)).toEqual(['a', 'b']);
-  });
-
-  it('combina banca e matéria, ignorando o concurso', () => {
-    const r = aplicarFiltros(acervo, {
-      bancaId: 'fcc',
-      concursoId: null,
-      materiaIds: ['port'],
-    });
-    expect(r.map((x) => x.id)).toEqual(['a']);
-  });
-
-  it('matéria aceita várias', () => {
-    const r = aplicarFiltros(acervo, { ...FILTROS_VAZIOS, materiaIds: ['port', 'rlm'] });
-    expect(r).toHaveLength(3);
-  });
-
-  it('questão sem matéria some quando há filtro de matéria', () => {
-    const r = aplicarFiltros([q('x', { materia_id: null })], {
-      ...FILTROS_VAZIOS,
-      materiaIds: ['port'],
-    });
-    expect(r).toEqual([]);
-  });
-});
-
-describe('opcoesDeFiltro', () => {
-  const acervo = [
-    comNomes('a', 'fcc', 'FCC', 'trt15', 'TRT 15', 'port', 'Português'),
-    comNomes('b', 'fcc', 'FCC', 'tre', 'TRE', 'rlm', 'RLM'),
-    comNomes('c', 'cespe', 'Cespe', 'pf', 'PF', 'info', 'Informática'),
-  ];
-
-  it('oferece só o que existe no acervo — nenhuma opção leva a zero sozinha', () => {
-    const o = opcoesDeFiltro(acervo, FILTROS_VAZIOS);
-    expect(o.bancas.map((b) => b.nome)).toEqual(['Cespe', 'FCC']);
-    expect(o.materias).toHaveLength(3);
-  });
-
-  it('encolhe os concursos e as matérias conforme a banca escolhida', () => {
-    const o = opcoesDeFiltro(acervo, { ...FILTROS_VAZIOS, bancaId: 'fcc' });
-    expect(o.concursos.map((c) => c.nome)).toEqual(['TRE', 'TRT 15']);
-    expect(o.materias.map((m) => m.nome)).toEqual(['Português', 'RLM']);
-    // As bancas não encolhem: é por elas que se começa.
-    expect(o.bancas).toHaveLength(2);
-  });
-
-  it('ignora questão sem banca — não há id para filtrar', () => {
-    const semBanca = [{ ...acervo[0], banca_id: null, banca_nome: null }];
-    expect(opcoesDeFiltro(semBanca, FILTROS_VAZIOS).bancas).toEqual([]);
-  });
-});
-
-describe('sortear', () => {
+describe('filaDoModo — menos vistas', () => {
   const acervo = [q('a'), q('b'), q('c'), q('d')];
 
-  it('nunca repete a mesma questão no mesmo quiz', () => {
-    const sorteadas = sortear(acervo, 4, rngFixo([0.9, 0.1, 0.5, 0.3]));
-    expect(new Set(sorteadas.map((x) => x.id)).size).toBe(4);
+  it('põe as nunca respondidas na frente', () => {
+    const historico = [resp('a', true, '01'), resp('b', true, '01')];
+    const fila = filaDoModo(acervo, historico, 'menos_vistas', rngFixo([0.5]));
+    expect(new Set(fila.slice(0, 2).map((x) => x.id))).toEqual(new Set(['c', 'd']));
   });
 
-  it('pedir mais do que existe monta com o que há, sem erro', () => {
-    expect(sortear(acervo, 50)).toHaveLength(4);
+  it('NUNCA esgota — é a diferença para o modo que substituiu', () => {
+    // Com tudo respondido, "só não respondidas" devolvia vazio. Este continua
+    // devolvendo o acervo inteiro, agora ordenado por prioridade.
+    const historico = acervo.map((x) => resp(x.id, true, '01'));
+    expect(filaDoModo(acervo, historico, 'menos_vistas')).toHaveLength(4);
   });
 
-  it('pedir zero ou menos devolve vazio', () => {
-    expect(sortear(acervo, 0)).toEqual([]);
-    expect(sortear(acervo, -3)).toEqual([]);
+  it('ordena as vistas por menos vezes, depois pela mais antiga', () => {
+    const historico = [
+      resp('a', true, '10'),
+      resp('b', true, '01'),
+      resp('b', true, '02'), // b foi vista duas vezes
+      resp('c', true, '05'),
+    ];
+    // 'd' nunca foi vista; entre as vistas, c (1x, 05) vem antes de a (1x, 10),
+    // e b (2x) vai para o fim.
+    const fila = filaDoModo(acervo, historico, 'menos_vistas');
+    expect(fila.map((x) => x.id)).toEqual(['d', 'c', 'a', 'b']);
   });
 
-  it('é determinístico com um RNG fixo — é o que torna o sorteio testável', () => {
-    const a = sortear(acervo, 3, rngFixo([0.1, 0.7, 0.3, 0.9]));
-    const b = sortear(acervo, 3, rngFixo([0.1, 0.7, 0.3, 0.9]));
-    expect(a.map((x) => x.id)).toEqual(b.map((x) => x.id));
+  it('responder de novo joga a questão para o fim, sem apagar nada', () => {
+    // É o mecanismo da rotação: a fila se reorganiza pelo ato de responder.
+    const antes = [resp('a', true, '01'), resp('b', true, '02'), resp('c', true, '03')];
+    const soD = filaDoModo([q('a'), q('b'), q('c')], antes, 'menos_vistas');
+    expect(soD.map((x) => x.id)).toEqual(['a', 'b', 'c']);
+
+    const depois = [...antes, resp('a', true, '20')];
+    const reordenada = filaDoModo([q('a'), q('b'), q('c')], depois, 'menos_vistas');
+    expect(reordenada.map((x) => x.id)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('embaralha as nunca respondidas entre si, sem critério inventado', () => {
+    const fila = filaDoModo(acervo, [], 'menos_vistas', rngFixo([0.9, 0.1, 0.5]));
+    expect(new Set(fila.map((x) => x.id)).size).toBe(4);
   });
 
   it('não altera a lista original', () => {
     const original = [...acervo];
-    sortear(acervo, 2);
+    filaDoModo(acervo, [resp('a', true, '01')], 'menos_vistas');
     expect(acervo).toEqual(original);
+  });
+});
+
+describe('filaDoModo — aleatório e erros', () => {
+  const acervo = [q('a'), q('b'), q('c'), q('d')];
+
+  it('não repete questão dentro do mesmo quiz', () => {
+    const fila = filaDoModo(acervo, [], 'aleatorio', rngFixo([0.9, 0.1, 0.5, 0.3]));
+    expect(new Set(fila.map((x) => x.id)).size).toBe(4);
+  });
+
+  it('é determinístico com RNG fixo', () => {
+    const a = filaDoModo(acervo, [], 'aleatorio', rngFixo([0.1, 0.7, 0.3, 0.9]));
+    const b = filaDoModo(acervo, [], 'aleatorio', rngFixo([0.1, 0.7, 0.3, 0.9]));
+    expect(a.map((x) => x.id)).toEqual(b.map((x) => x.id));
+  });
+
+  it('revisão de erros continua podendo esvaziar — ali é sucesso', () => {
+    const historico = acervo.map((x) => resp(x.id, true, '01'));
+    expect(filaDoModo(acervo, historico, 'revisao_erros')).toEqual([]);
+  });
+});
+
+describe('primeiras', () => {
+  const fila = [q('a'), q('b'), q('c'), q('d')];
+
+  it('corta no topo, preservando a ordem que o modo estabeleceu', () => {
+    expect(primeiras(fila, 2).map((x) => x.id)).toEqual(['a', 'b']);
+  });
+
+  it('pedir mais do que existe devolve o que há, sem erro', () => {
+    expect(primeiras(fila, 50)).toHaveLength(4);
+  });
+
+  it('pedir zero ou menos devolve vazio', () => {
+    expect(primeiras(fila, 0)).toEqual([]);
+    expect(primeiras(fila, -3)).toEqual([]);
+  });
+});
+
+describe('usoPorQuestao', () => {
+  it('conta as vezes e guarda a mais recente', () => {
+    const uso = usoPorQuestao([
+      resp('a', true, '01'),
+      resp('a', false, '09'),
+      resp('b', true, '05'),
+    ]);
+    expect(uso.get('a')).toEqual({ vezes: 2, ultimaEm: '2026-08-09T10:00:00Z' });
+    expect(uso.get('b')?.vezes).toBe(1);
   });
 });
 
@@ -257,12 +240,14 @@ describe('motivoConjuntoVazio', () => {
 
   it('explica o modo quando os filtros têm questões mas o modo não', () => {
     const historico = [resp('a', true, '01'), resp('b', true, '01')];
-    expect(motivoConjuntoVazio(acervo, historico, FILTROS_VAZIOS, 'nao_respondidas')).toContain(
-      'já respondeu todas',
-    );
     expect(motivoConjuntoVazio(acervo, historico, FILTROS_VAZIOS, 'revisao_erros')).toContain(
       'errada na última tentativa',
     );
+  });
+
+  it('menos vistas nunca fica sem motivo próprio — ele não esvazia sozinho', () => {
+    const historico = acervo.map((x) => resp(x.id, true, '01'));
+    expect(motivoConjuntoVazio(acervo, historico, FILTROS_VAZIOS, 'menos_vistas')).toBeNull();
   });
 });
 

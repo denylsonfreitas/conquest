@@ -1,0 +1,175 @@
+@switch (status()) {
+  @case ('carregando') {
+    <app-estado-carregando mensagem="Carregando o acervo…" />
+  }
+  @case ('erro') {
+    <app-estado-erro [mensagem]="erroCarga() ?? ''" (tentarDeNovo)="carregar()" />
+  }
+  @case ('ok') {
+    <header class="mb-6">
+      <h1 class="text-2xl font-semibold text-tinta-900">Montar quiz</h1>
+    </header>
+
+    @if (erroAcao(); as msg) {
+      <p role="alert" class="alerta-erro mb-4">{{ msg }}</p>
+    }
+
+    <section class="cartao mb-6 space-y-5 p-5">
+      <div>
+        <span class="rotulo">Modo</span>
+        <div class="mt-1 flex flex-wrap gap-2">
+          @for (m of MODOS; track m) {
+            <button
+              type="button"
+              class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
+              [class]="
+                modo() === m
+                  ? 'bg-tinta-900 text-white ring-tinta-900'
+                  : 'bg-white text-tinta-700 ring-tinta-200 hover:bg-tinta-50'
+              "
+              (click)="modo.set(m)"
+            >
+              {{ ROTULO_MODO[m] }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="banca" class="rotulo">Banca</label>
+          <select
+            id="banca"
+            class="campo mt-1"
+            [ngModel]="filtros().bancaId"
+            (ngModelChange)="escolherBanca($event)"
+          >
+            <option [ngValue]="null">Todas</option>
+            @for (b of opcoes().bancas; track b.id) {
+              <option [ngValue]="b.id">{{ b.nome }}</option>
+            }
+          </select>
+        </div>
+
+        <div>
+          <label for="concurso" class="rotulo">Concurso</label>
+          <select
+            id="concurso"
+            class="campo mt-1"
+            [ngModel]="filtros().concursoId"
+            (ngModelChange)="escolherConcurso($event)"
+          >
+            <option [ngValue]="null">Todos</option>
+            @for (c of opcoes().concursos; track c.id) {
+              <option [ngValue]="c.id">{{ c.nome }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <!-- Matéria é multi-seleção; banca e concurso, não (docs/03). -->
+      <div>
+        <span class="rotulo">Matérias</span>
+        <div class="mt-1 flex flex-wrap gap-2">
+          @for (m of opcoes().materias; track m.id) {
+            <button
+              type="button"
+              class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
+              [class]="
+                materiaEscolhida(m.id)
+                  ? 'bg-tinta-900 text-white ring-tinta-900'
+                  : 'bg-white text-tinta-700 ring-tinta-200 hover:bg-tinta-50'
+              "
+              (click)="alternarMateria(m.id)"
+            >
+              {{ m.nome }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="quantidade" class="rotulo">Quantidade</label>
+          <!--
+            `[value]` ligado ao que o campo EXIBE, que só muda no blur: o valor
+            em vigor acompanha cada tecla, mas reescrever o input a cada uma
+            jogaria o cursor para o fim ao editar no meio do número.
+          -->
+          <input
+            id="quantidade"
+            type="number"
+            class="campo mt-1 w-28"
+            [min]="QUANTIDADE_MIN"
+            [max]="QUANTIDADE_MAX"
+            [value]="quantidadeExibida()"
+            (input)="digitarQuantidade($any($event.target).value)"
+            (change)="normalizarCampo()"
+          />
+        </div>
+
+        <div>
+          <span class="rotulo">Resposta certa</span>
+          <div class="mt-1 flex gap-2">
+            <button
+              type="button"
+              class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
+              [class]="
+                feedbackImediato()
+                  ? 'bg-tinta-900 text-white ring-tinta-900'
+                  : 'bg-white text-tinta-700 ring-tinta-200 hover:bg-tinta-50'
+              "
+              (click)="feedbackImediato.set(true)"
+            >
+              A cada questão
+            </button>
+            <button
+              type="button"
+              class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
+              [class]="
+                !feedbackImediato()
+                  ? 'bg-tinta-900 text-white ring-tinta-900'
+                  : 'bg-white text-tinta-700 ring-tinta-200 hover:bg-tinta-50'
+              "
+              (click)="feedbackImediato.set(false)"
+            >
+              Só no fim
+            </button>
+          </div>
+        </div>
+      </div>
+
+      @if (temFiltro()) {
+        <button type="button" class="acao-inline" (click)="limparFiltros()">Limpar filtros</button>
+      }
+    </section>
+
+    <!--
+      O contador vive a cada clique porque acervo e histórico já estão em
+      memória. Descobrir o vazio depois de "começar" seria tarde.
+    -->
+    <div class="flex flex-wrap items-center gap-4">
+      <button
+        type="button"
+        class="btn"
+        [disabled]="disponiveis() === 0 || montando()"
+        (click)="comecar()"
+      >
+        {{ montando() ? 'Montando…' : 'Começar' }}
+      </button>
+
+      @if (motivoVazio(); as motivo) {
+        <p role="status" class="text-sm font-medium text-amber-800">{{ motivo }}</p>
+      } @else {
+        <p role="status" class="text-sm text-tinta-500">
+          <span class="font-medium text-tinta-900">{{ disponiveis() }}</span> disponíveis
+          @if (vaiMontarCom() < quantidade()) {
+            <span class="text-amber-800">
+              — o quiz vai começar com {{ vaiMontarCom() }}, não {{ quantidade() }}
+            </span>
+          }
+        </p>
+      }
+    </div>
+  }
+}

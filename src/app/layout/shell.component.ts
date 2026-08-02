@@ -23,6 +23,7 @@ export class ShellComponent {
   /** Menu como dado, não como marcação repetida: crescer é adicionar item. */
   protected readonly navegacao = [
     { rota: '/concursos', rotulo: 'Concursos' },
+    { rota: '/quiz', rotulo: 'Quiz' },
     { rota: '/materias', rotulo: 'Matérias' },
     { rota: '/bancas', rotulo: 'Bancas' },
   ] as const;

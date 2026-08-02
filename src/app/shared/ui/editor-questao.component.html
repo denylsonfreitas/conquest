@@ -1,0 +1,122 @@
+<div class="space-y-4">
+  <ul class="space-y-1 text-sm">
+    @for (alt of questao().alternativas; track alt.letra) {
+      <li [class.font-medium]="alt.letra === valor('gabarito')">
+        ({{ alt.letra }}) {{ alt.texto }}
+      </li>
+    }
+  </ul>
+
+  <!--
+    `ngModel` + `ngValue`, não `[value]`: o binding cru roda ANTES de o `@for`
+    criar as <option>, e o navegador descarta um valor sem opção
+    correspondente — o campo abriria vazio mesmo com a questão preenchida.
+  -->
+  <div class="grid gap-3 sm:grid-cols-2">
+    <div>
+      <label class="rotulo">Matéria</label>
+      <select
+        class="campo mt-1"
+        [ngModel]="valor('materia_id')"
+        (ngModelChange)="mudar('materia_id', $event)"
+      >
+        <option [ngValue]="null">— sem matéria —</option>
+        @for (m of materias(); track m.id) {
+          <option [ngValue]="m.id">{{ m.nome }}</option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label class="rotulo">Gabarito</label>
+      <select
+        class="campo mt-1"
+        [ngModel]="valor('gabarito')"
+        (ngModelChange)="mudar('gabarito', $event)"
+      >
+        <option [ngValue]="null">— sem gabarito —</option>
+        @for (letra of LETRAS; track letra) {
+          <option [ngValue]="letra">{{ letra }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <!--
+    `acertou` é conta, não fato: corrigir o gabarito refaz a comparação das
+    respostas passadas. O número aparece ANTES de salvar para a mudança não
+    ser silenciosa.
+  -->
+  @if (gabaritoMudou() && respostasAfetadas() > 0) {
+    <p role="status" class="text-sm font-medium text-amber-800">
+      {{ respostasAfetadas() }}
+      {{
+        respostasAfetadas() === 1
+          ? 'resposta passada será recontada'
+          : 'respostas passadas serão recontadas'
+      }}.
+    </p>
+  }
+
+  <div>
+    <label class="rotulo">Comentário</label>
+    <!--
+      `change` (no blur), não `input`: com `[value]` ligado ao rascunho,
+      reescrever o campo a cada tecla joga o cursor para o fim quando a edição
+      é no meio do texto.
+    -->
+    <textarea
+      class="campo mt-1"
+      rows="2"
+      [value]="valor('comentario') ?? ''"
+      (change)="mudar('comentario', $any($event.target).value || null)"
+    ></textarea>
+  </div>
+
+  @if (valor('tem_imagem')) {
+    <div>
+      <label class="rotulo">Imagem</label>
+
+      @if (questao().imagem_path) {
+        <div class="mt-1 flex items-start gap-3">
+          @if (urlImagem(); as url) {
+            <img
+              [src]="url"
+              [alt]="'Imagem da questão ' + questao().numero"
+              class="max-h-40 rounded-campo border border-tinta-200"
+            />
+          }
+          <button type="button" class="acao-inline text-red-600" (click)="removerImagem.emit()">
+            Remover
+          </button>
+        </div>
+      }
+
+      <input type="file" accept="image/*" class="campo mt-2" (change)="escolherArquivo($event)" />
+    </div>
+  }
+
+  <div class="flex flex-wrap gap-3 text-sm">
+    <button type="button" class="acao-inline" (click)="mudar('tem_imagem', !valor('tem_imagem'))">
+      {{ valor('tem_imagem') ? 'Não depende de imagem' : 'Depende de imagem' }}
+    </button>
+    <button type="button" class="acao-inline" (click)="mudar('anulada', !valor('anulada'))">
+      {{ valor('anulada') ? 'Desanular' : 'Marcar anulada' }}
+    </button>
+    @if (valor('incerto')) {
+      <button type="button" class="acao-inline" (click)="mudar('incerto', false)">
+        Conferi — remover marca de dúvida
+      </button>
+    }
+  </div>
+
+  <div class="flex items-center gap-3 border-t border-tinta-200 pt-4">
+    <button type="button" class="btn" [disabled]="!tem() || salvando()" (click)="confirmar()">
+      {{ salvando() ? 'Salvando…' : 'Salvar' }}
+    </button>
+
+    @if (tem()) {
+      <button type="button" class="btn-secundario" (click)="descartar()">Descartar</button>
+    }
+  </div>
+</div>

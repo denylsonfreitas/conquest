@@ -23,7 +23,9 @@ import {
   podeAprovar,
   precisaAtencao,
 } from './regras-revisao';
-import { EdicaoQuestao, QuestaoRevisao, RevisaoService } from './revisao.service';
+import { EdicaoQuestao } from '../../shared/edicao-questao';
+import { EditorQuestaoComponent } from '../../shared/ui/editor-questao.component';
+import { QuestaoRevisao, RevisaoService } from './revisao.service';
 
 type Status = 'carregando' | 'ok' | 'erro';
 
@@ -55,6 +57,7 @@ type Status = 'carregando' | 'ok' | 'erro';
     EstadoCarregandoComponent,
     EstadoErroComponent,
     EstadoVazioComponent,
+    EditorQuestaoComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './revisao-questoes.component.html',
@@ -246,30 +249,16 @@ export class RevisaoQuestoesComponent {
 
   // --- edição de uma questão: rascunho + Salvar --------------------------------
 
-  /** Valor em vigor no formulário: o do rascunho se houver, senão o gravado. */
-  protected valor<K extends keyof QuestaoRevisao>(q: QuestaoRevisao, campo: K): QuestaoRevisao[K] {
-    const rascunho = this.rascunhos()[q.id] as Partial<QuestaoRevisao> | undefined;
-    return rascunho && campo in rascunho ? (rascunho[campo] as QuestaoRevisao[K]) : q[campo];
-  }
-
   /**
-   * Registra a mudança de um campo — e a REMOVE se o valor voltar ao original.
-   * Sem isso, editar e desfazer deixaria a questão eternamente "não salva".
+   * O editor avisa o que está pendente; aqui só se guarda o suficiente para
+   * proteger a saída. O rascunho em si vive lá, porque é estado de formulário.
    */
-  protected mudar<K extends keyof EdicaoQuestao>(
-    q: QuestaoRevisao,
-    campo: K,
-    valor: QuestaoRevisao[K],
-  ): void {
+  protected acompanhar(id: string, rascunho: EdicaoQuestao): void {
     this.avisoNaoSalvo.set(null);
     this.rascunhos.update((atual) => {
-      const rascunho: Record<string, unknown> = { ...(atual[q.id] ?? {}) };
-      if (Object.is(valor, q[campo])) delete rascunho[campo];
-      else rascunho[campo] = valor;
-
       const proximo = { ...atual };
-      if (Object.keys(rascunho).length === 0) delete proximo[q.id];
-      else proximo[q.id] = rascunho as EdicaoQuestao;
+      if (Object.keys(rascunho).length > 0) proximo[id] = rascunho;
+      else delete proximo[id];
       return proximo;
     });
   }
@@ -279,9 +268,8 @@ export class RevisaoQuestoesComponent {
   }
 
   /** Uma requisição com tudo que mudou, em vez de uma por campo. */
-  protected async salvar(q: QuestaoRevisao): Promise<void> {
-    const mudancas = this.rascunhos()[q.id];
-    if (!mudancas || this.salvando()) return;
+  protected async salvar(q: QuestaoRevisao, mudancas: EdicaoQuestao): Promise<void> {
+    if (this.salvando()) return;
 
     this.salvando.set(true);
     this.erroAcao.set(null);
@@ -332,11 +320,7 @@ export class RevisaoQuestoesComponent {
   }
 
   /** Enviar o arquivo JÁ É o gesto explícito; não faria sentido pedir outro. */
-  protected async anexarImagem(q: QuestaoRevisao, evento: Event): Promise<void> {
-    const entrada = evento.target as HTMLInputElement;
-    const arquivo = entrada.files?.[0];
-    if (!arquivo) return;
-
+  protected async anexarImagem(q: QuestaoRevisao, arquivo: File): Promise<void> {
     this.erroAcao.set(null);
     try {
       const atualizada = await this.service.anexarImagem(q, arquivo);
@@ -345,7 +329,6 @@ export class RevisaoQuestoesComponent {
       // figura antiga com uma URL assinada ainda válida.
       if (atualizada.imagem_path) this.esquecerUrl(atualizada.imagem_path);
       this.substituir(atualizada);
-      entrada.value = ''; // permite reenviar o mesmo arquivo depois de remover
       this.mostrarToast(q.imagem_path ? 'Imagem trocada' : 'Imagem anexada');
     } catch (e) {
       this.erroAcao.set(mensagem(e));

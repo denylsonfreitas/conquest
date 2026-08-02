@@ -293,6 +293,7 @@ export type Database = {
           gabarito: string | null
           id: string | null
           imagem_path: string | null
+          incerto: boolean | null
           materia: string | null
           materia_id: string | null
           numero: number | null

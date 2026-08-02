@@ -1,22 +1,20 @@
 import { inject, Injectable } from '@angular/core';
 
 import { SupabaseService } from '../../core/supabase.service';
-import { Alternativa, Letra, RespostaNova, TipoQuestao } from '../../shared/models';
+import { QuestaoEditavel } from '../../shared/edicao-questao';
+import { RespostaNova, TipoQuestao } from '../../shared/models';
 import { ItemComNomes } from '../../shared/filtros-acervo';
 import { RespostaHistorico } from './regras-quiz';
 
-/** Questão como o quiz precisa dela, direto da view do read-side. */
-export interface QuestaoQuiz {
-  id: string;
-  numero: number | null;
-  enunciado: string;
-  alternativas: Alternativa[];
-  gabarito: Letra;
+/**
+ * Questão como o quiz precisa dela, direto da view do read-side.
+ *
+ * Estende `QuestaoEditavel` para poder ser editada a partir do resultado sem
+ * conversão: é a mesma questão, vista por duas telas.
+ */
+export interface QuestaoQuiz extends QuestaoEditavel {
   tipo: TipoQuestao;
-  materia_id: string | null;
   materia: string | null;
-  imagem_path: string | null;
-  comentario: string | null;
   prova_nome: string;
   prova_ano: number | null;
   concurso_nome: string;
@@ -24,7 +22,7 @@ export interface QuestaoQuiz {
 }
 
 const COLUNAS_QUESTAO =
-  'id, numero, enunciado, alternativas, gabarito, tipo, materia_id, materia, imagem_path, comentario, prova_nome, prova_ano, concurso_nome, banca_nome';
+  'id, numero, enunciado, alternativas, gabarito, tipo, materia_id, materia, tem_imagem, imagem_path, comentario, anulada, incerto, prova_nome, prova_ano, concurso_nome, banca_nome';
 
 /**
  * Data access do quiz — o lado de LEITURA do sistema (docs/00).

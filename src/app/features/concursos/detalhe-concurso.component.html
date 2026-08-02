@@ -188,8 +188,10 @@
                       {{ prova.arquivo_path ? 'Substituir PDF' : 'Anexar PDF' }}
                     </button>
                   } @else {
-                    <span class="text-sm text-tinta-300" [title]="motivoBloqueio(prova.status) ?? ''"
-                      >PDF travado</span
+                    <span
+                      class="text-sm text-tinta-500"
+                      [title]="motivoBloqueio(prova.status) ?? ''"
+                      >{{ rotuloBloqueio(prova.status) }}</span
                     >
                   }
 

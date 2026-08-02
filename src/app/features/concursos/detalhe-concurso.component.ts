@@ -13,6 +13,7 @@ import {
   motivoBloqueioAnexo,
   podeAnexarPdf,
   podeProcessar,
+  rotuloBloqueioAnexo,
   rotuloStatusProva,
 } from '../provas/regras-prova';
 import { ConcursoComBanca, ConcursosService } from './concursos.service';
@@ -255,6 +256,7 @@ export class DetalheConcursoComponent {
   protected readonly corStatus = corStatusProva;
   protected readonly podeAnexar = podeAnexarPdf;
   protected readonly motivoBloqueio = motivoBloqueioAnexo;
+  protected readonly rotuloBloqueio = rotuloBloqueioAnexo;
   protected readonly podeProcessar = podeProcessar;
   protected readonly estaTravada = estaTravada;
   protected readonly minutosProcessando = minutosProcessando;

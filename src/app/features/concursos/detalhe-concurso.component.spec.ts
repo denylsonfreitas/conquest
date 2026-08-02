@@ -138,8 +138,16 @@ describe('DetalheConcursoComponent', () => {
   it('trava a troca de PDF a partir de processando', async () => {
     const emProcessamento: Prova = { ...PROVA_COM_PDF, status: 'processando' };
     const fixture = montar({}, { listarPorConcurso: async () => [emProcessamento] });
-    const texto = await assentar(fixture, 'PDF travado');
+    const texto = await assentar(fixture, 'Processando');
     expect(texto).not.toContain('Substituir PDF');
+  });
+
+  it('diz como sair do impasse quando a prova já foi extraída', async () => {
+    const extraida: Prova = { ...PROVA_COM_PDF, status: 'aguardando_revisao' };
+    const fixture = montar({}, { listarPorConcurso: async () => [extraida] });
+    // O rótulo antigo ("PDF travado") dizia o quê, não o porquê nem a saída.
+    const texto = await assentar(fixture, 'apague a prova');
+    expect(texto).toContain('Extraída');
   });
 
   it('anexa o PDF escolhido e atualiza a prova na lista', async () => {

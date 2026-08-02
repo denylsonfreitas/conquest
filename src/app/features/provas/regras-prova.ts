@@ -62,6 +62,19 @@ export function podeAnexarPdf(status: StatusProva): boolean {
   return status === 'pendente' || status === 'erro';
 }
 
+/**
+ * Rótulo curto para quando o anexo está bloqueado.
+ *
+ * "PDF travado" dizia o quê, não o porquê — e o porquê ficava só no `title`,
+ * que ninguém vê. Aqui a saída para o impasse aparece no próprio rótulo.
+ */
+export function rotuloBloqueioAnexo(status: StatusProva): string | null {
+  if (podeAnexarPdf(status)) return null;
+  return status === 'processando'
+    ? 'Processando…'
+    : 'Extraída — apague a prova para trocar o PDF';
+}
+
 export function motivoBloqueioAnexo(status: StatusProva): string | null {
   if (podeAnexarPdf(status)) return null;
   return status === 'processando'

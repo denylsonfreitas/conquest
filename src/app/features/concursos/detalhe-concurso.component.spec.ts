@@ -26,6 +26,8 @@ const PROVA: Prova = {
   arquivo_path: null,
   arquivo_hash: null,
   gabarito_path: null,
+  erro_msg: null,
+  processando_desde: null,
   created_at: '2026-08-01T12:00:00+00:00',
 };
 
@@ -179,6 +181,45 @@ describe('DetalheConcursoComponent', () => {
     expect(texto).toContain('Prova antiga');
     // A prova continua sem PDF: nada foi vinculado.
     expect(texto).toContain('Sem PDF');
+  });
+
+  it('oferece Processar só quando há PDF e não está em curso', async () => {
+    const semPdf = montar({}, { listarPorConcurso: async () => [PROVA] });
+    expect(await assentar(semPdf, 'Anexar PDF')).not.toContain('Processar');
+
+    const comPdf = montar({}, { listarPorConcurso: async () => [PROVA_COM_PDF] });
+    expect(await assentar(comPdf, 'Processar')).toContain('Processar');
+  });
+
+  it('mostra Destravar apenas quando a prova passou do limite em processando', async () => {
+    const viva: Prova = {
+      ...PROVA_COM_PDF,
+      status: 'processando',
+      processando_desde: new Date(Date.now() - 60_000).toISOString(),
+    };
+    const travada: Prova = {
+      ...PROVA_COM_PDF,
+      status: 'processando',
+      processando_desde: new Date(Date.now() - 30 * 60_000).toISOString(),
+    };
+
+    const a = montar({}, { listarPorConcurso: async () => [viva] });
+    expect(await assentar(a, 'Processando')).not.toContain('Destravar');
+
+    const b = montar({}, { listarPorConcurso: async () => [travada] });
+    expect(await assentar(b, 'Destravar')).toContain('Parece travada');
+  });
+
+  it('exibe o erro_msg da função, não uma mensagem genérica', async () => {
+    const comErro: Prova = {
+      ...PROVA_COM_PDF,
+      status: 'erro',
+      erro_msg: 'O PDF parece escaneado: OCR ainda não é suportado.',
+    };
+    const fixture = montar({}, { listarPorConcurso: async () => [comErro] });
+    const texto = await assentar(fixture, 'escaneado');
+    // E oferece retentar sem exigir reupload.
+    expect(texto).toContain('Tentar de novo');
   });
 
   it('aceita prova sem ano em vez de gravar NaN', async () => {

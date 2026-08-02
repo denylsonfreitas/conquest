@@ -12,6 +12,47 @@ export interface ProvaParaRegra {
 }
 
 /**
+ * Depois de quantos minutos em 'processando' a prova é considerada travada.
+ *
+ * Generoso de propósito: a extração real leva ~1,5 min (LLM), e destravar uma
+ * prova que ainda está viva apagaria trabalho em andamento. Errar para o lado
+ * de esperar demais é barato; para o outro, não.
+ */
+export const MINUTOS_ATE_TRAVADA = 10;
+
+export interface ProvaEmProcessamento {
+  readonly status: StatusProva;
+  readonly processando_desde: string | null;
+}
+
+/** Pode disparar o processamento: tem PDF e não está no meio de um. */
+export function podeProcessar(prova: ProvaParaRegra): boolean {
+  return prova.arquivo_path !== null && (prova.status === 'pendente' || prova.status === 'erro');
+}
+
+/**
+ * Detecta o beco sem saída: a função morreu por timeout, OOM ou deploy, o
+ * catch nunca rodou, e a prova ficou em 'processando' para sempre — o que
+ * também bloqueia trocar o PDF pela regra de anexo.
+ *
+ * Sem o carimbo `processando_desde` não haveria como distinguir isso de um
+ * processamento saudável.
+ */
+export function estaTravada(prova: ProvaEmProcessamento, agora: Date = new Date()): boolean {
+  if (prova.status !== 'processando' || !prova.processando_desde) return false;
+  const minutos = (agora.getTime() - new Date(prova.processando_desde).getTime()) / 60_000;
+  return minutos >= MINUTOS_ATE_TRAVADA;
+}
+
+export function minutosProcessando(
+  prova: ProvaEmProcessamento,
+  agora: Date = new Date(),
+): number | null {
+  if (!prova.processando_desde) return null;
+  return Math.floor((agora.getTime() - new Date(prova.processando_desde).getTime()) / 60_000);
+}
+
+/**
  * Trocar o PDF só faz sentido antes de existir extração.
  *
  * A partir de 'processando' há questões penduradas naquele arquivo: trocar o

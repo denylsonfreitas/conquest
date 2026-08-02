@@ -4,22 +4,25 @@ import { Router } from '@angular/router';
 
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
+import { FiltrosAcervoComponent } from '../../shared/ui/filtros-acervo.component';
 import { QuizService } from './quiz.service';
 import {
   aplicarFiltros,
-  aplicarModo,
-  CandidataComNomes,
-  FiltrosQuiz,
   FILTROS_VAZIOS,
+  FiltrosAcervo,
+  ItemComNomes,
+} from '../../shared/filtros-acervo';
+import {
+  aplicarModo,
+  filaDoModo,
   ModoQuiz,
   motivoConjuntoVazio,
   normalizarQuantidade,
-  opcoesDeFiltro,
+  primeiras,
   QUANTIDADE_MAX,
   QUANTIDADE_MIN,
-  ROTULO_MODO,
   RespostaHistorico,
-  sortear,
+  ROTULO_MODO,
 } from './regras-quiz';
 import { SessaoQuizService } from './sessao-quiz.service';
 
@@ -35,7 +38,7 @@ type Status = 'carregando' | 'ok' | 'erro';
  */
 @Component({
   selector: 'app-montar-quiz',
-  imports: [FormsModule, EstadoCarregandoComponent, EstadoErroComponent],
+  imports: [FormsModule, EstadoCarregandoComponent, EstadoErroComponent, FiltrosAcervoComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './montar-quiz.component.html',
 })
@@ -49,15 +52,13 @@ export class MontarQuizComponent {
   protected readonly erroAcao = signal<string | null>(null);
   protected readonly montando = signal(false);
 
-  protected readonly acervo = signal<CandidataComNomes[]>([]);
+  protected readonly acervo = signal<ItemComNomes[]>([]);
   protected readonly historico = signal<RespostaHistorico[]>([]);
 
-  protected readonly filtros = signal<FiltrosQuiz>(FILTROS_VAZIOS);
+  protected readonly filtros = signal<FiltrosAcervo>(FILTROS_VAZIOS);
   protected readonly modo = signal<ModoQuiz>('aleatorio');
   protected readonly quantidade = signal(10);
   protected readonly feedbackImediato = signal(true);
-
-  protected readonly opcoes = computed(() => opcoesDeFiltro(this.acervo(), this.filtros()));
 
   /** As candidatas de verdade: filtros + modo. É delas que o sorteio sai. */
   protected readonly candidatas = computed(() =>
@@ -73,7 +74,7 @@ export class MontarQuizComponent {
   /** Quantas vão de fato entrar — o aviso de "pediu 50, tem 38" vem daqui. */
   protected readonly vaiMontarCom = computed(() => Math.min(this.quantidade(), this.disponiveis()));
 
-  protected readonly MODOS: ModoQuiz[] = ['aleatorio', 'nao_respondidas', 'revisao_erros'];
+  protected readonly MODOS: ModoQuiz[] = ['aleatorio', 'menos_vistas', 'revisao_erros'];
   protected readonly ROTULO_MODO = ROTULO_MODO;
   protected readonly QUANTIDADE_MIN = QUANTIDADE_MIN;
   protected readonly QUANTIDADE_MAX = QUANTIDADE_MAX;
@@ -117,41 +118,6 @@ export class MontarQuizComponent {
     }
   }
 
-  // --- filtros ----------------------------------------------------------------
-
-  protected escolherBanca(id: string | null): void {
-    // Trocar a banca invalida concurso e matéria escolhidos: eles podem não
-    // existir dentro da nova banca, e um filtro fantasma zeraria o conjunto sem
-    // nada na tela explicando por quê.
-    this.filtros.set({ bancaId: id || null, concursoId: null, materiaIds: [] });
-  }
-
-  protected escolherConcurso(id: string | null): void {
-    this.filtros.update((f) => ({ ...f, concursoId: id || null, materiaIds: [] }));
-  }
-
-  protected alternarMateria(id: string): void {
-    this.filtros.update((f) => ({
-      ...f,
-      materiaIds: f.materiaIds.includes(id)
-        ? f.materiaIds.filter((m) => m !== id)
-        : [...f.materiaIds, id],
-    }));
-  }
-
-  protected materiaEscolhida(id: string): boolean {
-    return this.filtros().materiaIds.includes(id);
-  }
-
-  protected limparFiltros(): void {
-    this.filtros.set(FILTROS_VAZIOS);
-  }
-
-  protected temFiltro(): boolean {
-    const f = this.filtros();
-    return f.bancaId !== null || f.concursoId !== null || f.materiaIds.length > 0;
-  }
-
   // --- montagem ---------------------------------------------------------------
 
   protected async comecar(): Promise<void> {
@@ -160,8 +126,15 @@ export class MontarQuizComponent {
     this.montando.set(true);
     this.erroAcao.set(null);
     try {
-      const sorteadas = sortear(this.candidatas(), this.quantidade());
-      const questoes = await this.service.questoes(sorteadas.map((q) => q.id));
+      // A fila já vem na ordem do modo; cortar no topo é o que respeita a
+      // prioridade que "menos vistas" acabou de estabelecer.
+      const fila = filaDoModo(
+        aplicarFiltros(this.acervo(), this.filtros()),
+        this.historico(),
+        this.modo(),
+      );
+      const escolhidas = primeiras(fila, this.quantidade());
+      const questoes = await this.service.questoes(escolhidas.map((q) => q.id));
       this.sessao.iniciar(questoes, this.modo(), this.feedbackImediato());
       await this.router.navigate(['/quiz/executar']);
     } catch (e) {

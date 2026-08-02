@@ -2,7 +2,8 @@ import { inject, Injectable } from '@angular/core';
 
 import { SupabaseService } from '../../core/supabase.service';
 import { Alternativa, Letra, RespostaNova, TipoQuestao } from '../../shared/models';
-import { CandidataComNomes, RespostaHistorico } from './regras-quiz';
+import { ItemComNomes } from '../../shared/filtros-acervo';
+import { RespostaHistorico } from './regras-quiz';
 
 /** Questão como o quiz precisa dela, direto da view do read-side. */
 export interface QuestaoQuiz {
@@ -47,14 +48,14 @@ export class QuizService {
    * cada clique de filtro sem pesar. As questões completas só são buscadas
    * depois do sorteio, e só as sorteadas.
    */
-  async acervoElegivel(): Promise<CandidataComNomes[]> {
+  async acervoElegivel(): Promise<ItemComNomes[]> {
     const { data, error } = await this.supabase.client
       .from('questoes_completas')
       .select('id, materia_id, materia, banca_id, banca_nome, concurso_id, concurso_nome')
       .eq('elegivel', true);
 
     if (error) throw new Error(`Não foi possível carregar o acervo: ${error.message}`);
-    return (data ?? []) as CandidataComNomes[];
+    return (data ?? []) as ItemComNomes[];
   }
 
   /**

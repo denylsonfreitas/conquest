@@ -4,10 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MontarQuizComponent } from './montar-quiz.component';
 import { QuestaoQuiz, QuizService } from './quiz.service';
-import { CandidataComNomes, RespostaHistorico } from './regras-quiz';
+import { ItemComNomes } from '../../shared/filtros-acervo';
+import { RespostaHistorico } from './regras-quiz';
 import { SessaoQuizService } from './sessao-quiz.service';
 
-const candidata = (id: string, over: Partial<CandidataComNomes> = {}): CandidataComNomes => ({
+const candidata = (id: string, over: Partial<ItemComNomes> = {}): ItemComNomes => ({
   id,
   materia_id: 'port',
   materia: 'Português',
@@ -18,7 +19,7 @@ const candidata = (id: string, over: Partial<CandidataComNomes> = {}): Candidata
   ...over,
 });
 
-const acervoDe = (n: number, over: Partial<CandidataComNomes> = {}) =>
+const acervoDe = (n: number, over: Partial<ItemComNomes> = {}) =>
   Array.from({ length: n }, (_, i) => candidata(`q${i}`, over));
 
 function montar(quiz: Partial<QuizService>) {
@@ -42,11 +43,10 @@ async function assentar(fixture: ComponentFixture<MontarQuizComponent>, texto: s
 const controles = (fixture: ComponentFixture<MontarQuizComponent>) =>
   fixture.componentInstance as unknown as {
     modo: { set: (m: string) => void };
+    filtros: { set: (f: unknown) => void };
     quantidade: () => number;
     digitarQuantidade: (texto: string) => void;
     normalizarCampo: () => void;
-    escolherBanca: (id: string) => void;
-    alternarMateria: (id: string) => void;
     disponiveis: () => number;
     comecar: () => Promise<void>;
   };
@@ -70,7 +70,7 @@ describe('MontarQuizComponent', () => {
 
   it('mostra erro com retry quando a carga falha', async () => {
     const acervoElegivel = vi
-      .fn<() => Promise<CandidataComNomes[]>>()
+      .fn<() => Promise<ItemComNomes[]>>()
       .mockRejectedValueOnce(new Error('Banco fora do ar'))
       .mockResolvedValueOnce(acervoDe(3));
 
@@ -89,7 +89,9 @@ describe('MontarQuizComponent', () => {
     const fixture = montar({ acervoElegivel, historico: async () => [] });
     expect(await assentar(fixture, 'disponíveis')).toContain('5');
 
-    controles(fixture).alternarMateria('rlm');
+    // Clica no chip que o componente burro de filtros renderizou: prova a
+    // contagem E a ligação com o componente extraído.
+    clicar(fixture, 'RLM')?.click();
     fixture.detectChanges();
 
     expect(controles(fixture).disponiveis()).toBe(2);
@@ -140,8 +142,11 @@ describe('MontarQuizComponent', () => {
 
     // Banca Cespe só tem matéria X; escolher a banca e depois a matéria de
     // outra banca é o beco que a mensagem precisa explicar.
-    controles(fixture).escolherBanca('cespe');
-    controles(fixture).alternarMateria('port');
+    controles(fixture).filtros.set({
+      bancaId: 'cespe',
+      concursoId: null,
+      materiaIds: ['port'],
+    });
     const texto = await assentar(fixture, 'Nenhuma questão');
 
     expect(texto).toContain('Nenhuma questão');
@@ -159,8 +164,26 @@ describe('MontarQuizComponent', () => {
     });
     await assentar(fixture, 'disponíveis');
 
-    controles(fixture).modo.set('nao_respondidas');
-    expect(await assentar(fixture, 'já respondeu')).toContain('já respondeu todas');
+    controles(fixture).modo.set('revisao_erros');
+    expect(await assentar(fixture, 'errada na última')).toContain('errada na última tentativa');
+  });
+
+  it('menos vistas continua oferecendo o acervo com tudo já respondido', async () => {
+    // O precipício que o modo antigo tinha: aqui a contagem não cai a zero.
+    const historico: RespostaHistorico[] = [
+      { questao_id: 'q0', acertou: true, respondido_em: '2026-08-01T10:00:00Z' },
+      { questao_id: 'q1', acertou: true, respondido_em: '2026-08-01T10:00:00Z' },
+    ];
+    const fixture = montar({
+      acervoElegivel: async () => acervoDe(2),
+      historico: async () => historico,
+    });
+    await assentar(fixture, 'disponíveis');
+
+    controles(fixture).modo.set('menos_vistas');
+    fixture.detectChanges();
+    expect(controles(fixture).disponiveis()).toBe(2);
+    expect(clicar(fixture, 'Começar')?.disabled).toBe(false);
   });
 
   it('monta a sessão e navega para a execução', async () => {

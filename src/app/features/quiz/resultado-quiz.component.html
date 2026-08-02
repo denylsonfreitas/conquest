@@ -1,0 +1,77 @@
+@if (sessao.ativa()) {
+  <header class="mb-6">
+    <h1 class="text-2xl font-semibold text-tinta-900">Resultado</h1>
+    <p class="mt-1 text-sm text-tinta-500">{{ ROTULO_MODO[sessao.modo()] }}</p>
+  </header>
+
+  <section class="cartao mb-6 p-5">
+    <p class="text-3xl font-semibold text-tinta-900">
+      {{ placar().acertos }} <span class="text-tinta-500">de {{ placar().total }}</span>
+    </p>
+    <p class="mt-1 text-lg font-medium" [class]="corPercentual(placar().percentual)">
+      {{ placar().percentual }}%
+    </p>
+  </section>
+
+  <!--
+    Vem antes da revisão questão a questão: é a informação que diz onde focar,
+    e está ordenada do pior para o melhor pelo mesmo motivo.
+  -->
+  <h2 class="mb-3 font-semibold text-tinta-900">Desempenho por matéria</h2>
+  <ul class="cartao mb-8 divide-y divide-tinta-200 overflow-hidden">
+    @for (linha of porMateria(); track linha.materia) {
+      <li class="flex items-center gap-4 px-4 py-3">
+        <span class="min-w-0 flex-1 text-tinta-900">{{ linha.materia }}</span>
+        <span class="text-sm text-tinta-500">{{ linha.acertos }}/{{ linha.total }}</span>
+        <span class="w-12 text-right font-medium" [class]="corPercentual(linha.percentual)">
+          {{ linha.percentual }}%
+        </span>
+      </li>
+    }
+  </ul>
+
+  <h2 class="mb-3 font-semibold text-tinta-900">Revisão</h2>
+  <ul class="mb-8 space-y-3">
+    @for (item of revisao(); track item.questao.id) {
+      <li class="cartao p-4">
+        <div class="flex items-start gap-3">
+          <span
+            class="mt-0.5 shrink-0 rounded-campo px-2 py-0.5 text-xs font-medium"
+            [class]="
+              item.resposta!.acertou ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+            "
+          >
+            {{ item.resposta!.acertou ? 'acertou' : 'errou' }}
+          </span>
+
+          <div class="min-w-0 flex-1">
+            <p class="line-clamp-2 text-tinta-900">{{ item.questao.enunciado }}</p>
+
+            <p class="mt-1 text-sm text-tinta-500">
+              Você marcou
+              <span class="font-medium text-tinta-900">{{ item.resposta!.letraMarcada }}</span>
+              @if (!item.resposta!.acertou) {
+                <span>
+                  · gabarito
+                  <span class="font-medium text-emerald-700">{{ item.questao.gabarito }}</span>
+                </span>
+              }
+              @if (item.questao.materia) {
+                <span> · {{ item.questao.materia }}</span>
+              }
+            </p>
+
+            @if (item.questao.comentario) {
+              <p class="mt-2 text-sm text-tinta-700">{{ item.questao.comentario }}</p>
+            }
+          </div>
+        </div>
+      </li>
+    }
+  </ul>
+
+  <div class="flex items-center gap-3">
+    <button type="button" class="btn" (click)="novoQuiz()">Montar outro</button>
+    <a routerLink="/concursos" class="acao-inline">Voltar ao acervo</a>
+  </div>
+}

@@ -1,0 +1,105 @@
+@if (sessao.atual(); as q) {
+  <header class="mb-6 flex items-center justify-between gap-4">
+    <div>
+      <p class="text-sm text-tinta-500">
+        Questão {{ sessao.indice() + 1 }} de {{ sessao.total() }}
+        <span class="text-tinta-400">· {{ respondidas() }} respondidas</span>
+      </p>
+      <h1 class="text-lg font-semibold text-tinta-900">{{ q.materia ?? 'Sem matéria' }}</h1>
+    </div>
+
+    <button type="button" class="acao-inline" (click)="abandonar()">Sair do quiz</button>
+  </header>
+
+  <!-- Barra de progresso: dá a noção de quanto falta sem contar de cabeça. -->
+  <div class="mb-6 h-1 rounded-campo bg-tinta-200">
+    <div
+      class="h-1 rounded-campo bg-tinta-900 transition-all"
+      [style.width.%]="(respondidas() / sessao.total()) * 100"
+    ></div>
+  </div>
+
+  @if (erro(); as msg) {
+    <p role="alert" class="alerta-erro mb-4">{{ msg }}</p>
+  }
+
+  <article class="cartao p-5">
+    <p class="mb-1 text-xs text-tinta-500">
+      {{ q.concurso_nome }}
+      @if (q.banca_nome) {
+        <span> · {{ q.banca_nome }}</span>
+      }
+      @if (q.prova_ano) {
+        <span> · {{ q.prova_ano }}</span>
+      }
+      @if (q.numero) {
+        <span> · questão {{ q.numero }}</span>
+      }
+    </p>
+
+    <p class="text-tinta-900 whitespace-pre-line">{{ q.enunciado }}</p>
+
+    @if (q.imagem_path) {
+      @if (urlImagem(); as url) {
+        <img
+          [src]="url"
+          alt="Figura da questão"
+          class="mt-4 max-h-80 rounded-campo border border-tinta-200"
+        />
+      }
+    }
+
+    <ul class="mt-5 space-y-2">
+      @for (alt of q.alternativas; track alt.letra) {
+        <li>
+          <button
+            type="button"
+            class="w-full rounded-campo px-4 py-3 text-left ring-1 transition"
+            [class]="estilo(alt.letra)"
+            [disabled]="respondendo() || sessao.respostaAtual() !== null"
+            (click)="responder(alt.letra)"
+          >
+            <span class="font-medium">{{ alt.letra }})</span> {{ alt.texto }}
+          </button>
+        </li>
+      }
+    </ul>
+
+    @if (revelado()) {
+      <div class="mt-5 border-t border-tinta-200 pt-4">
+        @if (sessao.respostaAtual()?.acertou) {
+          <p class="font-medium text-emerald-700">Acertou.</p>
+        } @else {
+          <p class="font-medium text-red-700">Errou — o gabarito é {{ q.gabarito }}.</p>
+        }
+
+        @if (q.comentario) {
+          <p class="mt-2 text-sm text-tinta-700">{{ q.comentario }}</p>
+        }
+      </div>
+    }
+  </article>
+
+  <div class="mt-6 flex items-center gap-3">
+    <button
+      type="button"
+      class="btn-secundario"
+      [disabled]="sessao.indice() === 0"
+      (click)="sessao.voltar()"
+    >
+      Anterior
+    </button>
+
+    @if (sessao.indice() < sessao.total() - 1) {
+      <button type="button" class="btn" (click)="sessao.avancar()">Próxima</button>
+    }
+
+    @if (sessao.terminou()) {
+      <button type="button" class="btn" (click)="encerrar()">Ver resultado</button>
+    } @else if (respondidas() > 0) {
+      <button type="button" class="acao-inline ml-auto" (click)="encerrar()">
+        Encerrar com {{ respondidas() }} respondidas
+      </button>
+    }
+  </div>
+}

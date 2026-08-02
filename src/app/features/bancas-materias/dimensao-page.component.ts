@@ -50,9 +50,6 @@ export class DimensaoPageComponent {
 
   protected readonly titulo = computed(() => (this.tabela() === 'bancas' ? 'Bancas' : 'Matérias'));
   protected readonly singular = computed(() => (this.tabela() === 'bancas' ? 'banca' : 'matéria'));
-  protected readonly ondeUsa = computed(() =>
-    this.tabela() === 'bancas' ? 'os concursos' : 'as questões',
-  );
 
   constructor() {
     // Carrega via effect, não no construtor: inputs obrigatórios ainda não têm

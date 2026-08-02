@@ -64,10 +64,18 @@ describe('podeProcessar', () => {
     expect(podeProcessar({ status: 'erro', arquivo_path: 'c/p.pdf' })).toBe(true);
   });
 
-  it('não redispara sobre prova já processada ou em curso', () => {
-    for (const status of ['processando', 'aguardando_revisao', 'pronta'] as const) {
+  it('não redispara enquanto processa nem depois de pronta', () => {
+    for (const status of ['processando', 'pronta'] as const) {
       expect(podeProcessar({ status, arquivo_path: 'c/p.pdf' })).toBe(false);
     }
+  });
+
+  it('permite reprocessar extração ruim enquanto nada foi aprovado', () => {
+    const prova = { status: 'aguardando_revisao', arquivo_path: 'c/p.pdf' } as const;
+    expect(podeProcessar(prova, false)).toBe(true);
+    // Reprocessar sobrescreve as questões: curadoria já feita não pode ser
+    // apagada por um clique.
+    expect(podeProcessar(prova, true)).toBe(false);
   });
 });
 
@@ -77,14 +85,17 @@ describe('estaTravada', () => {
 
   it('não acusa processamento saudável', () => {
     // A extração real leva ~1,5 min; destravar aqui apagaria trabalho vivo.
-    expect(
-      estaTravada({ status: 'processando', processando_desde: haMinutos(2) }, agora),
-    ).toBe(false);
+    expect(estaTravada({ status: 'processando', processando_desde: haMinutos(2) }, agora)).toBe(
+      false,
+    );
   });
 
   it('acusa quando passa do limite — o caso do worker morto', () => {
     expect(
-      estaTravada({ status: 'processando', processando_desde: haMinutos(MINUTOS_ATE_TRAVADA) }, agora),
+      estaTravada(
+        { status: 'processando', processando_desde: haMinutos(MINUTOS_ATE_TRAVADA) },
+        agora,
+      ),
     ).toBe(true);
   });
 
@@ -95,7 +106,9 @@ describe('estaTravada', () => {
   });
 
   it('conta os minutos para a UI explicar a espera', () => {
-    expect(minutosProcessando({ status: 'processando', processando_desde: haMinutos(7) }, agora)).toBe(7);
+    expect(
+      minutosProcessando({ status: 'processando', processando_desde: haMinutos(7) }, agora),
+    ).toBe(7);
     expect(minutosProcessando({ status: 'pendente', processando_desde: null }, agora)).toBeNull();
   });
 });

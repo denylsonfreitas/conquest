@@ -1,8 +1,5 @@
 <header class="mb-6">
   <h1 class="text-2xl font-semibold text-tinta-900">{{ titulo() }}</h1>
-  <p class="mt-1 text-sm text-tinta-500">
-    Lista canônica — é daqui que {{ ondeUsa() }} escolhem, nunca texto livre.
-  </p>
 </header>
 
 <form class="mb-6 flex gap-2" (ngSubmit)="criar()">
@@ -31,9 +28,7 @@
     @if (itens().length === 0) {
       <app-estado-vazio [mensagem]="'Nenhuma ' + singular() + ' cadastrada ainda.'" />
     } @else {
-      <p class="mb-2 text-sm text-tinta-500">
-        {{ itens().length }} {{ titulo().toLowerCase() }}
-      </p>
+      <p class="mb-2 text-sm text-tinta-500">{{ itens().length }} {{ titulo().toLowerCase() }}</p>
 
       <ul class="cartao divide-y divide-tinta-200 overflow-hidden">
         @for (item of itens(); track item.id) {
@@ -55,11 +50,7 @@
               <button type="button" class="acao-inline" (click)="iniciarEdicao(item)">
                 Renomear
               </button>
-              <button
-                type="button"
-                class="acao-inline text-red-600"
-                (click)="excluir(item)"
-              >
+              <button type="button" class="acao-inline text-red-600" (click)="excluir(item)">
                 Excluir
               </button>
             }

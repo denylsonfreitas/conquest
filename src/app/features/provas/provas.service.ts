@@ -173,7 +173,7 @@ export class ProvasService {
     if (caminhos.length > 0) await this.supabase.provasPdf.remove(caminhos);
   }
 
-    /**
+  /**
    * Dispara a extração.
    *
    * O texto é extraído AQUI, no navegador, e enviado à função — pdf.js não

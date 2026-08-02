@@ -39,6 +39,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'provas/:id/revisao',
+        loadComponent: () =>
+          import('./features/importacao/revisao-questoes.component').then(
+            (m) => m.RevisaoQuestoesComponent,
+          ),
+      },
+      {
         path: 'materias',
         // `data` alimenta o input `tabela` do componente via
         // withComponentInputBinding(), então uma tela serve as duas rotas.

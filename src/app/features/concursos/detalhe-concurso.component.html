@@ -29,9 +29,6 @@
         <div class="mb-4 flex items-start justify-between gap-4">
           <div>
             <h2 class="text-lg font-semibold text-tinta-900">Provas</h2>
-            <p class="mt-0.5 text-sm text-tinta-500">
-              Registre a prova aqui; o PDF entra na etapa de importação.
-            </p>
           </div>
 
           @if (!formAberto()) {
@@ -107,7 +104,12 @@
                         <span>{{ prova.ano }}</span>
                       }
                       @if (prova.cargo) {
-                        <span>@if (prova.ano) { · } {{ prova.cargo }}</span>
+                        <span>
+                          @if (prova.ano) {
+                            ·
+                          }
+                          {{ prova.cargo }}</span
+                        >
                       }
                       @if (prova.gabarito_path) {
                         <span> · gabarito anexado</span>
@@ -154,6 +156,14 @@
                     <button type="button" class="acao-inline" (click)="abrirPdf(prova)">
                       Ver PDF
                     </button>
+                  }
+
+                  @if (prova.status === 'aguardando_revisao' || prova.status === 'pronta') {
+                    <a
+                      [routerLink]="['/provas', prova.id, 'revisao']"
+                      class="acao-inline font-medium text-tinta-900"
+                      >Revisar</a
+                    >
                   }
 
                   @if (podeProcessar(prova)) {

@@ -25,9 +25,21 @@ export interface ProvaEmProcessamento {
   readonly processando_desde: string | null;
 }
 
-/** Pode disparar o processamento: tem PDF e não está no meio de um. */
-export function podeProcessar(prova: ProvaParaRegra): boolean {
-  return prova.arquivo_path !== null && (prova.status === 'pendente' || prova.status === 'erro');
+/**
+ * Pode disparar o processamento.
+ *
+ * `aguardando_revisao` entra na lista porque reprocessar é diferente de trocar
+ * o PDF: é rodar o LLM de novo no MESMO arquivo, quando a extração saiu ruim.
+ * Sem isso, a única saída seria apagar a prova e recomeçar.
+ *
+ * Mas reprocessar sobrescreve as questões, então só vale enquanto **nenhuma**
+ * foi aprovada — curadoria já feita não pode ser apagada por um clique.
+ * A partir de `pronta`, nunca.
+ */
+export function podeProcessar(prova: ProvaParaRegra, temQuestaoRevisada = false): boolean {
+  if (prova.arquivo_path === null) return false;
+  if (prova.status === 'pendente' || prova.status === 'erro') return true;
+  return prova.status === 'aguardando_revisao' && !temQuestaoRevisada;
 }
 
 /**
@@ -70,9 +82,7 @@ export function podeAnexarPdf(status: StatusProva): boolean {
  */
 export function rotuloBloqueioAnexo(status: StatusProva): string | null {
   if (podeAnexarPdf(status)) return null;
-  return status === 'processando'
-    ? 'Processando…'
-    : 'Extraída — apague a prova para trocar o PDF';
+  return status === 'processando' ? 'Processando…' : 'Extraída — apague a prova para trocar o PDF';
 }
 
 export function motivoBloqueioAnexo(status: StatusProva): string | null {

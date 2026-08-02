@@ -54,6 +54,8 @@ concurso-app/
 │   └── main.ts
 ├── supabase/
 │   ├── migrations/                    # SQL versionado do schema
+│   ├── scripts/                       # SQL de desenvolvimento, NÃO migrations
+│   │   └── resetar-revisao.sql        # devolve uma prova ao pré-revisão
 │   └── functions/
 │       └── processar-prova/           # Edge Function (Deno/TS)
 │           ├── index.ts
@@ -282,6 +284,38 @@ primeira versão da tela — nunca retrofitados.
    (e opcionalmente respostas) para JSON e baixa. Seguro barato contra perda.
 11. **Polimento** — responsividade do tablet, estados de erro/vazio, modo revisão
     de erros.
+
+    > Registrado durante o passo 6: **ícones nas ações** (Abrir/Aprovar/
+    > Remover). Melhora a varredura da lista, mas é acabamento — não segurou o
+    > merge do passo 6.
+
+## Higiene de dados: o Storage não segue o CASCADE
+
+Registrado no passo 6, sem passo dono ainda. **Não é polimento** — resolver
+junto do próximo trabalho de exclusão, seja qual passo for.
+
+O banco limpa a árvore de conteúdo sozinho, o bucket não. Hoje só um caminho
+faz a limpeza, e ele cobre metade do problema:
+
+| caminho | banco | Storage |
+|---|---|---|
+| excluir prova pela UI | CASCADE nas questões | apaga o PDF e o gabarito, **não** as imagens das questões |
+| excluir concurso pela UI | CASCADE em provas e questões | **nada** — o código de limpeza do passo 4 não roda |
+| qualquer DELETE fora da UI (script, psql) | CASCADE | **nada** |
+
+Achado ao investigar a imagem da questão 29: quatro objetos em
+`questao-imagens` para duas questões vivas.
+
+Por que pesa mais que espaço em disco: os PDFs de prova carregam a marca
+d'água do pciconcursos, que codifica **IP e data de download de quem baixou**
+(ver `marca-dagua.ts` e o `docs/02`). A limpeza dessa marca protege o que sai
+para o LLM; ela não apaga o arquivo original. Um PDF que sumiu do banco e
+continua no bucket é dado pessoal sobrevivendo à própria exclusão.
+
+Duas saídas, a decidir quando houver dono: limpeza no banco (trigger
+`after delete` chamando o Storage) ou uma rotina de varredura que compara
+objetos com as linhas vivas. A primeira fecha o buraco na origem; a segunda
+também recolhe o que já vazou.
 
 Ataque o item 5 (extração) com uma prova de verdade assim que possível. Tudo
 depois dele assume que ele funciona; validar cedo evita retrabalho. Note que a

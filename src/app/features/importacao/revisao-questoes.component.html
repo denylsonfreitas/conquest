@@ -1,0 +1,270 @@
+@switch (status()) {
+  @case ('carregando') {
+    <app-estado-carregando mensagem="Carregando as questões…" />
+  }
+  @case ('erro') {
+    <app-estado-erro [mensagem]="erroCarga() ?? ''" (tentarDeNovo)="carregar()" />
+  }
+  @case ('ok') {
+    <nav class="mb-4 text-sm">
+      <a routerLink="/concursos" class="text-tinta-500 hover:underline">← Concursos</a>
+    </nav>
+
+    <header class="mb-6">
+      <h1 class="text-2xl font-semibold text-tinta-900">Revisão</h1>
+      <p class="mt-1 text-sm text-tinta-500">
+        {{ totalAprovadas() }} de {{ questoes().length }} questões aprovadas.
+        @if (concluida()) {
+          <span class="font-medium text-emerald-700">Prova pronta.</span>
+        }
+      </p>
+    </header>
+
+    @if (erroAcao(); as msg) {
+      <p role="alert" class="alerta-erro mb-4">{{ msg }}</p>
+    }
+
+    @if (questoes().length === 0) {
+      <app-estado-vazio mensagem="Esta prova ainda não tem questões extraídas." />
+    } @else {
+      <!-- FASE 1: mapeamento. Três decisões resolvem dezenas de questões. -->
+      @if (paraMapear().length > 0) {
+        <section class="cartao mb-8 p-5">
+          <h2 class="font-semibold text-tinta-900">Matérias a mapear</h2>
+          <p class="mt-1 mb-4 text-sm text-tinta-500">
+            A prova nomeia as seções do jeito dela. Mapeie cada nome para a matéria canônica —
+            uma escolha resolve todas as questões daquela seção.
+          </p>
+
+          <ul class="space-y-3">
+            @for (grupo of paraMapear(); track grupo.assunto) {
+              <li class="flex flex-wrap items-center gap-2">
+                <span class="min-w-0 flex-1 text-tinta-900">
+                  {{ grupo.assunto }}
+                  <span class="text-tinta-500">· {{ grupo.quantidade }} questões</span>
+                </span>
+
+                <select
+                  class="campo w-auto"
+                  [value]="escolhaMateria()[grupo.assunto] ?? ''"
+                  (change)="escolherMateria(grupo.assunto, $any($event.target).value)"
+                >
+                  <option value="">— escolher matéria —</option>
+                  @for (m of materias(); track m.id) {
+                    <option [value]="m.id">{{ m.nome }}</option>
+                  }
+                </select>
+
+                <span class="text-sm text-tinta-500">ou criar</span>
+                <input
+                  class="campo w-48"
+                  placeholder="nova matéria"
+                  [value]="novaMateria()[grupo.assunto] ?? ''"
+                  (input)="digitarNovaMateria(grupo.assunto, $any($event.target).value)"
+                />
+
+                <button
+                  type="button"
+                  class="btn"
+                  [disabled]="salvando()"
+                  (click)="mapear(grupo.assunto, grupo.questaoIds)"
+                >
+                  Aplicar
+                </button>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
+      <!-- FASE 2: aprovação em lote do que não tem pendência. -->
+      @if (grupos().semPendencia.length > 0) {
+        <div class="mb-6 flex items-center gap-3">
+          <button
+            type="button"
+            class="btn"
+            [disabled]="salvando()"
+            (click)="aprovarSemPendencia()"
+          >
+            Aprovar as {{ grupos().semPendencia.length }} questões sem pendência
+          </button>
+          <span class="text-sm text-tinta-500">
+            Matéria, gabarito e imagem conferidos — os CHECKs do banco recusam o que faltar.
+          </span>
+        </div>
+      }
+
+      @if (grupos().atencao.length > 0) {
+        <h2 class="mb-3 font-semibold text-tinta-900">
+          Precisam de atenção ({{ grupos().atencao.length }})
+        </h2>
+        <ul class="mb-8 space-y-3">
+          @for (q of grupos().atencao; track q.id) {
+            <ng-container *ngTemplateOutlet="cartaoQuestao; context: { $implicit: q }" />
+          }
+        </ul>
+      }
+
+      @if (grupos().semPendencia.length > 0) {
+        <h2 class="mb-3 font-semibold text-tinta-900">
+          Sem pendência ({{ grupos().semPendencia.length }})
+        </h2>
+        <ul class="mb-8 space-y-3">
+          @for (q of grupos().semPendencia; track q.id) {
+            <ng-container *ngTemplateOutlet="cartaoQuestao; context: { $implicit: q }" />
+          }
+        </ul>
+      }
+
+      @if (grupos().aprovadas.length > 0) {
+        <h2 class="mb-3 font-semibold text-tinta-900">
+          Aprovadas ({{ grupos().aprovadas.length }})
+        </h2>
+        <ul class="space-y-3">
+          @for (q of grupos().aprovadas; track q.id) {
+            <ng-container *ngTemplateOutlet="cartaoQuestao; context: { $implicit: q }" />
+          }
+        </ul>
+      }
+    }
+  }
+}
+
+<!--
+  Um cartão só para os três grupos: a diferença entre eles é a ordem em que
+  aparecem, não a aparência. Duplicar a marcação três vezes seria o tipo de
+  repetição que o docs/04 manda extrair.
+-->
+<ng-template #cartaoQuestao let-q>
+  <li class="cartao p-4" [class.opacity-60]="q.anulada">
+    <div class="flex items-start gap-3">
+      <span class="w-8 shrink-0 font-medium text-tinta-500">{{ q.numero ?? '—' }}</span>
+
+      <div class="min-w-0 flex-1">
+        <p class="text-tinta-900" [class.line-clamp-2]="expandidaId() !== q.id">
+          {{ q.enunciado }}
+        </p>
+
+        <p class="mt-1 flex flex-wrap gap-2 text-xs">
+          @if (q.materia_id) {
+            <span class="rounded-campo bg-tinta-50 px-2 py-0.5 text-tinta-700">
+              {{ nomesMateria().get(q.materia_id) }}
+            </span>
+          }
+          @if (q.gabarito) {
+            <span class="rounded-campo bg-emerald-50 px-2 py-0.5 text-emerald-700">
+              gabarito {{ q.gabarito }}
+            </span>
+          }
+          @if (q.anulada) {
+            <span class="rounded-campo bg-tinta-50 px-2 py-0.5 text-tinta-500">anulada</span>
+          }
+          @for (motivo of motivosAtencao(q); track motivo) {
+            <span class="rounded-campo bg-amber-50 px-2 py-0.5 text-amber-700">{{ motivo }}</span>
+          }
+        </p>
+      </div>
+
+      <button type="button" class="acao-inline" (click)="alternarExpansao(q.id)">
+        {{ expandidaId() === q.id ? 'Fechar' : 'Abrir' }}
+      </button>
+
+      <button
+        type="button"
+        class="acao-inline font-medium"
+        [class.text-emerald-700]="!q.revisada"
+        [class.text-tinta-500]="q.revisada"
+        [disabled]="!q.revisada && precisaAtencao(q)"
+        (click)="alternarAprovacao(q)"
+      >
+        {{ q.revisada ? 'Desaprovar' : 'Aprovar' }}
+      </button>
+    </div>
+
+    @if (expandidaId() === q.id) {
+      <div class="mt-4 space-y-4 border-t border-tinta-200 pt-4">
+        <ul class="space-y-1 text-sm">
+          @for (alt of q.alternativas; track alt.letra) {
+            <li [class.font-medium]="alt.letra === q.gabarito">
+              ({{ alt.letra }}) {{ alt.texto }}
+            </li>
+          }
+        </ul>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label class="rotulo">Matéria</label>
+            <select
+              class="campo mt-1"
+              [value]="q.materia_id ?? ''"
+              (change)="definirMateria(q, $any($event.target).value)"
+            >
+              <option value="">— sem matéria —</option>
+              @for (m of materias(); track m.id) {
+                <option [value]="m.id">{{ m.nome }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label class="rotulo">Gabarito</label>
+            <select
+              class="campo mt-1"
+              [value]="q.gabarito ?? ''"
+              (change)="definirGabarito(q, $any($event.target).value)"
+            >
+              <option value="">— sem gabarito —</option>
+              @for (letra of LETRAS; track letra) {
+                <option [value]="letra">{{ letra }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="rotulo">Comentário <span class="text-tinta-500">(sua anotação)</span></label>
+          <textarea
+            class="campo mt-1"
+            rows="2"
+            [value]="q.comentario ?? ''"
+            (change)="definirComentario(q, $any($event.target).value)"
+          ></textarea>
+        </div>
+
+        @if (q.tem_imagem) {
+          <div>
+            <label class="rotulo">
+              Imagem
+              @if (!q.imagem_path) {
+                <span class="text-amber-700">— sem ela a questão não entra em quizzes</span>
+              }
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              class="campo mt-1"
+              (change)="anexarImagem(q, $event)"
+            />
+            @if (q.imagem_path) {
+              <p class="mt-1 text-sm text-emerald-700">Imagem anexada.</p>
+            }
+          </div>
+        }
+
+        <div class="flex flex-wrap gap-3 text-sm">
+          <button type="button" class="acao-inline" (click)="alternarTemImagem(q)">
+            {{ q.tem_imagem ? 'Não depende de imagem' : 'Depende de imagem' }}
+          </button>
+          <button type="button" class="acao-inline" (click)="alternarAnulada(q)">
+            {{ q.anulada ? 'Desanular' : 'Marcar anulada' }}
+          </button>
+          @if (q.incerto) {
+            <button type="button" class="acao-inline" (click)="limparIncerto(q)">
+              Conferi — remover marca de dúvida
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </li>
+</ng-template>

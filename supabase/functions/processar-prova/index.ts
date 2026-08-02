@@ -224,9 +224,12 @@ function montarQuestoes(
       gabarito,
       tipo: bruta.tipo,
       tem_imagem: bruta.tem_imagem,
-      // Sinaliza o que a revisão precisa olhar: o LLM duvidou, o gabarito não
-      // casou, ou a matéria não bateu com a lista canônica.
-      incerto: bruta.incerto || gabarito === null || materiaId === null,
+      // APENAS a dúvida do próprio LLM. Gabarito ausente e matéria não casada
+      // são pendências DERIVADAS das colunas, e a revisão as calcula de lá
+      // (`precisaAtencao`). Guardá-las aqui seria redundante e destrutivo: a
+      // questão continuaria marcada mesmo depois de a matéria ser atribuída,
+      // porque nada saberia distinguir qual dos motivos tinha sido resolvido.
+      incerto: bruta.incerto,
       anulada: false,
       revisada: false,
     };

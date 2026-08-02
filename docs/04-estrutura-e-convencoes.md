@@ -54,6 +54,8 @@ concurso-app/
 │   └── main.ts
 ├── supabase/
 │   ├── migrations/                    # SQL versionado do schema
+│   ├── scripts/                       # SQL de desenvolvimento, NÃO migrations
+│   │   └── resetar-revisao.sql        # devolve uma prova ao pré-revisão
 │   └── functions/
 │       └── processar-prova/           # Edge Function (Deno/TS)
 │           ├── index.ts

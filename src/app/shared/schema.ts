@@ -156,7 +156,9 @@ const questaoCampos = z.object({
   materia_id: uuid.nullable(),
   assunto: textoOpcional,
   enunciado: textoObrigatorio,
-  alternativas: z.array(AlternativaSchema).min(2, { error: 'questão precisa de ao menos 2 alternativas' }),
+  alternativas: z
+    .array(AlternativaSchema)
+    .min(2, { error: 'questão precisa de ao menos 2 alternativas' }),
   // nullable: a extração pode não casar o gabarito (PDF separado ilegível,
   // bloco de respostas ambíguo). A questão entra em rascunho sinalizada em vez
   // de barrar a prova inteira — ver `revisadaExigeGabarito` abaixo.
@@ -192,8 +194,7 @@ const gabaritoExisteNasAlternativas = (q: CamposVerificaveis): boolean =>
   q.gabarito == null || q.alternativas.some((a) => a.letra === q.gabarito);
 
 /** Espelha a CHECK `questoes_revisada_exige_gabarito` do banco. */
-const revisadaExigeGabarito = (q: CamposVerificaveis): boolean =>
-  !q.revisada || q.gabarito != null;
+const revisadaExigeGabarito = (q: CamposVerificaveis): boolean => !q.revisada || q.gabarito != null;
 
 /** Duas alternativas 'B' quebrariam o quiz silenciosamente. */
 const letrasNaoRepetem = (q: CamposVerificaveis): boolean =>

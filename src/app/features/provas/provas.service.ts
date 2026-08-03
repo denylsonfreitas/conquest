@@ -161,6 +161,24 @@ export class ProvasService {
     }
   }
 
+  /** O que o CASCADE leva junto ao excluir uma prova. */
+  async impactoDaExclusao(provaId: string): Promise<{ questoes: number; respostas: number }> {
+    const { data: questoes } = await this.supabase.client
+      .from('questoes')
+      .select('id')
+      .eq('prova_id', provaId);
+
+    const ids = (questoes ?? []).map((q) => q.id);
+    const { count } = ids.length
+      ? await this.supabase.client
+          .from('respostas')
+          .select('id', { count: 'exact', head: true })
+          .in('questao_id', ids)
+      : { count: 0 };
+
+    return { questoes: ids.length, respostas: count ?? 0 };
+  }
+
   async excluir(prova: Prova): Promise<void> {
     const { error } = await this.supabase.client.from('provas').delete().eq('id', prova.id);
     if (error) throw new Error(`Não foi possível excluir a prova: ${error.message}`);

@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
+import { consequenciasDaExclusao } from '../../shared/consequencias-exclusao';
+import { ConfirmacaoComponent } from '../../shared/ui/confirmacao.component';
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
 import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
@@ -30,6 +32,7 @@ type Status = 'carregando' | 'ok' | 'erro';
     EstadoCarregandoComponent,
     EstadoErroComponent,
     EstadoVazioComponent,
+    ConfirmacaoComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './lista-concursos.component.html',
@@ -44,6 +47,9 @@ export class ListaConcursosComponent {
   protected readonly bancas = signal<ItemDimensao[]>([]);
   protected readonly erroCarga = signal<string | null>(null);
   protected readonly erroAcao = signal<string | null>(null);
+  protected readonly aExcluir = signal<ConcursoComBanca | null>(null);
+  protected readonly consequencias = signal<string[]>([]);
+  protected readonly excluindo = signal(false);
   protected readonly salvando = signal(false);
   protected readonly formAberto = signal(false);
 
@@ -110,13 +116,35 @@ export class ListaConcursosComponent {
     }
   }
 
+  /** Nada é apagado antes da confirmação mostrar o que vai junto. */
+  protected async pedirExclusao(concurso: ConcursoComBanca): Promise<void> {
+    this.erroAcao.set(null);
+    this.aExcluir.set(concurso);
+    this.consequencias.set([]);
+    try {
+      this.consequencias.set(
+        consequenciasDaExclusao(await this.service.impactoDaExclusao(concurso.id)),
+      );
+    } catch (e) {
+      this.erroAcao.set(mensagem(e));
+    }
+  }
+
+  protected cancelarExclusao(): void {
+    this.aExcluir.set(null);
+  }
+
   protected async excluir(concurso: ConcursoComBanca): Promise<void> {
     this.erroAcao.set(null);
+    this.excluindo.set(true);
     try {
       await this.service.excluir(concurso.id);
+      this.aExcluir.set(null);
       this.concursos.update((atual) => atual.filter((c) => c.id !== concurso.id));
     } catch (e) {
       this.erroAcao.set(mensagem(e));
+    } finally {
+      this.excluindo.set(false);
     }
   }
 }

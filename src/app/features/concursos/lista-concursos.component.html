@@ -88,7 +88,11 @@
             </div>
 
             <a [routerLink]="['/concursos', concurso.id]" class="acao-inline">Abrir</a>
-            <button type="button" class="acao-inline text-red-600" (click)="excluir(concurso)">
+            <button
+              type="button"
+              class="acao-inline text-red-600"
+              (click)="pedirExclusao(concurso)"
+            >
               Excluir
             </button>
           </li>
@@ -96,4 +100,14 @@
       </ul>
     }
   }
+}
+
+@if (aExcluir(); as alvo) {
+  <app-confirmacao
+    [titulo]="'Excluir ' + alvo.nome + '?'"
+    [consequencias]="consequencias()"
+    [ocupado]="excluindo()"
+    (confirmar)="excluir(alvo)"
+    (cancelar)="cancelarExclusao()"
+  />
 }

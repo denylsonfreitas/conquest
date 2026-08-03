@@ -60,15 +60,15 @@ async function sessaoRespondida(sessao: SessaoQuizService) {
       questao('d', 'RLM', 'A'),
     ],
     'aleatorio',
-    true,
+    'estudo',
   );
-  await sessao.responder('A'); // a — acerto
+  await sessao.marcar('A'); // a — acerto
   sessao.avancar();
-  await sessao.responder('A'); // b — acerto
+  await sessao.marcar('A'); // b — acerto
   sessao.avancar();
-  await sessao.responder('B'); // c — erro
+  await sessao.marcar('B'); // c — erro
   sessao.avancar();
-  await sessao.responder('B'); // d — erro
+  await sessao.marcar('B'); // d — erro
 }
 
 describe('ResultadoQuizComponent', () => {
@@ -122,8 +122,12 @@ describe('ResultadoQuizComponent', () => {
   it('só lista as questões respondidas — quiz encerrado no meio não inventa linha', async () => {
     const fixture = montar();
     const sessao = TestBed.inject(SessaoQuizService);
-    sessao.iniciar([questao('a', 'Português', 'A'), questao('b', 'RLM', 'A')], 'aleatorio', true);
-    await sessao.responder('A');
+    sessao.iniciar(
+      [questao('a', 'Português', 'A'), questao('b', 'RLM', 'A')],
+      'aleatorio',
+      'estudo',
+    );
+    await sessao.marcar('A');
 
     const texto = await assentar(fixture, 'Revisão');
     expect(texto).toContain('Enunciado da a');

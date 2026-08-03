@@ -4,13 +4,31 @@
     <p class="mt-1 text-sm text-tinta-500">{{ ROTULO_MODO[sessao.modo()] }}</p>
   </header>
 
+  <!--
+    Dois denominadores, nenhum escondido. Só o de respondidas mentiria como
+    resultado de prova; só o da prova inteira esconderia sua taxa de acerto no
+    que você atacou.
+  -->
   <section class="cartao mb-6 p-5">
     <p class="text-3xl font-semibold text-tinta-900">
-      {{ placar().acertos }} <span class="text-tinta-500">de {{ placar().total }}</span>
+      {{ placar().acertos }}
+      <span class="text-tinta-500">de {{ placar().respondidas }} respondidas</span>
     </p>
-    <p class="mt-1 text-lg font-medium" [class]="corPercentual(placar().percentual)">
-      {{ placar().percentual }}%
+    <p class="mt-1 text-lg font-medium" [class]="corPercentual(placar().percentualRespondidas)">
+      {{ placar().percentualRespondidas }}%
     </p>
+
+    @if (placar().brancos > 0) {
+      <p class="mt-3 border-t border-tinta-200 pt-3 text-sm text-tinta-500">
+        {{ placar().brancos }} em branco ·
+        <span class="font-medium text-tinta-900">
+          {{ placar().acertos }} de {{ placar().total }} na prova inteira
+        </span>
+        <span [class]="corPercentual(placar().percentualProva)">
+          ({{ placar().percentualProva }}%)
+        </span>
+      </p>
+    }
   </section>
 
   <!--

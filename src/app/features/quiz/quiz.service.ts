@@ -90,10 +90,22 @@ export class QuizService {
     return ids.map((id) => porId.get(id)).filter((q): q is QuestaoQuiz => q !== undefined);
   }
 
-  /** Grava a resposta na hora — é o que faz interromper o quiz não perder nada. */
-  async registrar(resposta: RespostaNova): Promise<void> {
-    const { error } = await this.supabase.client.from('respostas').insert(resposta);
-    if (error) throw new Error(`Não foi possível registrar a resposta: ${error.message}`);
+  /**
+   * Grava respostas.
+   *
+   * Recebe uma LISTA porque os dois modos gravam quantidades diferentes: o
+   * estudo manda uma por clique, a prova manda todas na entrega. Um `insert`
+   * com array é uma instrução só no Postgres — ou tudo entra, ou nada —, e é
+   * isso que impede um simulado meio gravado.
+   */
+  async registrar(respostas: readonly RespostaNova[]): Promise<void> {
+    if (respostas.length === 0) return;
+
+    const { error } = await this.supabase.client.from('respostas').insert([...respostas]);
+    if (error) {
+      const quantas = respostas.length === 1 ? 'a resposta' : `as ${respostas.length} respostas`;
+      throw new Error(`Não foi possível registrar ${quantas}: ${error.message}`);
+    }
   }
 
   async urlImagem(caminho: string, segundos = 900): Promise<string> {

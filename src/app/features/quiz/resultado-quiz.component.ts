@@ -54,7 +54,14 @@ export class ResultadoQuizComponent {
   protected readonly respostasAfetadas = signal(0);
   protected readonly sessao = inject(SessaoQuizService);
 
-  protected readonly placar = computed(() => placar(this.sessao.respostas()));
+  /**
+   * O total vem do TAMANHO DO QUIZ, não da contagem de respostas.
+   *
+   * Sem isso, deixar questões em branco (ou encerrar cedo no modo estudo)
+   * melhoraria o percentual em vez de piorá-lo — o denominador encolheria
+   * junto. Uma regra só, sem exceção por modo.
+   */
+  protected readonly placar = computed(() => placar(this.sessao.respostas(), this.sessao.total()));
 
   protected readonly porMateria = computed(() =>
     desempenhoPorMateria(this.sessao.respostas(), this.sessao.materiaPorQuestao()),

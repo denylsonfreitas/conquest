@@ -25,6 +25,7 @@ export class ShellComponent {
     { rota: '/concursos', rotulo: 'Concursos' },
     { rota: '/quiz', rotulo: 'Quiz' },
     { rota: '/acervo', rotulo: 'Acervo' },
+    { rota: '/progresso', rotulo: 'Progresso' },
     { rota: '/materias', rotulo: 'Matérias' },
     { rota: '/bancas', rotulo: 'Bancas' },
   ] as const;

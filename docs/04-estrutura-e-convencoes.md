@@ -55,7 +55,8 @@ concurso-app/
 ├── supabase/
 │   ├── migrations/                    # SQL versionado do schema
 │   ├── scripts/                       # SQL de desenvolvimento, NÃO migrations
-│   │   └── resetar-revisao.sql        # devolve uma prova ao pré-revisão
+│   │   ├── resetar-revisao.sql        # devolve uma prova ao pré-revisão
+│   │   └── storage.mjs                # reconciliação e faxina do Storage
 │   └── functions/
 │       └── processar-prova/           # Edge Function (Deno/TS)
 │           ├── index.ts
@@ -315,10 +316,25 @@ primeira versão da tela — nunca retrofitados.
    > É modo de EXECUÇÃO, não gestão de acervo: por isso é um passo separado do
    > 8, e não um retoque do 7. O "feedback só no fim" que o passo 7 já oferece é
    > metade disto; falta a resposta editável até entregar.
-10. **Estatísticas globais** — desempenho por matéria e por banca ao longo do
-    tempo, progresso global, matérias mais fracas. Tudo derivado de `respostas`
-    subindo a árvore; o placar e o desempenho por matéria do quiz em si já saem
-    no passo 7.
+10. **Estatísticas globais** — desempenho por matéria e por banca, evolução,
+    progresso global, matérias mais fracas. Tudo derivado de `respostas`
+    subindo a árvore, sem tabela nova e sem escrita; o placar e o desempenho
+    por matéria do quiz em si já saem no passo 7.
+
+    > Três decisões que o desenho forçou:
+    >
+    > - **Evolução por últimas N respostas de cada matéria**, não por janela de
+    >   calendário. Estudo acontece em rajada: uma janela de 30 dias falaria do
+    >   ritmo de estudo, não do aprendizado.
+    > - **Anuladas não contam.** A banca invalidou a questão; registrar como
+    >   erro seu o que não valia seria contar contra você. Nada é apagado — só
+    >   deixa de contar, como `elegivel` já faz no quiz.
+    > - **Piso de amostra para ranquear as fracas.** 2 de 2 erradas no topo é
+    >   acaso, não sinal. As de amostra menor ficam num grupo à parte, visíveis:
+    >   escondê-las faria parecer que a matéria não existe.
+    >
+    > O limiar registrado: a junção em memória vale até alguns milhares de
+    > respostas. Passando de dezenas de milhares, agregar no banco.
 11. **Export do acervo** — botão que serializa bancas/concursos/provas/questões
     (e opcionalmente respostas) para JSON e baixa. Seguro barato contra perda.
 12. **Polimento** — responsividade do tablet, estados de erro/vazio, modo revisão
@@ -330,36 +346,48 @@ primeira versão da tela — nunca retrofitados.
 
 ## Higiene de dados: o Storage não segue o CASCADE
 
-Registrado no passo 6, sem passo dono ainda. **Não é polimento** — resolver
-junto do próximo trabalho de exclusão, seja qual passo for.
+O banco limpa a árvore de conteúdo sozinho, o bucket não. Excluir uma prova
+pela UI apaga o PDF, mas não as imagens das questões; excluir um concurso não
+apaga nada — o CASCADE remove linha, não arquivo. E qualquer DELETE fora da UI
+(script de reset, psql) escapa de todo código de limpeza.
 
-O banco limpa a árvore de conteúdo sozinho, o bucket não. Hoje só um caminho
-faz a limpeza, e ele cobre metade do problema:
+Pesa mais que espaço em disco: os PDFs de prova carregam a marca d'água do
+pciconcursos, que codifica **IP e data de download de quem baixou** (ver
+`marca-dagua.ts`). A limpeza dessa marca protege o que sai para o LLM; ela não
+apaga o arquivo original. Um PDF que sumiu do banco e continua no bucket é dado
+pessoal sobrevivendo à própria exclusão.
 
-| caminho | banco | Storage |
-|---|---|---|
-| excluir prova pela UI | CASCADE nas questões | apaga o PDF e o gabarito, **não** as imagens das questões |
-| excluir concurso pela UI | CASCADE em provas e questões | **nada** — o código de limpeza do passo 4 não roda |
-| qualquer DELETE fora da UI (script, psql) | CASCADE | **nada** |
+**Resolvido por reconciliação, não por gancho** (`supabase/scripts/storage.mjs`):
 
-Achado ao investigar a imagem da questão 29: quatro objetos em
-`questao-imagens` para duas questões vivas.
+```bash
+npm run storage:varrer  -- --aplicar   # só os órfãos, com carência
+npm run acervo:zerar    -- --aplicar   # tudo: buckets primeiro, tabelas depois
+npm run acervo:conferir                # inventário
+```
 
-Por que pesa mais que espaço em disco: os PDFs de prova carregam a marca
-d'água do pciconcursos, que codifica **IP e data de download de quem baixou**
-(ver `marca-dagua.ts` e o `docs/02`). A limpeza dessa marca protege o que sai
-para o LLM; ela não apaga o arquivo original. Um PDF que sumiu do banco e
-continua no bucket é dado pessoal sobrevivendo à própria exclusão.
 
-Duas saídas, a decidir quando houver dono: limpeza no banco (trigger
-`after delete` chamando o Storage) ou uma rotina de varredura que compara
-objetos com as linhas vivas. A primeira fecha o buraco na origem; a segunda
-também recolhe o que já vazou.
+A escolha foi deliberada. Um gancho no momento do delete só cobre o cano onde
+foi instalado, e o acervo é apagado por caminhos que ele não alcança — CASCADE,
+scripts, psql. A varredura compara o que EXISTE com o que TEM DONO, então cobre
+todo caminho e ainda limpa o que já acumulou; um gancho vale só dali para
+frente. O preço é o lixo viver até a varredura rodar, e isso é aceitável.
 
-Ataque o item 5 (extração) com uma prova de verdade assim que possível. Tudo
-depois dele assume que ele funciona; validar cedo evita retrabalho. Note que a
-Edge Function é Deno/TypeScript puro — bom exercício, mas separado do Angular.
+Descartado: trigger apagando de `storage.objects`. Aquela tabela é só o
+metadado — apagar a linha deixaria os bytes no backend e sumiria com o órfão do
+inventário, trocando lixo visível por lixo invisível. Toda exclusão passa pela
+API de Storage.
 
+**Carência**: a varredura poupa objetos recentes (30 min por padrão). No passo 4
+o arquivo sobe ANTES de a linha apontar para ele; sem carência, uma varredura
+nessa janela apagaria um upload prestes a ganhar dono.
+
+Medido antes de existir: **metade de tudo no Storage era órfão** (1,4 MB), vinda
+de uma única prova apagada e recriada. Cada ciclo importar→apagar dobrava o
+acumulado.
+
+> Registrado, não feito: um gancho na UI (a opção `A2`) reduziria a janela entre
+> varreduras. Fica para quando a latência incomodar — como reforço, nunca como
+> garantia.
 ## Nota sobre testes
 
 O Angular CLI já configura o test runner. Priorize testes das **funções puras de

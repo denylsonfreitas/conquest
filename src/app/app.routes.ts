@@ -46,6 +46,11 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'acervo',
+        loadComponent: () =>
+          import('./features/acervo/lista-acervo.component').then((m) => m.ListaAcervoComponent),
+      },
+      {
         path: 'quiz',
         loadComponent: () =>
           import('./features/quiz/montar-quiz.component').then((m) => m.MontarQuizComponent),

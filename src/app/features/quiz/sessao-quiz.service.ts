@@ -74,6 +74,18 @@ export class SessaoQuizService {
     ]);
   }
 
+  /**
+   * Reflete na sessão uma edição feita a partir do resultado.
+   *
+   * Só a questão muda. As `respostas` já dadas ficam como estão: o placar é o
+   * retrato daquela sessão, e corrigir um gabarito agora vale para as
+   * estatísticas e para a fila de revisão de erros — quem reconta isso é o
+   * trigger do banco, não esta tela.
+   */
+  atualizarQuestao(id: string, mudancas: Partial<QuestaoQuiz>): void {
+    this.questoes.update((atual) => atual.map((q) => (q.id === id ? { ...q, ...mudancas } : q)));
+  }
+
   avancar(): void {
     if (this.indice() < this.total() - 1) this.indice.update((i) => i + 1);
   }

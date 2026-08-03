@@ -24,6 +24,7 @@ export class ShellComponent {
   protected readonly navegacao = [
     { rota: '/concursos', rotulo: 'Concursos' },
     { rota: '/quiz', rotulo: 'Quiz' },
+    { rota: '/acervo', rotulo: 'Acervo' },
     { rota: '/materias', rotulo: 'Matérias' },
     { rota: '/bancas', rotulo: 'Bancas' },
   ] as const;

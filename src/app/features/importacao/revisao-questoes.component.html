@@ -194,146 +194,25 @@
     </div>
 
     @if (expandidaId() === q.id) {
-      <div class="mt-4 space-y-4 border-t border-tinta-200 pt-4">
-        <ul class="space-y-1 text-sm">
-          @for (alt of q.alternativas; track alt.letra) {
-            <li [class.font-medium]="alt.letra === valor(q, 'gabarito')">
-              ({{ alt.letra }}) {{ alt.texto }}
-            </li>
-          }
-        </ul>
-
+      <div class="mt-4 border-t border-tinta-200 pt-4">
         <!--
-          `ngModel` + `ngValue`, não `[value]`: o binding cru roda ANTES de o
-          `@for` criar as <option>, então o navegador descartava o valor por
-          não haver opção correspondente e o campo abria vazio mesmo com o selo
-          mostrando a matéria. O CVA do Angular reaplica quando as opções
-          aparecem — e `ngValue` carrega `null` de verdade, em vez de string.
+          Mesmo editor da listagem do acervo e do resultado do quiz. O que NÃO
+          vem com ele são os botões de aprovar/desaprovar: isso é da revisão.
         -->
-        <div class="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label class="rotulo">Matéria</label>
-            <select
-              class="campo mt-1"
-              [ngModel]="valor(q, 'materia_id')"
-              (ngModelChange)="mudar(q, 'materia_id', $event)"
-            >
-              <option [ngValue]="null">— sem matéria —</option>
-              @for (m of materias(); track m.id) {
-                <option [ngValue]="m.id">{{ m.nome }}</option>
-              }
-            </select>
-          </div>
+        <app-editor-questao
+          [questao]="q"
+          [materias]="materias()"
+          [urlImagem]="q.imagem_path ? (urlsPorCaminho()[q.imagem_path] ?? null) : null"
+          [salvando]="salvando()"
+          (rascunhoMudou)="acompanhar(q.id, $event)"
+          (salvar)="salvar(q, $event)"
+          (anexarImagem)="anexarImagem(q, $event)"
+          (removerImagem)="removerImagem(q)"
+        />
 
-          <div>
-            <label class="rotulo">Gabarito</label>
-            <select
-              class="campo mt-1"
-              [ngModel]="valor(q, 'gabarito')"
-              (ngModelChange)="mudar(q, 'gabarito', $event)"
-            >
-              <option [ngValue]="null">— sem gabarito —</option>
-              @for (letra of LETRAS; track letra) {
-                <option [ngValue]="letra">{{ letra }}</option>
-              }
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label class="rotulo">Comentário</label>
-          <!--
-            `change` (no blur), não `input`: com `[value]` ligado ao rascunho,
-            reescrever o campo a cada tecla joga o cursor para o fim quando a
-            edição é no meio do texto.
-          -->
-          <textarea
-            class="campo mt-1"
-            rows="2"
-            [value]="valor(q, 'comentario') ?? ''"
-            (change)="mudar(q, 'comentario', $any($event.target).value || null)"
-          ></textarea>
-        </div>
-
-        @if (valor(q, 'tem_imagem')) {
-          <div>
-            <label class="rotulo">Imagem</label>
-
-            <!--
-              Ver o que está anexado é o que permite perceber que subiu a
-              figura errada. Sem a miniatura, `imagem_path` preenchido e upload
-              perdido eram indistinguíveis na tela.
-            -->
-            @if (q.imagem_path) {
-              <div class="mt-1 flex items-start gap-3">
-                @if (urlsPorCaminho()[q.imagem_path]; as url) {
-                  <img
-                    [src]="url"
-                    [alt]="'Imagem da questão ' + q.numero"
-                    class="max-h-40 rounded-campo border border-tinta-200"
-                  />
-                }
-                <button type="button" class="acao-inline text-red-600" (click)="removerImagem(q)">
-                  Remover
-                </button>
-              </div>
-            }
-
-            <input
-              type="file"
-              accept="image/*"
-              class="campo mt-2"
-              (change)="anexarImagem(q, $event)"
-            />
-          </div>
-        }
-
-        <div class="flex flex-wrap gap-3 text-sm">
-          <button
-            type="button"
-            class="acao-inline"
-            (click)="mudar(q, 'tem_imagem', !valor(q, 'tem_imagem'))"
-          >
-            {{ valor(q, 'tem_imagem') ? 'Não depende de imagem' : 'Depende de imagem' }}
-          </button>
-          <button
-            type="button"
-            class="acao-inline"
-            (click)="mudar(q, 'anulada', !valor(q, 'anulada'))"
-          >
-            {{ valor(q, 'anulada') ? 'Desanular' : 'Marcar anulada' }}
-          </button>
-          @if (valor(q, 'incerto')) {
-            <button type="button" class="acao-inline" (click)="mudar(q, 'incerto', false)">
-              Conferi — remover marca de dúvida
-            </button>
-          }
-        </div>
-
-        <!--
-          Fechar com rascunho pendente é barrado aqui: salvar exige um clique,
-          então perder o trabalho também precisa exigir um.
-        -->
         @if (avisoNaoSalvo() === q.id) {
-          <p role="alert" class="text-sm font-medium text-amber-800">Mudanças não salvas.</p>
+          <p role="alert" class="mt-3 text-sm font-medium text-amber-800">Mudanças não salvas.</p>
         }
-
-        <div class="flex items-center gap-3 border-t border-tinta-200 pt-4">
-          <button
-            type="button"
-            class="btn"
-            [disabled]="!temRascunho(q.id) || salvando()"
-            (click)="salvar(q)"
-          >
-            {{ salvando() ? 'Salvando…' : 'Salvar' }}
-          </button>
-
-          @if (temRascunho(q.id)) {
-            <button type="button" class="btn-secundario" (click)="descartarEFechar(q.id)">
-              Descartar
-            </button>
-          }
-        </div>
       </div>
     }
   </li>

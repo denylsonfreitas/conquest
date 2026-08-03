@@ -1,0 +1,179 @@
+@switch (status()) {
+  @case ('carregando') {
+    <app-estado-carregando mensagem="Carregando o acervo…" />
+  }
+  @case ('erro') {
+    <app-estado-erro [mensagem]="erroCarga() ?? ''" (tentarDeNovo)="carregar()" />
+  }
+  @case ('ok') {
+    <header class="mb-6">
+      <h1 class="text-2xl font-semibold text-tinta-900">Acervo</h1>
+    </header>
+
+    @if (erroAcao(); as msg) {
+      <p role="alert" class="alerta-erro mb-4">{{ msg }}</p>
+    }
+
+    <section class="cartao mb-6 space-y-5 p-5">
+      <div>
+        <label for="busca" class="rotulo">Buscar</label>
+        <input
+          id="busca"
+          class="campo mt-1"
+          placeholder="texto do enunciado ou do comentário"
+          [value]="busca()"
+          (change)="digitarBusca($any($event.target).value)"
+        />
+      </div>
+
+      <app-filtros-acervo
+        [universo]="universo()"
+        [filtros]="filtros()"
+        (mudou)="mudarFiltros($event)"
+      />
+
+      <!--
+        Filtro que o quiz não tem, e não poderia ter: aqui se caça justamente a
+        questão que NÃO é elegível.
+      -->
+      <div>
+        <span class="rotulo">Situação</span>
+        <div class="mt-1 flex flex-wrap gap-2">
+          @for (s of SITUACOES; track s) {
+            <button
+              type="button"
+              class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
+              [class]="
+                situacao() === s
+                  ? 'bg-tinta-900 text-white ring-tinta-900'
+                  : 'bg-white text-tinta-700 ring-tinta-200 hover:bg-tinta-50'
+              "
+              (click)="mudarSituacao(s)"
+            >
+              {{ ROTULO_SITUACAO[s] }}
+            </button>
+          }
+        </div>
+      </div>
+    </section>
+
+    <p class="mb-3 text-sm text-tinta-500">
+      <span class="font-medium text-tinta-900">{{ total() }}</span>
+      {{ total() === 1 ? 'questão' : 'questões' }}
+    </p>
+
+    @if (questoes().length === 0) {
+      <app-estado-vazio mensagem="Nenhuma questão com esses filtros." />
+    } @else {
+      <ul class="space-y-3">
+        @for (q of questoes(); track q.id) {
+          <li class="cartao p-4" [class.opacity-60]="q.anulada">
+            <div class="flex items-start gap-3">
+              <span class="w-8 shrink-0 font-medium text-tinta-500">{{ q.numero ?? '—' }}</span>
+
+              <div class="min-w-0 flex-1">
+                <p class="text-tinta-900" [class.line-clamp-2]="abertaId() !== q.id">
+                  {{ q.enunciado }}
+                </p>
+
+                <p class="mt-1 flex flex-wrap gap-2 text-xs">
+                  @if (q.materia) {
+                    <span class="rounded-campo bg-tinta-50 px-2 py-0.5 text-tinta-700">
+                      {{ q.materia }}
+                    </span>
+                  }
+                  @if (q.gabarito) {
+                    <span class="rounded-campo bg-emerald-50 px-2 py-0.5 text-emerald-700">
+                      gabarito {{ q.gabarito }}
+                    </span>
+                  }
+                  @if (q.elegivel) {
+                    <span class="rounded-campo bg-sky-50 px-2 py-0.5 text-sky-700">elegível</span>
+                  } @else {
+                    <span class="rounded-campo bg-amber-50 px-2 py-0.5 font-medium text-amber-800">
+                      fora dos quizzes
+                    </span>
+                  }
+                  @if (q.anulada) {
+                    <span class="rounded-campo bg-tinta-50 px-2 py-0.5 text-tinta-500"
+                      >anulada</span
+                    >
+                  }
+                  @if (!q.revisada) {
+                    <span class="rounded-campo bg-amber-50 px-2 py-0.5 text-amber-800">
+                      não revisada
+                    </span>
+                  }
+                  @if (q.tem_imagem && !q.imagem_path) {
+                    <span class="rounded-campo bg-amber-50 px-2 py-0.5 text-amber-800">
+                      falta imagem
+                    </span>
+                  }
+                  <span class="text-tinta-500">
+                    {{ q.concurso_nome }}
+                    @if (q.banca_nome) {
+                      <span>· {{ q.banca_nome }}</span>
+                    }
+                  </span>
+                </p>
+              </div>
+
+              <button type="button" class="acao-inline" (click)="alternarAberta(q.id)">
+                {{ abertaId() === q.id ? 'Fechar' : 'Editar' }}
+              </button>
+            </div>
+
+            @if (abertaId() === q.id) {
+              <div class="mt-4 border-t border-tinta-200 pt-4">
+                @if (recontadas() > 0) {
+                  <p role="status" class="mb-3 text-sm font-medium text-emerald-700">
+                    {{ recontadas() }}
+                    {{
+                      recontadas() === 1
+                        ? 'resposta passada recontada'
+                        : 'respostas passadas recontadas'
+                    }}.
+                  </p>
+                }
+
+                <app-editor-questao
+                  [questao]="q"
+                  [materias]="materias()"
+                  [urlImagem]="urlImagem()"
+                  [salvando]="salvando()"
+                  [respostasAfetadas]="respostasAfetadas()"
+                  (rascunhoMudou)="acompanhar(q, $event)"
+                  (salvar)="salvar(q, $event)"
+                  (anexarImagem)="anexarImagem(q, $event)"
+                  (removerImagem)="removerImagem(q)"
+                />
+              </div>
+            }
+          </li>
+        }
+      </ul>
+
+      @if (paginas() > 1) {
+        <div class="mt-6 flex items-center gap-3">
+          <button
+            type="button"
+            class="btn-secundario"
+            [disabled]="pagina() === 0"
+            (click)="irPara(pagina() - 1)"
+          >
+            Anterior
+          </button>
+          <span class="text-sm text-tinta-500"> página {{ pagina() + 1 }} de {{ paginas() }} </span>
+          <button
+            type="button"
+            class="btn-secundario"
+            [disabled]="pagina() >= paginas() - 1"
+            (click)="irPara(pagina() + 1)"
+          >
+            Próxima
+          </button>
+        </div>
+      }
+    }
+  }
+}

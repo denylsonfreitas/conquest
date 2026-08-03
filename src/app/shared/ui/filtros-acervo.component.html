@@ -1,0 +1,58 @@
+<div class="space-y-5">
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div>
+      <label for="filtro-banca" class="rotulo">Banca</label>
+      <select
+        id="filtro-banca"
+        class="campo mt-1"
+        [ngModel]="filtros().bancaId"
+        (ngModelChange)="escolherBanca($event)"
+      >
+        <option [ngValue]="null">Todas</option>
+        @for (b of opcoes().bancas; track b.id) {
+          <option [ngValue]="b.id">{{ b.nome }}</option>
+        }
+      </select>
+    </div>
+
+    <div>
+      <label for="filtro-concurso" class="rotulo">Concurso</label>
+      <select
+        id="filtro-concurso"
+        class="campo mt-1"
+        [ngModel]="filtros().concursoId"
+        (ngModelChange)="escolherConcurso($event)"
+      >
+        <option [ngValue]="null">Todos</option>
+        @for (c of opcoes().concursos; track c.id) {
+          <option [ngValue]="c.id">{{ c.nome }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <!-- Matéria é multi-seleção; banca e concurso, não (docs/03). -->
+  <div>
+    <span class="rotulo">Matérias</span>
+    <div class="mt-1 flex flex-wrap gap-2">
+      @for (m of opcoes().materias; track m.id) {
+        <button
+          type="button"
+          class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
+          [class]="
+            materiaEscolhida(m.id)
+              ? 'bg-tinta-900 text-white ring-tinta-900'
+              : 'bg-white text-tinta-700 ring-tinta-200 hover:bg-tinta-50'
+          "
+          (click)="alternarMateria(m.id)"
+        >
+          {{ m.nome }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (tem()) {
+    <button type="button" class="acao-inline" (click)="limpar()">Limpar filtros</button>
+  }
+</div>

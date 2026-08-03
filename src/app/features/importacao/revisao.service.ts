@@ -1,7 +1,17 @@
 import { inject, Injectable } from '@angular/core';
 
 import { SupabaseService } from '../../core/supabase.service';
+import { EdicaoQuestao } from '../../shared/edicao-questao';
 import { Alternativa, Letra, TipoQuestao } from '../../shared/models';
+
+/**
+ * A revisão edita os mesmos campos das outras telas, MAIS a aprovação.
+ *
+ * `revisada` fica fora do `EdicaoQuestao` compartilhado de propósito: aprovar é
+ * ato da revisão, e o editor burro não deve nem oferecer o botão nas outras
+ * duas telas que o reaproveitam.
+ */
+export type EdicaoRevisao = EdicaoQuestao & { revisada?: boolean };
 
 /** Questão como a tela de revisão precisa dela. */
 export interface QuestaoRevisao {
@@ -21,22 +31,6 @@ export interface QuestaoRevisao {
   anulada: boolean;
   revisada: boolean;
 }
-
-/** Campos que a revisão pode alterar numa questão. */
-export type EdicaoQuestao = Partial<
-  Pick<
-    QuestaoRevisao,
-    | 'materia_id'
-    | 'gabarito'
-    | 'enunciado'
-    | 'comentario'
-    | 'tem_imagem'
-    | 'imagem_path'
-    | 'anulada'
-    | 'revisada'
-    | 'incerto'
-  >
->;
 
 const COLUNAS =
   'id, prova_id, numero, materia_id, assunto, enunciado, alternativas, gabarito, tipo, tem_imagem, imagem_path, comentario, incerto, anulada, revisada';
@@ -81,7 +75,7 @@ export class RevisaoService {
     if (error) throw new Error(`Não foi possível atribuir a matéria: ${error.message}`);
   }
 
-  async editar(id: string, mudancas: EdicaoQuestao): Promise<QuestaoRevisao> {
+  async editar(id: string, mudancas: EdicaoRevisao): Promise<QuestaoRevisao> {
     const { data, error } = await this.supabase.client
       .from('questoes')
       .update(mudancas)

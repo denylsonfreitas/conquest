@@ -63,8 +63,8 @@ async function assentar(fixture: ComponentFixture<RevisaoQuestoesComponent>, tex
 /** Os membros da edição são `protected`: o template os vê, o teste precisa deles. */
 function editor(fixture: ComponentFixture<RevisaoQuestoesComponent>) {
   return fixture.componentInstance as unknown as {
-    mudar: (q: QuestaoRevisao, campo: keyof QuestaoRevisao, valor: unknown) => void;
-    salvar: (q: QuestaoRevisao) => Promise<void>;
+    acompanhar: (id: string, rascunho: Record<string, unknown>) => void;
+    salvar: (q: QuestaoRevisao, mudancas: Record<string, unknown>) => Promise<void>;
     temRascunho: (id: string) => boolean;
     descartarEFechar: (id: string) => void;
     alternarExpansao: (id: string) => void;
@@ -252,33 +252,17 @@ describe('RevisaoQuestoesComponent', () => {
     expect(img()).toBeNull();
   });
 
-  it('junta os campos alterados numa requisição só', async () => {
-    // O ponto do botão: uma edição manual mexe em dois ou três campos e vai ao
-    // banco uma vez, em vez de um PATCH por tecla de select.
+  it('manda uma requisição só com tudo que o editor acumulou', async () => {
     const editar = vi.fn(async (_id: string, m: Partial<QuestaoRevisao>) => base({ ...m }));
     const fixture = montar({ listar: async () => [base()], editar });
     await assentar(fixture, 'Enunciado da questão');
 
     const c = editor(fixture);
-    c.mudar(base(), 'materia_id', 'm2');
-    c.mudar(base(), 'gabarito', 'B');
-    await c.salvar(base());
+    await c.salvar(base(), { materia_id: 'm2', gabarito: 'B' });
 
     expect(editar).toHaveBeenCalledTimes(1);
     expect(editar).toHaveBeenCalledWith('q1', { materia_id: 'm2', gabarito: 'B' });
     expect(await assentar(fixture, 'Salvo')).toContain('Salvo');
-  });
-
-  it('esquece a mudança que volta ao valor original', async () => {
-    // Editar e desfazer não pode deixar a questão eternamente "não salva".
-    const fixture = montar({ listar: async () => [base()] });
-    await assentar(fixture, 'Enunciado da questão');
-
-    const c = editor(fixture);
-    c.mudar(base(), 'gabarito', 'B');
-    expect(c.temRascunho('q1')).toBe(true);
-    c.mudar(base(), 'gabarito', 'A');
-    expect(c.temRascunho('q1')).toBe(false);
   });
 
   it('barra o fechamento com mudança não salva, em vez de perdê-la', async () => {
@@ -287,34 +271,125 @@ describe('RevisaoQuestoesComponent', () => {
 
     const c = editor(fixture);
     c.alternarExpansao('q1');
-    c.mudar(base(), 'gabarito', 'B');
+    // Espera o editor montar: ao nascer ele emite rascunho vazio, e anunciar a
+    // pendência antes disso seria apagado por esse primeiro aviso.
+    await assentar(fixture, 'Salvar');
+
+    // É o editor que avisa o pai sobre o que está pendente.
+    c.acompanhar('q1', { gabarito: 'B' });
     c.alternarExpansao('q1');
 
     expect(c.expandidaId()).toBe('q1');
     expect(await assentar(fixture, 'Mudanças não salvas')).toContain('Mudanças não salvas');
 
-    // Descartar é a saída — explícita, como salvar.
     c.descartarEFechar('q1');
     expect(c.expandidaId()).toBeNull();
     expect(c.temRascunho('q1')).toBe(false);
   });
 
-  it('preserva o rascunho quando a gravação falha', async () => {
-    // O texto digitado é o trabalho; jogá-lo fora junto com a mensagem de erro
-    // seria a pior hora de perdê-lo.
+  it('esquece o aviso quando o editor diz que não há mais rascunho', async () => {
+    const fixture = montar({ listar: async () => [base()] });
+    await assentar(fixture, 'Enunciado da questão');
+
+    const c = editor(fixture);
+    c.acompanhar('q1', { gabarito: 'B' });
+    expect(c.temRascunho('q1')).toBe(true);
+    c.acompanhar('q1', {});
+    expect(c.temRascunho('q1')).toBe(false);
+  });
+
+  it('mostra o erro quando a gravação falha', async () => {
     const editar = vi.fn(async () => {
       throw new Error('Não dá para aprovar sem matéria atribuída.');
     });
     const fixture = montar({ listar: async () => [base()], editar });
     await assentar(fixture, 'Enunciado da questão');
 
-    const c = editor(fixture);
-    c.mudar(base(), 'materia_id', null);
-    await c.salvar(base());
+    await editor(fixture).salvar(base(), { materia_id: null });
 
     const texto = await assentar(fixture, 'Não dá para aprovar');
     expect(texto).not.toContain('Salvo');
-    expect(c.temRascunho('q1')).toBe(true);
+  });
+
+  it('não oferece lote para questão com pendência', async () => {
+    const fixture = montar({
+      listar: async () => [base({ id: 'a', numero: 1, tem_imagem: true, imagem_path: null })],
+    });
+    const texto = await assentar(fixture, 'precisa de imagem');
+    expect(texto).not.toContain('Aprovar as');
+  });
+
+  it('mostra cada pendência como selo na lista FECHADA', async () => {
+    // O ponto do agrupamento morre se for preciso abrir 70 questões para
+    // descobrir qual delas depende de imagem.
+    const fixture = montar({
+      listar: async () => [
+        base({ id: 'a', numero: 29, tem_imagem: true, imagem_path: null }),
+        base({ id: 'b', numero: 49, materia_id: null, assunto: null, incerto: true }),
+      ],
+    });
+    const texto = await assentar(fixture, 'precisa de imagem');
+
+    expect(texto).toContain('precisa de imagem');
+    expect(texto).toContain('sem matéria');
+    expect(texto).toContain('extração duvidou');
+    // Nada foi expandido: os selos vêm da lista fechada.
+    expect(texto).not.toContain('Comentário');
+  });
+
+  it('distingue "tem imagem" de "precisa de imagem"', async () => {
+    const fixture = montar({
+      listar: async () => [base({ id: 'a', tem_imagem: true, imagem_path: 'p/q.png' })],
+    });
+    const texto = await assentar(fixture, 'tem imagem');
+    expect(texto).not.toContain('precisa de imagem');
+  });
+
+  it('abre os campos já preenchidos com o valor da questão', async () => {
+    // O bug: `[value]` no <select> corria antes de o @for criar as <option>, o
+    // navegador descartava o valor sem opção correspondente, e o campo abria
+    // "— sem matéria —" enquanto o selo do cabeçalho mostrava a matéria.
+    const fixture = montar({ listar: async () => [base({ materia_id: 'm2', gabarito: 'B' })] });
+    await assentar(fixture, 'Enunciado da questão');
+
+    editor(fixture).alternarExpansao('q1');
+    await assentar(fixture, 'Comentário');
+
+    const selects = (fixture.nativeElement as HTMLElement).querySelectorAll('select');
+    const selecionado = (s: HTMLSelectElement) => s.options[s.selectedIndex]?.textContent?.trim();
+
+    expect(selecionado(selects[0])).toBe('Raciocínio Lógico');
+    expect(selecionado(selects[1])).toBe('B');
+  });
+
+  it('mostra a imagem anexada e deixa removê-la', async () => {
+    // `imagem_path` preenchido e upload perdido eram indistinguíveis na tela:
+    // nenhum dos dois mostrava figura nenhuma.
+    const removerImagem = vi.fn(async () => base({ tem_imagem: true, imagem_path: null }));
+    const fixture = montar({
+      listar: async () => [base({ tem_imagem: true, imagem_path: 'p1/q1' })],
+      urlImagem: async () => 'https://local/assinada.png',
+      removerImagem,
+    });
+    await assentar(fixture, 'Enunciado da questão');
+
+    editor(fixture).alternarExpansao('q1');
+    await assentar(fixture, 'Remover');
+
+    const img = () => (fixture.nativeElement as HTMLElement).querySelector('img');
+    for (let i = 0; i < 50 && !img(); i++) {
+      await new Promise((r) => setTimeout(r, 5));
+      fixture.detectChanges();
+    }
+    expect(img()?.getAttribute('src')).toBe('https://local/assinada.png');
+
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
+      .find((b) => b.textContent?.includes('Remover'))
+      ?.click();
+    await assentar(fixture, 'Imagem removida');
+
+    expect(removerImagem).toHaveBeenCalled();
+    expect(img()).toBeNull();
   });
 
   it('mostra a mensagem do CHECK quando a aprovação é recusada', async () => {

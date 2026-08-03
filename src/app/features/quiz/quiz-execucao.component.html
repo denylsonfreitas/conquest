@@ -1,9 +1,11 @@
 @if (sessao.atual(); as q) {
-  <header class="mb-6 flex items-center justify-between gap-4">
+  <header class="mb-4 flex items-center justify-between gap-4">
     <div>
       <p class="text-sm text-tinta-500">
         Questão {{ sessao.indice() + 1 }} de {{ sessao.total() }}
-        <span class="text-tinta-400">· {{ respondidas() }} respondidas</span>
+        <span class="text-tinta-400">
+          · {{ progresso() }} {{ sessao.ehProva() ? 'marcadas' : 'respondidas' }}
+        </span>
       </p>
       <h1 class="text-lg font-semibold text-tinta-900">{{ q.materia ?? 'Sem matéria' }}</h1>
     </div>
@@ -11,12 +13,28 @@
     <button type="button" class="acao-inline" (click)="abandonar()">Sair do quiz</button>
   </header>
 
-  <!-- Barra de progresso: dá a noção de quanto falta sem contar de cabeça. -->
-  <div class="mb-6 h-1 rounded-campo bg-tinta-200">
-    <div
-      class="h-1 rounded-campo bg-tinta-900 transition-all"
-      [style.width.%]="(respondidas() / sessao.total()) * 100"
-    ></div>
+  <!--
+    A folha de respostas. Com 50 questões, "Anterior/Próxima" não serve: é
+    preciso ver de longe o que ficou em branco e pular direto para lá.
+  -->
+  <div class="mb-6 flex flex-wrap gap-1.5">
+    @for (item of sessao.questoes(); track item.id; let i = $index) {
+      <button
+        type="button"
+        class="h-8 w-8 rounded-campo text-xs font-medium ring-1 transition"
+        [class]="
+          i === sessao.indice()
+            ? 'bg-tinta-900 text-white ring-tinta-900'
+            : sessao.situacaoDe(item) === 'marcada'
+              ? 'bg-sky-50 text-sky-700 ring-sky-300'
+              : 'bg-white text-tinta-500 ring-tinta-200 hover:bg-tinta-50'
+        "
+        [attr.aria-current]="i === sessao.indice() ? 'true' : null"
+        (click)="sessao.irPara(i)"
+      >
+        {{ i + 1 }}
+      </button>
+    }
   </div>
 
   @if (erro(); as msg) {
@@ -37,7 +55,7 @@
       }
     </p>
 
-    <p class="text-tinta-900 whitespace-pre-line">{{ q.enunciado }}</p>
+    <p class="whitespace-pre-line text-tinta-900">{{ q.enunciado }}</p>
 
     @if (q.imagem_path) {
       @if (urlImagem(); as url) {
@@ -56,8 +74,8 @@
             type="button"
             class="w-full rounded-campo px-4 py-3 text-left ring-1 transition"
             [class]="estilo(alt.letra)"
-            [disabled]="respondendo() || sessao.respostaAtual() !== null"
-            (click)="responder(alt.letra)"
+            [disabled]="ocupado() || (!sessao.ehProva() && sessao.respostaAtual() !== null)"
+            (click)="marcar(alt.letra)"
           >
             <span class="font-medium">{{ alt.letra }})</span> {{ alt.texto }}
           </button>
@@ -80,7 +98,7 @@
     }
   </article>
 
-  <div class="mt-6 flex items-center gap-3">
+  <div class="mt-6 flex flex-wrap items-center gap-3">
     <button
       type="button"
       class="btn-secundario"
@@ -94,12 +112,55 @@
       <button type="button" class="btn" (click)="sessao.avancar()">Próxima</button>
     }
 
-    @if (sessao.terminou()) {
-      <button type="button" class="btn" (click)="encerrar()">Ver resultado</button>
-    } @else if (respondidas() > 0) {
-      <button type="button" class="acao-inline ml-auto" (click)="encerrar()">
-        Encerrar com {{ respondidas() }} respondidas
+    @if (sessao.ehProva()) {
+      <button
+        type="button"
+        class="btn ml-auto"
+        [disabled]="ocupado() || sessao.marcadas() === 0"
+        (click)="pedirEntrega()"
+      >
+        Entregar
+      </button>
+    } @else if (sessao.terminou()) {
+      <button type="button" class="btn" (click)="verResultado()">Ver resultado</button>
+    } @else if (sessao.respostas().length > 0) {
+      <button type="button" class="acao-inline ml-auto" (click)="verResultado()">
+        Encerrar com {{ sessao.respostas().length }} respondidas
       </button>
     }
   </div>
+
+  <!--
+    O único momento em que dá para voltar: depois da entrega o feedback está
+    revelado e não há como "desentregar". Por isso a contagem de brancos vem
+    aqui, e não depois.
+  -->
+  @if (confirmandoEntrega()) {
+    <div class="cartao mt-6 border-amber-200 p-5">
+      <p class="font-medium text-tinta-900">
+        Entregar {{ sessao.marcadas() }} de {{ sessao.total() }}?
+      </p>
+
+      @if (sessao.brancos() > 0) {
+        <p class="mt-1 text-sm font-medium text-amber-800">
+          {{ sessao.brancos() }}
+          {{ sessao.brancos() === 1 ? 'questão em branco' : 'questões em branco' }}.
+        </p>
+      }
+
+      <div class="mt-4 flex gap-2">
+        <button type="button" class="btn" [disabled]="ocupado()" (click)="entregar()">
+          {{ ocupado() ? 'Entregando…' : 'Entregar' }}
+        </button>
+        <button
+          type="button"
+          class="btn-secundario"
+          [disabled]="ocupado()"
+          (click)="cancelarEntrega()"
+        >
+          Voltar ao simulado
+        </button>
+      </div>
+    </div>
+  }
 }

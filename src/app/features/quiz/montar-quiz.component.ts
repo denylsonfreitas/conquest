@@ -15,6 +15,7 @@ import {
 import {
   aplicarModo,
   filaDoModo,
+  ModoExecucao,
   ModoQuiz,
   motivoConjuntoVazio,
   normalizarQuantidade,
@@ -22,6 +23,8 @@ import {
   QUANTIDADE_MAX,
   QUANTIDADE_MIN,
   RespostaHistorico,
+  RESUMO_EXECUCAO,
+  ROTULO_EXECUCAO,
   ROTULO_MODO,
 } from './regras-quiz';
 import { SessaoQuizService } from './sessao-quiz.service';
@@ -58,7 +61,7 @@ export class MontarQuizComponent {
   protected readonly filtros = signal<FiltrosAcervo>(FILTROS_VAZIOS);
   protected readonly modo = signal<ModoQuiz>('aleatorio');
   protected readonly quantidade = signal(10);
-  protected readonly feedbackImediato = signal(true);
+  protected readonly execucao = signal<ModoExecucao>('estudo');
 
   /** As candidatas de verdade: filtros + modo. É delas que o sorteio sai. */
   protected readonly candidatas = computed(() =>
@@ -76,6 +79,9 @@ export class MontarQuizComponent {
 
   protected readonly MODOS: ModoQuiz[] = ['aleatorio', 'menos_vistas', 'revisao_erros'];
   protected readonly ROTULO_MODO = ROTULO_MODO;
+  protected readonly EXECUCOES: ModoExecucao[] = ['estudo', 'prova'];
+  protected readonly ROTULO_EXECUCAO = ROTULO_EXECUCAO;
+  protected readonly RESUMO_EXECUCAO = RESUMO_EXECUCAO;
   protected readonly QUANTIDADE_MIN = QUANTIDADE_MIN;
   protected readonly QUANTIDADE_MAX = QUANTIDADE_MAX;
 
@@ -135,7 +141,7 @@ export class MontarQuizComponent {
       );
       const escolhidas = primeiras(fila, this.quantidade());
       const questoes = await this.service.questoes(escolhidas.map((q) => q.id));
-      this.sessao.iniciar(questoes, this.modo(), this.feedbackImediato());
+      this.sessao.iniciar(questoes, this.modo(), this.execucao());
       await this.router.navigate(['/quiz/executar']);
     } catch (e) {
       this.erroAcao.set(mensagem(e));

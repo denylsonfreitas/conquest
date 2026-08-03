@@ -259,12 +259,34 @@ describe('placar e desempenho', () => {
     { questaoId: 'd', letraMarcada: 'D', acertou: false },
   ];
 
-  it('conta acertos e percentual', () => {
-    expect(placar(respostas)).toEqual({ acertos: 2, total: 4, percentual: 50 });
+  it('sem brancos, os dois denominadores coincidem', () => {
+    expect(placar(respostas, 4)).toEqual({
+      acertos: 2,
+      respondidas: 4,
+      total: 4,
+      brancos: 0,
+      percentualRespondidas: 50,
+      percentualProva: 50,
+    });
+  });
+
+  it('com brancos, o percentual da prova é MENOR — o de respondidas mentiria', () => {
+    // 2 de 4 respondidas é 50%; mas a prova tinha 8, então o resultado é 25%.
+    // Mostrar só o primeiro número seria dizer que você acertou metade da prova.
+    const p = placar(respostas, 8);
+    expect(p.brancos).toBe(4);
+    expect(p.percentualRespondidas).toBe(50);
+    expect(p.percentualProva).toBe(25);
+  });
+
+  it('sem total informado, cai no número de respostas', () => {
+    // É o caso do modo estudo encerrado cedo, antes de a tela passar o total.
+    expect(placar(respostas).total).toBe(4);
   });
 
   it('quiz sem resposta não divide por zero', () => {
-    expect(placar([])).toEqual({ acertos: 0, total: 0, percentual: 0 });
+    expect(placar([], 0)).toMatchObject({ acertos: 0, total: 0, percentualProva: 0 });
+    expect(placar([], 10).percentualProva).toBe(0);
   });
 
   it('agrupa por matéria e ordena do pior para o melhor', () => {

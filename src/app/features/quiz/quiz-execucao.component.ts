@@ -13,12 +13,17 @@ import { QuizService } from './quiz.service';
 import { SessaoQuizService } from './sessao-quiz.service';
 
 /**
- * Execução do quiz — uma questão por vez.
+ * Execução do quiz — uma questão por vez, em dois modos.
+ *
+ * **Estudo:** marcar grava na hora, a resposta certa aparece na hora, e não se
+ * remarca. O valor é o compromisso.
+ *
+ * **Prova:** marcar só registra a intenção, remarcar é livre, e nada é
+ * revelado até a entrega. É o simulado.
  *
  * Toda a sessão está no `SessaoQuizService`; esta tela só renderiza e despacha.
  * Sem sessão em memória (recarregou a página, entrou pela URL) ela volta para a
- * montagem: o quiz é efêmero por decisão do docs/01, e fingir que dá para
- * retomar seria pior que dizer que não dá.
+ * montagem: o quiz é efêmero por decisão do docs/01.
  */
 @Component({
   selector: 'app-quiz-execucao',
@@ -31,15 +36,19 @@ export class QuizExecucaoComponent {
   protected readonly sessao = inject(SessaoQuizService);
 
   protected readonly erro = signal<string | null>(null);
-  protected readonly respondendo = signal(false);
+  protected readonly ocupado = signal(false);
   protected readonly urlImagem = signal<string | null>(null);
+  /** Passo de confirmação da entrega, onde os brancos são contados. */
+  protected readonly confirmandoEntrega = signal(false);
 
-  /** Só revela certo/errado quando o modo de feedback pede. */
+  /** Só revela certo/errado no modo estudo, e só depois de responder. */
   protected readonly revelado = computed(
-    () => this.sessao.feedbackImediato() && this.sessao.respostaAtual() !== null,
+    () => this.sessao.revelaFeedback() && this.sessao.respostaAtual() !== null,
   );
 
-  protected readonly respondidas = computed(() => this.sessao.respostas().length);
+  protected readonly progresso = computed(() =>
+    this.sessao.ehProva() ? this.sessao.marcadas() : this.sessao.respostas().length,
+  );
 
   constructor() {
     effect(() => {
@@ -63,28 +72,27 @@ export class QuizExecucaoComponent {
     }
   }
 
-  protected async responder(letra: Letra): Promise<void> {
-    if (this.respondendo() || this.sessao.respostaAtual()) return;
+  protected async marcar(letra: Letra): Promise<void> {
+    if (this.ocupado()) return;
+    // No estudo, marcado é marcado. Na prova, remarcar é o ponto.
+    if (!this.sessao.ehProva() && this.sessao.respostaAtual()) return;
 
-    this.respondendo.set(true);
+    this.ocupado.set(true);
     this.erro.set(null);
     try {
-      await this.sessao.responder(letra);
-      // Sem feedback imediato não há o que ler na tela: avança sozinho, como
-      // uma folha de respostas.
-      if (!this.sessao.feedbackImediato() && !this.sessao.terminou()) this.sessao.avancar();
+      await this.sessao.marcar(letra);
     } catch (e) {
       this.erro.set(mensagem(e));
     } finally {
-      this.respondendo.set(false);
+      this.ocupado.set(false);
     }
   }
 
   protected marcada(letra: Letra): boolean {
-    return this.sessao.respostaAtual()?.letraMarcada === letra;
+    return this.sessao.letraAtual() === letra;
   }
 
-  /** Cor da alternativa depois de revelada: a certa e a que você marcou. */
+  /** Cor da alternativa: seleção antes de revelar, acerto/erro depois. */
   protected estilo(letra: Letra): string {
     if (!this.revelado()) {
       return this.marcada(letra)
@@ -98,12 +106,44 @@ export class QuizExecucaoComponent {
     return 'bg-white text-tinta-500 ring-tinta-200';
   }
 
-  protected async encerrar(): Promise<void> {
+  // --- entrega (modo prova) ----------------------------------------------------
+
+  protected pedirEntrega(): void {
+    this.confirmandoEntrega.set(true);
+  }
+
+  protected cancelarEntrega(): void {
+    this.confirmandoEntrega.set(false);
+  }
+
+  /**
+   * Entrega: um INSERT com tudo. Só aqui as marcações viram respostas.
+   *
+   * Se falhar, nada foi gravado e as marcações continuam na tela — o insert é
+   * atômico justamente para não existir simulado meio entregue.
+   */
+  protected async entregar(): Promise<void> {
+    if (this.ocupado()) return;
+    this.ocupado.set(true);
+    this.erro.set(null);
+    try {
+      await this.sessao.entregar();
+      this.confirmandoEntrega.set(false);
+      await this.router.navigate(['/quiz/resultado']);
+    } catch (e) {
+      this.erro.set(mensagem(e));
+    } finally {
+      this.ocupado.set(false);
+    }
+  }
+
+  protected async verResultado(): Promise<void> {
     await this.router.navigate(['/quiz/resultado']);
   }
 
   protected async abandonar(): Promise<void> {
-    // As respostas já dadas ficam no banco e contam; só a sessão se desfaz.
+    // No estudo as respostas já dadas ficam no banco e contam. Na prova, as
+    // marcações somem sem virar nada — é o preço de gravar só na entrega.
     this.sessao.encerrar();
     await this.router.navigate(['/quiz']);
   }

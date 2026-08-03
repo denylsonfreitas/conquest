@@ -52,6 +52,12 @@ async function assentar(fixture: ComponentFixture<QuizExecucaoComponent>, texto:
   return (fixture.nativeElement as HTMLElement).textContent ?? '';
 }
 
+/** Deixa o clique assentar.  volta cedo quando o texto já estava lá. */
+async function respirar(fixture: ComponentFixture<QuizExecucaoComponent>) {
+  await new Promise((r) => setTimeout(r, 20));
+  fixture.detectChanges();
+}
+
 const clicar = (fixture: ComponentFixture<QuizExecucaoComponent>, texto: string) =>
   Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) =>
     b.textContent?.includes(texto),
@@ -70,48 +76,120 @@ describe('QuizExecucaoComponent', () => {
   });
 
   it('mostra a questão e registra a resposta no banco', async () => {
-    const registrar = vi.fn(async (_r: RespostaNova) => {});
+    const registrar = vi.fn(async (_r: readonly RespostaNova[]) => {});
     const fixture = montar({ registrar });
-    TestBed.inject(SessaoQuizService).iniciar([questao('q1')], 'aleatorio', true);
+    TestBed.inject(SessaoQuizService).iniciar([questao('q1')], 'aleatorio', 'estudo');
 
     await assentar(fixture, 'Enunciado da q1');
     clicar(fixture, 'primeira')?.click();
     await assentar(fixture, 'Acertou');
 
-    expect(registrar).toHaveBeenCalledWith(
+    expect(registrar).toHaveBeenCalledWith([
       expect.objectContaining({ questao_id: 'q1', letra_marcada: 'A', acertou: true }),
-    );
+    ]);
     // Grava na hora — é o que faz interromper o quiz não perder nada.
-    expect(registrar.mock.calls[0][0].quiz_sessao_id).toBeTruthy();
+    expect(registrar.mock.calls[0][0][0].quiz_sessao_id).toBeTruthy();
   });
 
   it('com feedback imediato, revela o gabarito na questão errada', async () => {
     const fixture = montar();
-    TestBed.inject(SessaoQuizService).iniciar([questao('q1')], 'aleatorio', true);
+    TestBed.inject(SessaoQuizService).iniciar([questao('q1')], 'aleatorio', 'estudo');
     await assentar(fixture, 'Enunciado da q1');
 
     clicar(fixture, 'segunda')?.click();
     expect(await assentar(fixture, 'Errou')).toContain('o gabarito é A');
   });
 
-  it('sem feedback imediato, não revela nada e avança sozinho', async () => {
-    const fixture = montar();
+  it('no modo prova não revela nada e não grava nada até a entrega', async () => {
+    const registrar = vi.fn(async (_r: readonly RespostaNova[]) => {});
+    const fixture = montar({ registrar });
     const sessao = TestBed.inject(SessaoQuizService);
-    sessao.iniciar([questao('q1'), questao('q2')], 'aleatorio', false);
+    sessao.iniciar([questao('q1'), questao('q2')], 'aleatorio', 'prova');
     await assentar(fixture, 'Enunciado da q1');
 
     clicar(fixture, 'segunda')?.click();
-    const texto = await assentar(fixture, 'Enunciado da q2');
+    const texto = await assentar(fixture, 'Entregar');
 
     expect(texto).not.toContain('Errou');
     expect(texto).not.toContain('Acertou');
-    expect(sessao.indice()).toBe(1);
+    expect(registrar).not.toHaveBeenCalled();
+    // Marcação é intenção; ela não vira resposta antes da entrega.
+    expect(sessao.respostas()).toEqual([]);
+    expect(sessao.marcadas()).toBe(1);
   });
 
+  it('no modo prova, remarcar troca a marcação', async () => {
+    const fixture = montar();
+    const sessao = TestBed.inject(SessaoQuizService);
+    sessao.iniciar([questao('q1')], 'aleatorio', 'prova');
+    await assentar(fixture, 'Enunciado da q1');
+
+    clicar(fixture, 'segunda')?.click();
+    await respirar(fixture);
+    clicar(fixture, 'primeira')?.click();
+    await respirar(fixture);
+
+    expect(sessao.letraAtual()).toBe('A');
+    expect(sessao.marcadas()).toBe(1);
+  });
+
+  it('conta os brancos antes de entregar, e entrega num INSERT só', async () => {
+    const registrar = vi.fn(async (_r: readonly RespostaNova[]) => {});
+    const fixture = montar({ registrar });
+    const sessao = TestBed.inject(SessaoQuizService);
+    sessao.iniciar([questao('q1'), questao('q2'), questao('q3')], 'aleatorio', 'prova');
+    await assentar(fixture, 'Enunciado da q1');
+
+    clicar(fixture, 'primeira')?.click();
+    await respirar(fixture);
+
+    // Confirmação: é o último momento em que dá para voltar.
+    clicar(fixture, 'Entregar')?.click();
+    const aviso = await assentar(fixture, 'em branco');
+    expect(aviso).toContain('2 questões em branco');
+
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
+      .filter((b) => b.textContent?.trim() === 'Entregar')
+      .at(-1)
+      ?.click();
+    await new Promise((r) => setTimeout(r, 20));
+
+    // Uma chamada, com as marcadas apenas: branco não vira linha.
+    expect(registrar).toHaveBeenCalledTimes(1);
+    expect(registrar.mock.calls[0][0]).toHaveLength(1);
+    expect(registrar.mock.calls[0][0][0].questao_id).toBe('q1');
+  });
+
+  it('entrega que falha não deixa nada gravado — dá para tentar de novo', async () => {
+    const fixture = montar({
+      registrar: async () => {
+        throw new Error('Sem conexão');
+      },
+    });
+    const sessao = TestBed.inject(SessaoQuizService);
+    sessao.iniciar([questao('q1')], 'aleatorio', 'prova');
+    await assentar(fixture, 'Enunciado da q1');
+
+    clicar(fixture, 'primeira')?.click();
+    await respirar(fixture);
+    clicar(fixture, 'Entregar')?.click();
+    await respirar(fixture);
+
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
+      .filter((b) => b.textContent?.trim() === 'Entregar')
+      .at(-1)
+      ?.click();
+    await respirar(fixture);
+
+    expect(await assentar(fixture, 'Sem conexão')).toContain('Sem conexão');
+    expect(sessao.respostas()).toEqual([]);
+    // A marcação sobrevive: o simulado inteiro não pode sumir por um erro de rede.
+    expect(sessao.marcadas()).toBe(1);
+  });
   it('não deixa responder duas vezes a mesma questão', async () => {
     const registrar = vi.fn(async () => {});
     const fixture = montar({ registrar });
-    TestBed.inject(SessaoQuizService).iniciar([questao('q1')], 'aleatorio', true);
+    TestBed.inject(SessaoQuizService).iniciar([questao('q1')], 'aleatorio', 'estudo');
     await assentar(fixture, 'Enunciado da q1');
 
     clicar(fixture, 'primeira')?.click();
@@ -130,7 +208,7 @@ describe('QuizExecucaoComponent', () => {
       },
     });
     const sessao = TestBed.inject(SessaoQuizService);
-    sessao.iniciar([questao('q1')], 'aleatorio', true);
+    sessao.iniciar([questao('q1')], 'aleatorio', 'estudo');
     await assentar(fixture, 'Enunciado da q1');
 
     clicar(fixture, 'primeira')?.click();
@@ -140,7 +218,7 @@ describe('QuizExecucaoComponent', () => {
 
   it('oferece o resultado quando todas foram respondidas', async () => {
     const fixture = montar();
-    TestBed.inject(SessaoQuizService).iniciar([questao('q1')], 'aleatorio', true);
+    TestBed.inject(SessaoQuizService).iniciar([questao('q1')], 'aleatorio', 'estudo');
     await assentar(fixture, 'Enunciado da q1');
 
     clicar(fixture, 'primeira')?.click();

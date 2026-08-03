@@ -62,33 +62,24 @@
         </div>
 
         <div>
-          <span class="rotulo">Resposta certa</span>
+          <span class="rotulo">Execução</span>
           <div class="mt-1 flex gap-2">
-            <button
-              type="button"
-              class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
-              [class]="
-                feedbackImediato()
-                  ? 'bg-tinta-900 text-white ring-tinta-900'
-                  : 'bg-white text-tinta-700 ring-tinta-200 hover:bg-tinta-50'
-              "
-              (click)="feedbackImediato.set(true)"
-            >
-              A cada questão
-            </button>
-            <button
-              type="button"
-              class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
-              [class]="
-                !feedbackImediato()
-                  ? 'bg-tinta-900 text-white ring-tinta-900'
-                  : 'bg-white text-tinta-700 ring-tinta-200 hover:bg-tinta-50'
-              "
-              (click)="feedbackImediato.set(false)"
-            >
-              Só no fim
-            </button>
+            @for (e of EXECUCOES; track e) {
+              <button
+                type="button"
+                class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
+                [class]="
+                  execucao() === e
+                    ? 'bg-tinta-900 text-white ring-tinta-900'
+                    : 'bg-white text-tinta-700 ring-tinta-200 hover:bg-tinta-50'
+                "
+                (click)="execucao.set(e)"
+              >
+                {{ ROTULO_EXECUCAO[e] }}
+              </button>
+            }
           </div>
+          <p class="mt-1 text-xs text-tinta-500">{{ RESUMO_EXECUCAO[execucao()] }}</p>
         </div>
       </div>
     </section>

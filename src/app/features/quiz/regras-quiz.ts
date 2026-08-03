@@ -14,7 +14,33 @@
 
 import { aplicarFiltros, FiltrosAcervo, ItemFiltravel } from '../../shared/filtros-acervo';
 
+/** Como as questões são ESCOLHIDAS. Independente do modo de execução. */
 export type ModoQuiz = 'aleatorio' | 'menos_vistas' | 'revisao_erros';
+
+/**
+ * Como o quiz é RESPONDIDO — eixo independente da seleção.
+ *
+ * Nasceu do colapso de dois controles em um. Havia "modo" e "quando mostrar a
+ * resposta certa", e das quatro combinações só duas faziam sentido: gravar no
+ * clique sem remarcar com feedback imediato (estudo), e remarcar até entregar
+ * com feedback no fim (prova). "Gravar no clique sem feedback" é estritamente
+ * pior que prova; "remarcar vendo a resposta" é trapaça.
+ *
+ * Um controle só torna os dois estados inválidos INEXPRESSÁVEIS, em vez de
+ * montáveis por engano.
+ */
+export type ModoExecucao = 'estudo' | 'prova';
+
+export const ROTULO_EXECUCAO: Record<ModoExecucao, string> = {
+  estudo: 'Estudo',
+  prova: 'Prova',
+};
+
+/** O que cada modo de execução faz, para a tela não precisar explicar em prosa. */
+export const RESUMO_EXECUCAO: Record<ModoExecucao, string> = {
+  estudo: 'Resposta certa a cada questão · grava no clique · sem remarcar',
+  prova: 'Marca e remarca · resposta certa só na entrega · grava tudo na entrega',
+};
 
 /** Uma linha de `respostas`, como o histórico chega do banco. */
 export interface RespostaHistorico {
@@ -249,14 +275,45 @@ export interface DesempenhoMateria {
   readonly percentual: number;
 }
 
-/** Placar geral: X de N e o percentual. */
-export function placar(respostas: readonly RespostaDada[]): {
-  acertos: number;
-  total: number;
-  percentual: number;
-} {
+export interface Placar {
+  readonly acertos: number;
+  /** Quantas você de fato respondeu. */
+  readonly respondidas: number;
+  /** Quantas o quiz tinha. */
+  readonly total: number;
+  readonly brancos: number;
+  /** Acerto sobre o que você atacou. */
+  readonly percentualRespondidas: number;
+  /** Acerto sobre a prova inteira — o número que vale como resultado. */
+  readonly percentualProva: number;
+}
+
+/**
+ * Placar com os DOIS denominadores, sem esconder nenhum.
+ *
+ * Um número só mentiria. Num simulado de 50 com 10 em branco, "30 de 40, 75%"
+ * é verdade sobre o que você atacou e falso como resultado de prova — você não
+ * acertou 75% dela. E o mesmo já valia para o "encerrar com N respondidas" do
+ * modo estudo: é o mesmo cálculo mentindo, então a correção é uma regra só,
+ * sem exceção por modo.
+ *
+ * Questão em branco não vira linha em `respostas` (`letra_marcada` é NOT NULL),
+ * então não conta como erro no histórico nem tira a questão da fila de "menos
+ * vistas". Não errei o que não respondi.
+ */
+export function placar(respostas: readonly RespostaDada[], totalDoQuiz?: number): Placar {
   const acertos = respostas.filter((r) => r.acertou).length;
-  return { acertos, total: respostas.length, percentual: percentual(acertos, respostas.length) };
+  const respondidas = respostas.length;
+  const total = totalDoQuiz ?? respondidas;
+
+  return {
+    acertos,
+    respondidas,
+    total,
+    brancos: Math.max(0, total - respondidas),
+    percentualRespondidas: percentual(acertos, respondidas),
+    percentualProva: percentual(acertos, total),
+  };
 }
 
 /**

@@ -68,6 +68,11 @@ export const routes: Routes = [
           import('./features/quiz/resultado-quiz.component').then((m) => m.ResultadoQuizComponent),
       },
       {
+        path: 'progresso',
+        loadComponent: () =>
+          import('./features/progresso/progresso.component').then((m) => m.ProgressoComponent),
+      },
+      {
         path: 'materias',
         // `data` alimenta o input `tabela` do componente via
         // withComponentInputBinding(), então uma tela serve as duas rotas.

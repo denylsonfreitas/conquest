@@ -316,10 +316,25 @@ primeira versão da tela — nunca retrofitados.
    > É modo de EXECUÇÃO, não gestão de acervo: por isso é um passo separado do
    > 8, e não um retoque do 7. O "feedback só no fim" que o passo 7 já oferece é
    > metade disto; falta a resposta editável até entregar.
-10. **Estatísticas globais** — desempenho por matéria e por banca ao longo do
-    tempo, progresso global, matérias mais fracas. Tudo derivado de `respostas`
-    subindo a árvore; o placar e o desempenho por matéria do quiz em si já saem
-    no passo 7.
+10. **Estatísticas globais** — desempenho por matéria e por banca, evolução,
+    progresso global, matérias mais fracas. Tudo derivado de `respostas`
+    subindo a árvore, sem tabela nova e sem escrita; o placar e o desempenho
+    por matéria do quiz em si já saem no passo 7.
+
+    > Três decisões que o desenho forçou:
+    >
+    > - **Evolução por últimas N respostas de cada matéria**, não por janela de
+    >   calendário. Estudo acontece em rajada: uma janela de 30 dias falaria do
+    >   ritmo de estudo, não do aprendizado.
+    > - **Anuladas não contam.** A banca invalidou a questão; registrar como
+    >   erro seu o que não valia seria contar contra você. Nada é apagado — só
+    >   deixa de contar, como `elegivel` já faz no quiz.
+    > - **Piso de amostra para ranquear as fracas.** 2 de 2 erradas no topo é
+    >   acaso, não sinal. As de amostra menor ficam num grupo à parte, visíveis:
+    >   escondê-las faria parecer que a matéria não existe.
+    >
+    > O limiar registrado: a junção em memória vale até alguns milhares de
+    > respostas. Passando de dezenas de milhares, agregar no banco.
 11. **Export do acervo** — botão que serializa bancas/concursos/provas/questões
     (e opcionalmente respostas) para JSON e baixa. Seguro barato contra perda.
 12. **Polimento** — responsividade do tablet, estados de erro/vazio, modo revisão

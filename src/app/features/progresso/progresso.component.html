@@ -1,0 +1,115 @@
+@switch (status()) {
+  @case ('carregando') {
+    <app-estado-carregando mensagem="Somando seu histórico…" />
+  }
+  @case ('erro') {
+    <app-estado-erro [mensagem]="erro() ?? ''" (tentarDeNovo)="carregar()" />
+  }
+  @case ('ok') {
+    <header class="mb-6">
+      <h1 class="text-2xl font-semibold text-tinta-900">Progresso</h1>
+    </header>
+
+    @if (vazio()) {
+      <!--
+        O primeiro estado que se vê num acervo novo — e por isso o que mais
+        importa acertar. Um vazio mudo pareceria defeito.
+      -->
+      <div class="cartao p-8 text-center">
+        <p class="text-tinta-900">Responda alguns quizzes para ver seu progresso.</p>
+        <a routerLink="/quiz" class="btn mt-4 inline-block">Montar um quiz</a>
+      </div>
+    } @else {
+      <section class="cartao mb-6 p-5">
+        <p class="text-3xl font-semibold text-tinta-900">
+          {{ total().acertos }}
+          <span class="text-tinta-500">de {{ total().respostas }}</span>
+        </p>
+        <p class="mt-1 text-lg font-medium" [class]="cor(total().percentual)">
+          {{ total().percentual }}%
+        </p>
+        <p class="mt-2 text-sm text-tinta-500">
+          {{ total().questoes }}
+          {{ total().questoes === 1 ? 'questão praticada' : 'questões praticadas' }}
+          @if (total().desconsideradas > 0) {
+            <!-- A banca invalidou; não conta contra você. -->
+            <span> · {{ total().desconsideradas }} de questões anuladas, fora da conta </span>
+          }
+        </p>
+      </section>
+
+      <!--
+        Últimas N contra o que veio antes, e não janela de calendário: estudo em
+        rajada faria a janela por data falar do seu ritmo, não do seu aprendizado.
+      -->
+      @if (temEvolucao()) {
+        <h2 class="mb-1 font-semibold text-tinta-900">Evolução</h2>
+        <p class="mb-3 text-sm text-tinta-500">
+          últimas {{ JANELA }} respostas de cada matéria contra as anteriores
+        </p>
+        <ul class="cartao mb-8 divide-y divide-tinta-200 overflow-hidden">
+          @for (linha of evolucao(); track linha.materia) {
+            @if (linha.delta !== null) {
+              <li class="flex items-center gap-4 px-4 py-3">
+                <span class="min-w-0 flex-1 text-tinta-900">{{ linha.materia }}</span>
+                <span class="text-sm text-tinta-500">
+                  {{ linha.anteriores?.percentual }}% → {{ linha.recentes.percentual }}%
+                </span>
+                <span class="w-16 text-right font-medium" [class]="corDelta(linha.delta)">
+                  {{ linha.delta > 0 ? '+' : '' }}{{ linha.delta }} pp
+                </span>
+              </li>
+            }
+          }
+        </ul>
+      }
+
+      <h2 class="mb-3 font-semibold text-tinta-900">Onde focar</h2>
+      @if (fracas().ranqueadas.length > 0) {
+        <ul class="cartao mb-4 divide-y divide-tinta-200 overflow-hidden">
+          @for (d of fracas().ranqueadas; track d.chave) {
+            <li class="flex items-center gap-4 px-4 py-3">
+              <span class="min-w-0 flex-1 text-tinta-900">{{ d.chave }}</span>
+              <span class="text-sm text-tinta-500">{{ d.acertos }}/{{ d.total }}</span>
+              <span class="w-12 text-right font-medium" [class]="cor(d.percentual)">
+                {{ d.percentual }}%
+              </span>
+            </li>
+          }
+        </ul>
+      }
+
+      <!--
+        Amostra pequena não entra no ranking — 2 de 2 erradas é acaso —, mas
+        continua na tela: escondê-las faria parecer que a matéria não existe.
+      -->
+      @if (fracas().poucaAmostra.length > 0) {
+        <p class="mb-2 text-sm text-tinta-500">
+          Poucas respostas ainda (menos de {{ PISO }}), sem ranqueamento:
+        </p>
+        <ul class="cartao mb-8 divide-y divide-tinta-200 overflow-hidden">
+          @for (d of fracas().poucaAmostra; track d.chave) {
+            <li class="flex items-center gap-4 px-4 py-3">
+              <span class="min-w-0 flex-1 text-tinta-700">{{ d.chave }}</span>
+              <span class="text-sm text-tinta-500">{{ d.acertos }}/{{ d.total }}</span>
+              <span class="w-12 text-right text-tinta-500">{{ d.percentual }}%</span>
+            </li>
+          }
+        </ul>
+      }
+
+      <h2 class="mb-3 font-semibold text-tinta-900">Por banca</h2>
+      <ul class="cartao divide-y divide-tinta-200 overflow-hidden">
+        @for (d of bancas(); track d.chave) {
+          <li class="flex items-center gap-4 px-4 py-3">
+            <span class="min-w-0 flex-1 text-tinta-900">{{ d.chave }}</span>
+            <span class="text-sm text-tinta-500">{{ d.acertos }}/{{ d.total }}</span>
+            <span class="w-12 text-right font-medium" [class]="cor(d.percentual)">
+              {{ d.percentual }}%
+            </span>
+          </li>
+        }
+      </ul>
+    }
+  }
+}

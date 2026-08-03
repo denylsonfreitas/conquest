@@ -135,17 +135,42 @@ Faz parte do MVP. O trabalho de importar e revisar questões é o ativo mais val
 do app, e o plano grátis do Supabase não garante backup robusto — então o app
 provê seu próprio seguro.
 
-- **Um botão "Exportar acervo"** gera um arquivo JSON com: bancas, concursos,
-  provas (metadados, sem o binário do PDF), e todas as questões revisadas
-  (incluindo matéria, gabarito, comentário, flags). O histórico de `respostas`
-  pode ir junto opcionalmente.
+- **Um botão "Baixar backup"** gera um arquivo JSON com bancas, matérias,
+  concursos, provas (metadados), questões e o histórico de `respostas`.
 - O arquivo é baixado para o dispositivo; você guarda onde quiser (nuvem pessoal,
   pendrive). Rode de vez em quando, sobretudo após sessões grandes de revisão.
-- **Escopo:** o export é uma leitura serializada das tabelas. Não inclui os PDFs
-  originais nem as imagens dos buckets (esses já estão no Storage; o risco que o
-  export cobre é perder a *curadoria*, não os arquivos-fonte).
-- **Import/restauração** (recriar o acervo a partir de um JSON) fica como evolução
-  futura. O export sozinho já elimina o pior cenário: perder horas de trabalho.
+- **`respostas` entram por padrão**, e o opcional é o contrário — desmarcar para
+  um export só do acervo.
+
+  > O doc dizia "opcionalmente" e estava invertido. O acervo é
+  > **reconstruível**: com os PDFs, o pipeline e o gabarito oficial, uma
+  > reimportação leva minutos. O histórico **não é** — quando você respondeu, o
+  > que errou e voltou a acertar não se reconstrói de lugar nenhum, e é o que
+  > alimenta a revisão de erros, a recirculação e as estatísticas. A parte
+  > insubstituível é justamente a que estava marcada como opcional.
+
+- **Escopo:** não inclui os PDFs nem as imagens dos buckets. A razão decisiva
+  não é tamanho: os PDFs carregam a marca d'água do pciconcursos, que codifica
+  **IP e data de download**. Embuti-los faria o arquivo de backup — que acaba em
+  Drive, pendrive, anexo de e-mail — carregar dado pessoal, contornando todo o
+  cuidado que o pipeline toma para essa marca não vazar. Um pacote com binários,
+  se um dia existir, é ação separada e nomeada como tal, nunca o padrão.
+- **Import/restauração faz parte do mesmo passo.** Export sem import é teatro de
+  backup: a sensação de proteção sem a proteção, descoberta no pior dia
+  possível. O import é **upsert por UUID e nunca apaga**:
+  - idempotente — rodar duas vezes dá o mesmo resultado que rodar uma, que é o
+    que substitui a atomicidade (o PostgREST não dá transação entre tabelas):
+    falhou no meio, roda de novo e completa;
+  - **prévia obrigatória** antes de aplicar, com a contagem de linhas que serão
+    **sobrescritas**. É o que evita exportar segunda, revisar terça, restaurar
+    quarta e perder a curadoria de terça;
+  - espelhar o arquivo (apagar o que ele não conhece) é a composição de duas
+    ações explícitas: `npm run acervo:zerar` e então importar. A parte
+    destrutiva mora onde é óbvia;
+  - ponteiros de imagem sem arquivo no bucket são **zerados por padrão**. A view
+    mede elegibilidade pelo ponteiro, não pelo arquivo — sem isso a questão
+    entraria num quiz com imagem quebrada. Zerar devolve ao estado honesto
+    "precisa de imagem", que a revisão trata.
 
 ## Estados e navegação (mapa de telas)
 

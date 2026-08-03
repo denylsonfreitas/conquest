@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
+import { BackupComponent } from '../backup/backup.component';
 import { ProgressoService } from './progresso.service';
 import {
   evolucaoPorMateria,
@@ -25,7 +26,7 @@ type Status = 'carregando' | 'ok' | 'erro';
  */
 @Component({
   selector: 'app-progresso',
-  imports: [RouterLink, EstadoCarregandoComponent, EstadoErroComponent],
+  imports: [RouterLink, EstadoCarregandoComponent, EstadoErroComponent, BackupComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './progresso.component.html',
 })

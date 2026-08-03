@@ -13,7 +13,10 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > src/app/shared/database.types.ts",
-    "db:revisao-reset": "docker exec -i supabase_db_conquest psql -U postgres -d postgres -f - < supabase/scripts/resetar-revisao.sql"
+    "db:revisao-reset": "docker exec -i supabase_db_conquest psql -U postgres -d postgres -f - < supabase/scripts/resetar-revisao.sql",
+    "storage:varrer": "node supabase/scripts/storage.mjs varrer",
+    "acervo:zerar": "node supabase/scripts/storage.mjs zerar",
+    "acervo:conferir": "node supabase/scripts/storage.mjs conferir"
   },
   "private": true,
   "packageManager": "npm@11.7.0",

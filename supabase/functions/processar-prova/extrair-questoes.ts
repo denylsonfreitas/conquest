@@ -1,17 +1,5 @@
 import { garantirSemMarcaDagua } from './marca-dagua.ts';
 
-/**
- * Estruturação do texto em questões, via LLM.
- *
- * Todo o acoplamento com o provedor está NESTE arquivo, atrás de
- * `extrairQuestoes(texto)` (docs/02). Trocar Gemini por outro modelo é
- * reescrever só aqui — nada no resto do pipeline conhece o provedor.
- *
- * A saída é `QuestaoBruta`: ainda não é a questão canônica. Ela passa pelo Zod
- * e pelo casamento de gabarito antes de virar linha no banco.
- */
-
-/** O que o LLM devolve, antes de validar e de casar matéria e gabarito. */
 export interface QuestaoBruta {
   numero: number;
   materia: string | null;
@@ -32,11 +20,6 @@ export class LlmError extends Error {
 
 const MODELO_PADRAO = 'gemini-flash-latest';
 
-/**
- * Schema que o Gemini é obrigado a seguir. Usar `responseSchema` em vez de
- * pedir JSON no texto do prompt é o que elimina a classe inteira de falhas de
- * "o modelo devolveu markdown em volta do JSON".
- */
 const SCHEMA_RESPOSTA = {
   type: 'ARRAY',
   items: {
@@ -109,10 +92,6 @@ REGRAS INEGOCIÁVEIS
    rodapé de página, numeração de página, avisos sobre cartão de respostas.
 `.trim();
 
-/**
- * Chama o LLM. Recebe o texto JÁ limpo — e confere de novo, porque este é o
- * último ponto antes de o conteúdo sair da nossa infraestrutura.
- */
 export async function extrairQuestoes(texto: string): Promise<QuestaoBruta[]> {
   garantirSemMarcaDagua(texto);
 
@@ -129,7 +108,6 @@ export async function extrairQuestoes(texto: string): Promise<QuestaoBruta[]> {
       systemInstruction: { parts: [{ text: INSTRUCOES }] },
       contents: [{ role: 'user', parts: [{ text: texto }] }],
       generationConfig: {
-        // Extração é transcrição, não criação: temperatura zero.
         temperature: 0,
         responseMimeType: 'application/json',
         responseSchema: SCHEMA_RESPOSTA,

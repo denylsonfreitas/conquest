@@ -83,7 +83,6 @@ describe('opcoesDeFiltro', () => {
     const o = opcoesDeFiltro(acervo, { ...FILTROS_VAZIOS, bancaId: 'fcc' });
     expect(o.concursos.map((c) => c.nome)).toEqual(['TRE', 'TRT 15']);
     expect(o.materias.map((m) => m.nome)).toEqual(['Português', 'RLM']);
-    // As bancas não encolhem: é por elas que se começa.
     expect(o.bancas).toHaveLength(2);
   });
 
@@ -97,8 +96,6 @@ describe('trocar e alternar', () => {
   const cheio = { bancaId: 'fcc', concursoId: 'trt15', materiaIds: ['port'] };
 
   it('trocar a banca zera concurso e matéria', () => {
-    // Um filtro fantasma de outra banca zeraria o conjunto sem nada na tela
-    // explicando por quê.
     expect(trocarBanca('cespe')).toEqual({
       bancaId: 'cespe',
       concursoId: null,

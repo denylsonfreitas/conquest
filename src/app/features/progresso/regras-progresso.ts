@@ -1,15 +1,3 @@
-/**
- * Regras do progresso como funções PURAS (docs/04): sem Angular, sem banco.
- *
- * Tudo aqui é DERIVADO de `respostas` subindo a árvore — não existe tabela de
- * estatística, e não deve existir (docs/03). O que a tela mostra é uma leitura
- * do histórico, não um segundo registro dele.
- *
- * Vale notar o que o passo 8 comprou para cá: como o trigger recalcula
- * `acertou` quando um gabarito é corrigido, estes números podem confiar na
- * coluna. Antes dele, uma correção de gabarito deixaria a estatística mentindo
- * para sempre.
- */
 
 export interface RespostaAnalisavel {
   readonly questaoId: string;
@@ -20,36 +8,19 @@ export interface RespostaAnalisavel {
   readonly anulada: boolean;
 }
 
-/** Quantas respostas recentes formam a janela de evolução de cada matéria. */
 export const JANELA_EVOLUCAO = 20;
 
-/**
- * Mínimo de respostas para uma matéria entrar no ranking das mais fracas.
- *
- * Sem piso, 2 de 2 erradas viram "0%, sua pior matéria" — isso é acaso, não
- * sinal. As abaixo do piso não somem: vão para um grupo à parte, porque
- * escondê-las faria parecer que a matéria não existe.
- */
 export const PISO_RANQUEAMENTO = 10;
 
 const SEM_MATERIA = 'Sem matéria';
 const SEM_BANCA = 'Sem banca';
 
-/**
- * Respostas que CONTAM.
- *
- * Questão anulada foi invalidada pela banca: registrar como seu erro algo que
- * não valia seria contar contra você uma questão que nem deveria ter existido.
- * Nada é apagado — só deixa de contar, do mesmo jeito que `elegivel` já a
- * mantém fora dos quizzes.
- */
 export function contaveis(respostas: readonly RespostaAnalisavel[]): RespostaAnalisavel[] {
   return respostas.filter((r) => !r.anulada);
 }
 
 export interface TotalPraticado {
   readonly respostas: number;
-  /** Questões distintas: responder a mesma três vezes não são três questões. */
   readonly questoes: number;
   readonly acertos: number;
   readonly percentual: number;
@@ -76,13 +47,6 @@ export interface Desempenho {
   readonly percentual: number;
 }
 
-/**
- * Agrupa por um eixo qualquer — matéria ou banca.
- *
- * Uma função para os dois porque a pergunta é a mesma: "quanto eu acerto
- * quando o assunto é X". Duplicar por eixo seria duas cópias divergindo na
- * primeira mudança.
- */
 export function desempenhoPor(
   respostas: readonly RespostaAnalisavel[],
   eixo: (r: RespostaAnalisavel) => string | null,
@@ -110,21 +74,10 @@ export const porBanca = (r: readonly RespostaAnalisavel[]) =>
 export interface Evolucao {
   readonly materia: string;
   readonly recentes: Desempenho;
-  /** Nulo quando ainda não há histórico anterior à janela para comparar. */
   readonly anteriores: Desempenho | null;
-  /** Diferença em pontos percentuais. Positivo é melhora. */
   readonly delta: number | null;
 }
 
-/**
- * Evolução por ÚLTIMAS N respostas, não por janela de calendário.
- *
- * Estudo acontece em rajada: três dias seguidos e depois duas semanas sem
- * abrir o app. Uma janela de 30 dias ficaria vazia ou cheia por acidente de
- * calendário, e diria mais sobre o seu ritmo do que sobre o seu aprendizado.
- * As últimas N respondem "estou melhorando?" independentemente de quando você
- * estudou.
- */
 export function evolucaoPorMateria(
   respostas: readonly RespostaAnalisavel[],
   janela = JANELA_EVOLUCAO,
@@ -153,7 +106,6 @@ export function evolucaoPorMateria(
     });
   }
 
-  // Quem mudou mais aparece primeiro; sem comparação ainda, por último.
   return linhas.sort((a, b) => {
     if (a.delta === null && b.delta === null) return b.recentes.total - a.recentes.total;
     if (a.delta === null) return 1;
@@ -173,19 +125,10 @@ function resumir(chave: string, respostas: readonly RespostaAnalisavel[]): Desem
 }
 
 export interface Fracas {
-  /** Ranqueadas da pior para a melhor — só as que têm amostra suficiente. */
   readonly ranqueadas: Desempenho[];
-  /** Amostra pequena demais para ranquear, mas visíveis. */
   readonly poucaAmostra: Desempenho[];
 }
 
-/**
- * Separa o que dá para ranquear do que ainda é acaso.
- *
- * O piso é o que impede "errei as 2 únicas de Direito" de virar "Direito é sua
- * pior matéria". As de amostra pequena continuam na tela, num grupo próprio:
- * omiti-las faria parecer que a matéria não existe no acervo.
- */
 export function maisFracas(desempenhos: readonly Desempenho[], piso = PISO_RANQUEAMENTO): Fracas {
   return {
     ranqueadas: desempenhos

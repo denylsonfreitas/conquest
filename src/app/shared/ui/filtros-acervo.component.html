@@ -31,32 +31,15 @@
     </div>
   </div>
 
-  <!--
-    Matéria é multi-seleção; banca e concurso, não (docs/03).
-
-    Recolhido num <details> em vez de chips soltos: com dezenas de matérias os
-    chips viram várias linhas e empurram a tela inteira. Fechado ocupa uma
-    linha e diz quantas estão ativas; aberto mostra TODAS as do recorte, que é
-    o que o filtro precisa oferecer.
-
-    <details> nativo de propósito — abre, fecha e navega por teclado sem
-    JavaScript nenhum, e não precisa de clique-fora para fechar.
-  -->
   <div>
     <span class="rotulo">Matérias</span>
 
-    <!--
-      `relative` no container e `absolute` na lista: ela flutua por cima do
-      resto em vez de empurrar a tela, que é como os selects de banca e
-      concurso se comportam. Empurrar é justamente o que fazia os chips
-      atrapalharem.
-    -->
-    <details class="group relative mt-1">
+    <details class="group relative mt-1 mb-4">
       <summary class="campo flex cursor-pointer list-none items-center gap-2">
-        <span class="flex-1" [class.text-texto-fraco]="filtros().materiaIds.length === 0">
+        <span class="flex-1" [class.text-texto]="filtros().materiaIds.length === 0">
           {{ resumoMaterias() }}
         </span>
-        <span class="text-texto-fraco transition group-open:rotate-180">
+        <span class="text-texto transition group-open:rotate-180">
           <app-icone nome="abrir" />
         </span>
       </summary>
@@ -65,10 +48,6 @@
         class="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-campo border border-borda bg-superficie py-1 shadow-lg"
       >
         @for (m of opcoes().materias; track m.id) {
-          <!--
-            Linha inteira clicável, com a marca à esquerda: é a forma de lista
-            de opções, e o alvo grande importa no tablet.
-          -->
           <button
             type="button"
             class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-superficie-sutil"

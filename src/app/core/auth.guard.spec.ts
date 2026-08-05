@@ -7,14 +7,6 @@ import { authGuard, visitanteGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { ROTA_INICIAL } from './rotas';
 
-/**
- * O guard é a fronteira entre "logado" e "não logado". Errar o sentido dele
- * ou esquecer de esperar a restauração da sessão tranca o app ou expõe rota —
- * os dois casos silenciosos. Por isso ele é testado, mesmo sendo curto.
- *
- * Um duplo do AuthService evita rede e localStorage: o guard só precisa saber
- * o que `autenticado()` responde depois de `pronto()`.
- */
 function comAuth(autenticado: boolean) {
   const dublê = {
     autenticado: signal(autenticado),
@@ -26,7 +18,6 @@ function comAuth(autenticado: boolean) {
   return TestBed.inject(Router);
 }
 
-/** Guards funcionais precisam de um contexto de injeção para usar inject(). */
 function rodar(guard: typeof authGuard) {
   return TestBed.runInInjectionContext(
     () => guard(null as never, null as never) as Promise<boolean | UrlTree>,

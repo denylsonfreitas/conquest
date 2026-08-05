@@ -18,12 +18,6 @@ import {
 
 type Status = 'carregando' | 'ok' | 'erro';
 
-/**
- * Progresso global — a leitura de todo o histórico, fora do quiz.
- *
- * Uma consulta ao entrar; daí em diante tudo é recalculado por funções puras.
- * A tela não escreve nada.
- */
 @Component({
   selector: 'app-progresso',
   imports: [RouterLink, EstadoCarregandoComponent, EstadoErroComponent, BackupComponent],
@@ -43,7 +37,6 @@ export class ProgressoComponent {
   protected readonly fracas = computed(() => maisFracas(this.materias()));
   protected readonly evolucao = computed(() => evolucaoPorMateria(this.historico()));
 
-  /** Só há evolução a mostrar quando alguma matéria já passou da janela. */
   protected readonly temEvolucao = computed(() => this.evolucao().some((e) => e.delta !== null));
 
   protected readonly vazio = computed(() => this.total().respostas === 0);

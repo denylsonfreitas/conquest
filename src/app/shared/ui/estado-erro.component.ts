@@ -1,11 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
-/**
- * Estado de erro com ação de retentar.
- *
- * O componente não sabe COMO recarregar — só avisa que o usuário pediu, via
- * `output()`. Quem decide o que fazer é a tela dona do dado.
- */
 @Component({
   selector: 'app-estado-erro',
   changeDetection: ChangeDetectionStrategy.OnPush,

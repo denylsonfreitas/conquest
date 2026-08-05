@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { casarGabarito, lerBlocos } from './casar-gabarito.ts';
 import { identificarProva } from './identificar-prova.ts';
 
-/** Formato real do gabarito da DATAPREV/FGV: 35 blocos, um por cargo × tipo. */
 const GABARITO = [
   'Gabarito preliminares da prova aplicada no dia 17/11/2024',
   'TÉCNICO DE SEGURANÇA DO TRABALHO – PROVA TIPO 1',
@@ -17,7 +16,6 @@ const GABARITO = [
   'C E D A A',
 ].join('\n');
 
-/** Como a prova se identifica: capa + cabeçalho repetido em toda página. */
 const PROVA = [
   'ATI - DESENVOLVIMENTO DE SOFTWARE',
   'NÍVEL SUPERIOR TIPO 1 – BRANCA',
@@ -53,8 +51,6 @@ describe('lerBlocos', () => {
   });
 
   it('ignora grade desalinhada em vez de deslocar todas as respostas', () => {
-    // Uma letra a menos deslocaria tudo: 1->A, 2->B, 3->C quando o certo seria
-    // 1->A, 2->B, 3->C, 4->D. Erro silencioso — melhor não ler o par.
     const torto = ['CARGO X – PROVA TIPO 1', '1 2 3 4', 'A B C'].join('\n');
     expect(lerBlocos(torto)[0].respostas.size).toBe(0);
   });
@@ -65,14 +61,11 @@ describe('casarGabarito', () => {
     const r = casarGabarito(GABARITO, IDENT, 5);
     expect(r.aplicavel).toBe(true);
     if (r.aplicavel) {
-      // O bloco do TIPO 1, não o do TIPO 2 nem o de outro cargo.
       expect([...r.respostas.values()]).toEqual(['E', 'D', 'C', 'C', 'A']);
     }
   });
 
   it('RECUSA quando a contagem diverge — validação cruzada', () => {
-    // Dois caminhos independentes (extração e grade) discordam: pelo menos um
-    // está errado e não dá para saber qual.
     const r = casarGabarito(GABARITO, IDENT, 4);
     expect(r.aplicavel).toBe(false);
     if (!r.aplicavel) expect(r.motivo).toMatch(/Contagens divergentes/);
@@ -101,7 +94,6 @@ describe('casarGabarito', () => {
   });
 
   it('casa ignorando caixa e acento entre prova e gabarito', () => {
-    // "ATI - Desenvolvimento de Software" vs "ATI - DESENVOLVIMENTO DE SOFTWARE"
     expect(casarGabarito(GABARITO, IDENT, 5).aplicavel).toBe(true);
   });
 });

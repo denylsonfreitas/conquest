@@ -16,19 +16,8 @@ import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
 import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
 import { Dimensao, DimensoesService, ItemDimensao } from './dimensoes.service';
 
-/** Os três estados que toda tela que busca dados precisa tratar (docs/04). */
 type Status = 'carregando' | 'ok' | 'erro';
 
-/**
- * CRUD de uma dimensão normalizada (bancas ou matérias).
- *
- * A mesma tela serve as duas rotas: `tabela` vem do `data` da rota, ligado ao
- * input pelo `withComponentInputBinding()` do app.config. Duas telas idênticas
- * seriam duplicação pura.
- *
- * O componente não conhece o Supabase — só chama o service e reflete o
- * resultado em signals. Nenhuma regra de negócio mora aqui.
- */
 @Component({
   selector: 'app-dimensao-page',
   imports: [
@@ -45,7 +34,6 @@ type Status = 'carregando' | 'ok' | 'erro';
 export class DimensaoPageComponent {
   private readonly service = inject(DimensoesService);
 
-  /** Vem do `data: { tabela: … }` da rota (withComponentInputBinding). */
   readonly tabela = input.required<Dimensao>();
 
   protected readonly status = signal<Status>('carregando');
@@ -63,10 +51,6 @@ export class DimensaoPageComponent {
   protected readonly singular = computed(() => (this.tabela() === 'bancas' ? 'banca' : 'matéria'));
 
   constructor() {
-    // Carrega via effect, não no construtor: inputs obrigatórios ainda não têm
-    // valor quando o construtor roda (NG0950). Como o effect depende de
-    // `tabela()`, navegar de /materias para /bancas recarrega sozinho, mesmo
-    // que o roteador reaproveite a instância do componente.
     effect(() => {
       const tabela = this.tabela();
       void this.carregar(tabela);
@@ -94,7 +78,6 @@ export class DimensaoPageComponent {
     this.erroAcao.set(null);
     try {
       const criado = await this.service.criar(this.tabela(), nome);
-      // Insere já ordenado, evitando um round-trip só para reordenar a lista.
       this.itens.update((atual) =>
         [...atual, criado].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
       );
@@ -142,11 +125,6 @@ export class DimensaoPageComponent {
     this.aExcluir.set(null);
   }
 
-  /**
-   * Sem prévia de cascata aqui: o RESTRICT do docs/01 impede excluir dimensão
-   * em uso, então não há o que arrastar. O que resta é o engano — apagar a
-   * banca errada da lista.
-   */
   protected async excluir(item: ItemDimensao): Promise<void> {
     this.erroAcao.set(null);
     this.excluindo.set(true);
@@ -155,7 +133,6 @@ export class DimensaoPageComponent {
       this.itens.update((atual) => atual.filter((i) => i.id !== item.id));
       this.aExcluir.set(null);
     } catch (e) {
-      // Caso mais comum aqui: RESTRICT porque a dimensão está em uso.
       this.erroAcao.set(mensagem(e));
       this.aExcluir.set(null);
     } finally {

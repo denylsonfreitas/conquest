@@ -1,10 +1,3 @@
-/**
- * Tipos TypeScript do domínio.
- *
- * Nada é declarado à mão aqui: todo tipo é DERIVADO do schema Zod com
- * `z.infer`. Mudou o schema, o tipo muda junto e o compilador aponta o que
- * quebrou. É o que impede o schema e os tipos de divergirem com o tempo.
- */
 import { z } from 'zod';
 import {
   AlternativaSchema,
@@ -44,18 +37,11 @@ export type ProvaNova = z.infer<typeof ProvaNovaSchema>;
 
 export type Alternativa = z.infer<typeof AlternativaSchema>;
 export type Questao = z.infer<typeof QuestaoSchema>;
-/** O que você MONTA para inserir: `tem_imagem`/`anulada`/`revisada` podem faltar. */
 export type QuestaoNova = z.input<typeof QuestaoNovaSchema>;
 
-/** Linha da view `questoes_completas` — o formato que o read-side consome. */
 export type QuestaoCompleta = z.infer<typeof QuestaoCompletaSchema>;
 
 export type Resposta = z.infer<typeof RespostaSchema>;
 export type RespostaNova = z.infer<typeof RespostaNovaSchema>;
 
-/**
- * O que SAI do `.parse()`, com os defaults já aplicados — é o formato exato que
- * vai para o INSERT. `z.infer` é apelido de `z.output`; a distinção só importa
- * em schemas com `.default()`, como este.
- */
 export type QuestaoNovaValidada = z.output<typeof QuestaoNovaSchema>;

@@ -4,13 +4,6 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { AuthService } from '../core/auth.service';
 import { TemaService } from '../core/tema.service';
 
-/**
- * Moldura das telas autenticadas: cabeçalho, navegação e o outlet das filhas.
- *
- * É a rota-pai protegida pelo authGuard — quem não tem sessão nunca chega a
- * renderizar isto. Fica em `layout/` por não ser reutilizável (o `shared/ui`
- * do docs/04 é para peças genéricas).
- */
 @Component({
   selector: 'app-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
@@ -22,7 +15,6 @@ export class ShellComponent {
   protected readonly tema = inject(TemaService);
   private readonly router = inject(Router);
 
-  /** Menu como dado, não como marcação repetida: crescer é adicionar item. */
   protected readonly navegacao = [
     { rota: '/concursos', rotulo: 'Concursos' },
     { rota: '/quiz', rotulo: 'Quiz' },

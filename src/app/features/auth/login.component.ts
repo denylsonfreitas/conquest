@@ -5,13 +5,6 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { ROTA_INICIAL } from '../../core/rotas';
 
-/**
- * Login do usuário único. Não há cadastro nem "esqueci minha senha": o usuário
- * é criado uma vez (ver supabase/seed.sql no ambiente local).
- *
- * Reactive forms com `nonNullable: true`: sem isso `.value` seria
- * `string | null | undefined` e você acabaria com `!` espalhado pelo código.
- */
 @Component({
   selector: 'app-login',
   imports: [ReactiveFormsModule],

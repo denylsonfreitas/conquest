@@ -23,16 +23,6 @@ import { ConcursoComBanca, ConcursosService } from './concursos.service';
 
 type Status = 'carregando' | 'ok' | 'erro';
 
-/**
- * Detalhe de um concurso: seus dados e as provas já registradas nele.
- *
- * As provas moram aqui, e não em rota própria, porque é o fluxo real — você
- * abre o concurso para ver o que já importou. Rota separada seria uma tela sem
- * uso.
- *
- * O `id` vem do parâmetro da rota via withComponentInputBinding, igual ao
- * `data` da tela de dimensões: o roteador entrega direto no input().
- */
 @Component({
   selector: 'app-detalhe-concurso',
   imports: [
@@ -52,7 +42,6 @@ export class DetalheConcursoComponent {
   private readonly provasService = inject(ProvasService);
   private readonly fb = inject(FormBuilder);
 
-  /** Vem de `/concursos/:id`. */
   readonly id = input.required<string>();
 
   protected readonly status = signal<Status>('carregando');
@@ -68,15 +57,11 @@ export class DetalheConcursoComponent {
 
   protected readonly form = this.fb.nonNullable.group({
     nome: ['', [Validators.required]],
-    // O ano vem do input como string; a conversão para número acontece no
-    // envio, não no controle, para o campo aceitar vazio.
     ano: [''],
     cargo: [''],
   });
 
   constructor() {
-    // Mesmo motivo da tela de dimensões: input obrigatório não existe no
-    // construtor (NG0950), e o effect ainda recarrega se o id mudar.
     effect(() => {
       const id = this.id();
       void this.carregar(id);
@@ -166,9 +151,6 @@ export class DetalheConcursoComponent {
     }
   }
 
-  // --- anexo de PDF -----------------------------------------------------------
-
-  /** Id da prova cujo painel de anexo está aberto; null = nenhum. */
   protected readonly anexandoEm = signal<string | null>(null);
   protected readonly pdfEscolhido = signal<File | null>(null);
   protected readonly gabaritoEscolhido = signal<File | null>(null);
@@ -228,14 +210,11 @@ export class DetalheConcursoComponent {
     if (!prova.arquivo_path) return;
     this.erroAcao.set(null);
     try {
-      // Bucket privado: precisa de URL assinada, não dá para linkar direto.
       window.open(await this.provasService.urlTemporaria(prova.arquivo_path), '_blank');
     } catch (e) {
       this.erroAcao.set(mensagem(e));
     }
   }
-
-  // --- processamento ----------------------------------------------------------
 
   protected readonly processandoId = signal<string | null>(null);
   protected readonly faseProcessamento = signal<FaseProcessamento | null>(null);
@@ -256,8 +235,6 @@ export class DetalheConcursoComponent {
       await this.atualizarProva(prova.id);
     } catch (e) {
       this.erroAcao.set(mensagem(e));
-      // Recarrega mesmo em falha: a função grava o motivo em erro_msg, e é
-      // essa mensagem — não a genérica do HTTP — que ajuda a agir.
       await this.atualizarProva(prova.id).catch(() => undefined);
     } finally {
       this.processandoId.set(null);
@@ -280,7 +257,6 @@ export class DetalheConcursoComponent {
     this.provas.update((atual) => atual.map((p) => (p.id === id ? atualizada : p)));
   }
 
-  // Regras puras reexpostas para o template (docs/04: decisão fora do componente).
   protected readonly rotuloStatus = rotuloStatusProva;
   protected readonly corStatus = corStatusProva;
   protected readonly podeAnexar = podeAnexarPdf;
@@ -291,7 +267,6 @@ export class DetalheConcursoComponent {
   protected readonly minutosProcessando = minutosProcessando;
 }
 
-/** Aceita vazio; ignora ano fora de uma faixa plausível de concurso. */
 function anoValido(valor: string): number | null {
   const n = Number(valor);
   if (!valor.trim() || !Number.isInteger(n) || n < 1900 || n > 2200) return null;

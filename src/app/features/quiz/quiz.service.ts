@@ -6,12 +6,6 @@ import { RespostaNova, TipoQuestao } from '../../shared/models';
 import { ItemComNomes } from '../../shared/filtros-acervo';
 import { RespostaHistorico } from './regras-quiz';
 
-/**
- * Questão como o quiz precisa dela, direto da view do read-side.
- *
- * Estende `QuestaoEditavel` para poder ser editada a partir do resultado sem
- * conversão: é a mesma questão, vista por duas telas.
- */
 export interface QuestaoQuiz extends QuestaoEditavel {
   tipo: TipoQuestao;
   materia: string | null;
@@ -24,28 +18,10 @@ export interface QuestaoQuiz extends QuestaoEditavel {
 const COLUNAS_QUESTAO =
   'id, numero, enunciado, alternativas, gabarito, tipo, materia_id, materia, tem_imagem, imagem_path, comentario, anulada, incerto, prova_nome, prova_ano, concurso_nome, banca_nome';
 
-/**
- * Data access do quiz — o lado de LEITURA do sistema (docs/00).
- *
- * Lê `questoes_completas` e escreve `respostas`. Não toca em nenhuma tabela do
- * write-side: a fronteira entre processar e consumir é exatamente esta.
- *
- * A view já traz a coluna `elegivel` calculada, então o filtro de elegibilidade
- * é uma coluna só em vez da expressão repetida em cada query. Quem garante que
- * isso basta é o CHECK de `revisada` — uma questão aprovada tem, por
- * construção, matéria e gabarito.
- */
 @Injectable({ providedIn: 'root' })
 export class QuizService {
   private readonly supabase = inject(SupabaseService);
 
-  /**
-   * Todo o acervo elegível, só com o que o filtro e o sorteio precisam.
-   *
-   * Traz ids e nomes (não os enunciados): é o que permite o contador viver a
-   * cada clique de filtro sem pesar. As questões completas só são buscadas
-   * depois do sorteio, e só as sorteadas.
-   */
   async acervoElegivel(): Promise<ItemComNomes[]> {
     const { data, error } = await this.supabase.client
       .from('questoes_completas')
@@ -56,14 +32,6 @@ export class QuizService {
     return (data ?? []) as ItemComNomes[];
   }
 
-  /**
-   * O histórico inteiro de respostas.
-   *
-   * Trazer tudo para o cliente é deliberado: é o que deixa os três modos serem
-   * funções puras testáveis sem banco (`regras-quiz.ts`). Empurrar o filtro
-   * para uma RPC esconderia a regra dos testes. São três colunas de um usuário
-   * só — o custo é desprezível e o ganho é a regra ficar onde se testa.
-   */
   async historico(): Promise<RespostaHistorico[]> {
     const { data, error } = await this.supabase.client
       .from('respostas')
@@ -83,20 +51,10 @@ export class QuizService {
 
     if (error) throw new Error(`Não foi possível carregar as questões: ${error.message}`);
 
-    // O `in` devolve na ordem do banco, não na do sorteio. Reordenar aqui é o
-    // que impede o embaralhamento de ser desfeito silenciosamente pelo SELECT.
     const porId = new Map((data ?? []).map((q) => [q.id, q as QuestaoQuiz]));
     return ids.map((id) => porId.get(id)).filter((q): q is QuestaoQuiz => q !== undefined);
   }
 
-  /**
-   * Grava respostas.
-   *
-   * Recebe uma LISTA porque os dois modos gravam quantidades diferentes: o
-   * estudo manda uma por clique, a prova manda todas na entrega. Um `insert`
-   * com array é uma instrução só no Postgres — ou tudo entra, ou nada —, e é
-   * isso que impede um simulado meio gravado.
-   */
   async registrar(respostas: readonly RespostaNova[]): Promise<void> {
     if (respostas.length === 0) return;
 

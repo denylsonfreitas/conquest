@@ -27,7 +27,6 @@
     @if (questoes().length === 0) {
       <app-estado-vazio mensagem="Esta prova ainda não tem questões extraídas." />
     } @else {
-      <!-- FASE 1: mapeamento. Três decisões resolvem dezenas de questões. -->
       @if (paraMapear().length > 0) {
         <section class="cartao mb-8 p-5">
           <h2 class="mb-3 font-semibold text-texto">Matérias a mapear</h2>
@@ -73,7 +72,6 @@
         </section>
       }
 
-      <!-- FASE 2: aprovação em lote do que não tem pendência. -->
       @if (grupos().semPendencia.length > 0) {
         <div class="mb-6">
           <button type="button" class="btn" [disabled]="salvando()" (click)="aprovarSemPendencia()">
@@ -116,10 +114,6 @@
   }
 }
 
-<!--
-  Confirmação efêmera, longe dos botões. Enquanto era um selo na linha das
-  ações, ficava com cara de terceiro botão — status ocupando lugar de ação.
--->
 @if (toast(); as texto) {
   <div
     role="status"
@@ -129,11 +123,6 @@
   </div>
 }
 
-<!--
-  Um cartão só para os três grupos: a diferença entre eles é a ordem em que
-  aparecem, não a aparência. Duplicar a marcação três vezes seria o tipo de
-  repetição que o docs/04 manda extrair.
--->
 <ng-template #cartaoQuestao let-q>
   <li class="cartao p-5" [class.opacity-60]="q.anulada">
     <div class="flex items-start gap-3">
@@ -144,11 +133,6 @@
           {{ q.enunciado }}
         </p>
 
-        <!--
-          Selos da lista FECHADA. Cada pendência tem o seu: o grupo diz que há
-          algo a resolver, o selo diz o quê. Sem isto a única forma de saber
-          qual questão precisa de imagem era abrir as 70, uma a uma.
-        -->
         <p class="mt-1 flex flex-wrap gap-2 text-xs">
           @if (q.materia_id) {
             <span class="rounded-campo bg-superficie-sutil px-2 py-0.5 text-texto">
@@ -160,7 +144,6 @@
               gabarito {{ q.gabarito }}
             </span>
           }
-          <!-- Fato, não pendência: a imagem já está lá. -->
           @if (q.tem_imagem && q.imagem_path) {
             <span class="rounded-campo bg-info-fundo px-2 py-0.5 text-info">tem imagem</span>
           }
@@ -197,10 +180,6 @@
 
     @if (expandidaId() === q.id) {
       <div class="mt-4 border-t border-borda pt-4">
-        <!--
-          Mesmo editor da listagem do acervo e do resultado do quiz. O que NÃO
-          vem com ele são os botões de aprovar/desaprovar: isso é da revisão.
-        -->
         <app-editor-questao
           [questao]="q"
           [materias]="materias()"

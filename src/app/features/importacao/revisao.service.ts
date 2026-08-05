@@ -4,16 +4,8 @@ import { SupabaseService } from '../../core/supabase.service';
 import { EdicaoQuestao } from '../../shared/edicao-questao';
 import { Alternativa, Letra, TipoQuestao } from '../../shared/models';
 
-/**
- * A revisão edita os mesmos campos das outras telas, MAIS a aprovação.
- *
- * `revisada` fica fora do `EdicaoQuestao` compartilhado de propósito: aprovar é
- * ato da revisão, e o editor burro não deve nem oferecer o botão nas outras
- * duas telas que o reaproveitam.
- */
 export type EdicaoRevisao = EdicaoQuestao & { revisada?: boolean };
 
-/** Questão como a tela de revisão precisa dela. */
 export interface QuestaoRevisao {
   id: string;
   prova_id: string;
@@ -35,16 +27,8 @@ export interface QuestaoRevisao {
 const COLUNAS =
   'id, prova_id, numero, materia_id, assunto, enunciado, alternativas, gabarito, tipo, tem_imagem, imagem_path, comentario, incerto, anulada, revisada';
 
-/** Postgres: CHECK violado — aprovar sem matéria ou sem gabarito. */
 const CHECK_VIOLADO = '23514';
 
-/**
- * Data access da revisão.
- *
- * Note o que NÃO existe aqui: nenhum método mexe em `provas.status`. A
- * transição entre aguardando_revisao e pronta é derivada por trigger no banco,
- * justamente para nenhum caminho da UI poder esquecer de recalculá-la.
- */
 @Injectable({ providedIn: 'root' })
 export class RevisaoService {
   private readonly supabase = inject(SupabaseService);
@@ -60,12 +44,6 @@ export class RevisaoService {
     return (data ?? []) as QuestaoRevisao[];
   }
 
-  /**
-   * Atribui uma matéria a todas as questões de um mesmo `assunto`.
-   *
-   * É o que transforma 41 atribuições idênticas em 3 decisões — a diferença
-   * entre uma revisão que se faz e uma que se adia.
-   */
   async mapearAssunto(questaoIds: string[], materiaId: string): Promise<void> {
     const { error } = await this.supabase.client
       .from('questoes')
@@ -87,13 +65,6 @@ export class RevisaoService {
     return data as QuestaoRevisao;
   }
 
-  /**
-   * Aprova várias de uma vez.
-   *
-   * Os CHECKs do banco são a rede: `revisada = true` exige matéria e gabarito,
-   * então o lote falha em voz alta se alguma questão não estiver pronta — em
-   * vez de gravar torto. Nada é aprovado parcialmente: o UPDATE é atômico.
-   */
   async aprovarEmLote(questaoIds: string[]): Promise<void> {
     if (questaoIds.length === 0) return;
 
@@ -105,9 +76,7 @@ export class RevisaoService {
     if (error) throw new Error(traduzir(error.code, error.message));
   }
 
-  /** Anexa a figura de uma questão que depende de imagem. */
   async anexarImagem(questao: QuestaoRevisao, imagem: Blob): Promise<QuestaoRevisao> {
-    // Determinístico, como os PDFs: retentar sobrescreve em vez de acumular.
     const caminho = `${questao.prova_id}/${questao.id}`;
     const { error: erroUpload } = await this.supabase.questaoImagens.upload(caminho, imagem, {
       upsert: true,
@@ -117,15 +86,6 @@ export class RevisaoService {
     return this.editar(questao.id, { imagem_path: caminho, tem_imagem: true });
   }
 
-  /**
-   * Desfaz o anexo.
-   *
-   * O ponteiro cai PRIMEIRO: é ele que a revisão enxerga, e um ponteiro para
-   * um objeto que não existe mais seria pior que um objeto órfão. Se a remoção
-   * no bucket falhar depois disso, o caminho é determinístico e o próximo
-   * upload sobrescreve — o estranho seria abortar uma remoção já concluída aos
-   * olhos de quem pediu.
-   */
   async removerImagem(questao: QuestaoRevisao): Promise<QuestaoRevisao> {
     const atualizada = await this.editar(questao.id, { imagem_path: null });
     if (questao.imagem_path) await this.supabase.questaoImagens.remove([questao.imagem_path]);

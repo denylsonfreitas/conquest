@@ -112,7 +112,6 @@ describe('EditorQuestaoComponent', () => {
   });
 
   it('descarta o rascunho quando a questão exibida troca', () => {
-    // Manter seria aplicar a edição na questão errada.
     const fixture = montar();
     interno(fixture).mudar('gabarito', 'B');
     expect(interno(fixture).tem()).toBe(true);

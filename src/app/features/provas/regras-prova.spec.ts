@@ -73,8 +73,6 @@ describe('podeProcessar', () => {
   it('permite reprocessar extração ruim enquanto nada foi aprovado', () => {
     const prova = { status: 'aguardando_revisao', arquivo_path: 'c/p.pdf' } as const;
     expect(podeProcessar(prova, false)).toBe(true);
-    // Reprocessar sobrescreve as questões: curadoria já feita não pode ser
-    // apagada por um clique.
     expect(podeProcessar(prova, true)).toBe(false);
   });
 });
@@ -84,7 +82,6 @@ describe('estaTravada', () => {
   const haMinutos = (m: number) => new Date(agora.getTime() - m * 60_000).toISOString();
 
   it('não acusa processamento saudável', () => {
-    // A extração real leva ~1,5 min; destravar aqui apagaria trabalho vivo.
     expect(estaTravada({ status: 'processando', processando_desde: haMinutos(2) }, agora)).toBe(
       false,
     );
@@ -101,7 +98,6 @@ describe('estaTravada', () => {
 
   it('não acusa prova que não está processando', () => {
     expect(estaTravada({ status: 'erro', processando_desde: null }, agora)).toBe(false);
-    // Carimbo velho sem status processando não deve disparar o alerta.
     expect(estaTravada({ status: 'pronta', processando_desde: haMinutos(999) }, agora)).toBe(false);
   });
 

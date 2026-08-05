@@ -3,16 +3,6 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { BackupService } from './backup.service';
 import { Backup, nomeDoArquivo, Previa } from './formato-backup';
 
-/**
- * Backup do acervo: baixar e restaurar.
- *
- * Fica embutido no Progresso porque é lá que você olha o acumulado — "isto é
- * o que eu tenho a perder" é o contexto natural do botão.
- *
- * O import é em DUAS etapas por decisão: prévia primeiro, aplicar depois. O
- * número de "atualizar" é o aviso que impede o caso que morde — exportar
- * segunda, revisar terça, restaurar quarta e perder a curadoria de terça.
- */
 @Component({
   selector: 'app-backup',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,8 +21,6 @@ export class BackupComponent {
   protected readonly nomeLido = signal<string | null>(null);
   protected readonly previa = signal<Previa | null>(null);
   protected readonly zerarOrfaos = signal(true);
-
-  // --- export ------------------------------------------------------------------
 
   protected async exportar(): Promise<void> {
     if (this.ocupado()) return;
@@ -54,8 +42,6 @@ export class BackupComponent {
       this.ocupado.set(false);
     }
   }
-
-  // --- import ------------------------------------------------------------------
 
   protected async escolherArquivo(evento: Event): Promise<void> {
     const entrada = evento.target as HTMLInputElement;
@@ -104,8 +90,6 @@ export class BackupComponent {
       );
       this.cancelar();
     } catch (e) {
-      // Falhou no meio: nada foi desfeito, mas o import é idempotente — rodar
-      // de novo completa o que faltou sem duplicar o que entrou.
       this.erro.set(`${mensagem(e)} Rode a importação de novo: ela é retomável.`);
     } finally {
       this.ocupado.set(false);

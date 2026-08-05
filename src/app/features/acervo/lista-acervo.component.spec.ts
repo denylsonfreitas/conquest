@@ -96,7 +96,6 @@ describe('ListaAcervoComponent', () => {
   });
 
   it('mostra o acervo INTEIRO, marcando o que está fora dos quizzes', async () => {
-    // A diferença para o quiz: aqui se caça justamente a não elegível.
     const fixture = montar({
       questoes: [
         questao({ id: 'a', elegivel: true }),
@@ -134,7 +133,6 @@ describe('ListaAcervoComponent', () => {
     await assentar(fixture, 'questões');
 
     expect(chamadas.at(-1)?.situacao).toBe('falta_imagem');
-    // Trocar o recorte com a página 3 na tela mostraria um vazio enganoso.
     expect(chamadas.at(-1)?.pagina).toBe(0);
   });
 
@@ -146,7 +144,6 @@ describe('ListaAcervoComponent', () => {
     const service = TestBed.inject(AcervoService);
     vi.spyOn(service, 'respostasAfetadas').mockResolvedValue(3);
 
-    // O aviso mora no painel aberto — é onde a edição aconteceu.
     controles(fixture).alternarAberta('q1');
     await controles(fixture).salvar(questao(), { gabarito: 'B' });
     expect(controles(fixture).recontadas()).toBe(3);

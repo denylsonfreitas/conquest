@@ -134,17 +134,11 @@
                       </p>
                     }
 
-                    <!-- erro_msg carrega o motivo acionável, não um erro genérico. -->
                     @if (prova.erro_msg) {
                       <p class="mt-1 text-sm text-perigo">{{ prova.erro_msg }}</p>
                     }
                   </div>
 
-                  <!--
-                    Badge inline: primeira e única ocorrência do status. O rótulo
-                    é DERIVADO de arquivo_path — 'pendente' significa "sem PDF"
-                    ou "aguardando processamento" conforme haja arquivo.
-                  -->
                   <span
                     class="shrink-0 rounded-campo px-2 py-1 text-xs font-medium ring-1"
                     [class]="corStatus(prova)"
@@ -177,12 +171,6 @@
                     </button>
                   }
 
-                  <!--
-                    Só aparece quando a prova passou do limite em 'processando':
-                    a função morreu sem rodar o catch e ninguém mais vai
-                    reescrever o status. Sem isto, a prova ficaria inutilizável
-                    para sempre, inclusive impedindo trocar o PDF.
-                  -->
                   @if (estaTravada(prova)) {
                     <button
                       type="button"

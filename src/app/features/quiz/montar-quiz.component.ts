@@ -31,14 +31,6 @@ import { SessaoQuizService } from './sessao-quiz.service';
 
 type Status = 'carregando' | 'ok' | 'erro';
 
-/**
- * Montagem do quiz.
- *
- * O acervo e o histórico são carregados UMA vez; a partir daí, mudar filtro ou
- * modo não vai ao banco — a contagem é recalculada por funções puras. É o que
- * permite o contador viver a cada clique sem custo, e é o mesmo cálculo que
- * monta o quiz: o número na tela não pode divergir do que o botão vai sortear.
- */
 @Component({
   selector: 'app-montar-quiz',
   imports: [FormsModule, EstadoCarregandoComponent, EstadoErroComponent, FiltrosAcervoComponent],
@@ -63,7 +55,6 @@ export class MontarQuizComponent {
   protected readonly quantidade = signal(10);
   protected readonly execucao = signal<ModoExecucao>('estudo');
 
-  /** As candidatas de verdade: filtros + modo. É delas que o sorteio sai. */
   protected readonly candidatas = computed(() =>
     aplicarModo(aplicarFiltros(this.acervo(), this.filtros()), this.historico(), this.modo()),
   );
@@ -74,7 +65,6 @@ export class MontarQuizComponent {
     motivoConjuntoVazio(this.acervo(), this.historico(), this.filtros(), this.modo()),
   );
 
-  /** Quantas vão de fato entrar — o aviso de "pediu 50, tem 38" vem daqui. */
   protected readonly vaiMontarCom = computed(() => Math.min(this.quantidade(), this.disponiveis()));
 
   protected readonly MODOS: ModoQuiz[] = ['aleatorio', 'menos_vistas', 'revisao_erros'];
@@ -85,20 +75,12 @@ export class MontarQuizComponent {
   protected readonly QUANTIDADE_MIN = QUANTIDADE_MIN;
   protected readonly QUANTIDADE_MAX = QUANTIDADE_MAX;
 
-  /**
-   * O que o campo MOSTRA, separado do valor em vigor.
-   *
-   * Só muda ao sair do campo. Reescrever o input a cada tecla jogaria o cursor
-   * para o fim ao editar no meio do número — o mesmo problema do comentário na
-   * revisão.
-   */
   protected readonly quantidadeExibida = signal('10');
 
   protected digitarQuantidade(texto: string): void {
     this.quantidade.set(normalizarQuantidade(texto, this.quantidade()));
   }
 
-  /** Ao sair do campo, ele passa a mostrar o número que de fato será usado. */
   protected normalizarCampo(): void {
     this.quantidadeExibida.set(String(this.quantidade()));
   }
@@ -124,16 +106,12 @@ export class MontarQuizComponent {
     }
   }
 
-  // --- montagem ---------------------------------------------------------------
-
   protected async comecar(): Promise<void> {
     if (this.disponiveis() === 0 || this.montando()) return;
 
     this.montando.set(true);
     this.erroAcao.set(null);
     try {
-      // A fila já vem na ordem do modo; cortar no topo é o que respeita a
-      // prioridade que "menos vistas" acabou de estabelecer.
       const fila = filaDoModo(
         aplicarFiltros(this.acervo(), this.filtros()),
         this.historico(),

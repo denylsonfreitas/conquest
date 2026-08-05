@@ -1,9 +1,3 @@
-<!--
-  O véu usa preto fixo, não um papel: sombra não é superfície, e no escuro
-  um véu 'do tema' desapareceria contra a página.
-  Bloqueia a tela de propósito: é o critério que justifica o modal. Clicar
-  fora cancela — a saída barata tem que ser a segura.
--->
 <div
   class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
   (click)="cancelar.emit()"

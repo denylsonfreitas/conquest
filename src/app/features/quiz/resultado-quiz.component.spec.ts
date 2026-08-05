@@ -50,7 +50,6 @@ async function assentar(fixture: ComponentFixture<ResultadoQuizComponent>, texto
   return (fixture.nativeElement as HTMLElement).textContent ?? '';
 }
 
-/** Monta uma sessão já respondida, como a execução deixaria. */
 async function sessaoRespondida(sessao: SessaoQuizService) {
   sessao.iniciar(
     [
@@ -93,7 +92,6 @@ describe('ResultadoQuizComponent', () => {
   });
 
   it('mostra o desempenho por matéria, do pior para o melhor', async () => {
-    // É a informação mais útil do resultado (docs/03): diz onde focar.
     const fixture = montar();
     await sessaoRespondida(TestBed.inject(SessaoQuizService));
     await assentar(fixture, 'Desempenho por matéria');

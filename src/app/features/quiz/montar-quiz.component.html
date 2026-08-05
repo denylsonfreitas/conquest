@@ -44,11 +44,6 @@
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
           <label for="quantidade" class="rotulo">Quantidade</label>
-          <!--
-            `[value]` ligado ao que o campo EXIBE, que só muda no blur: o valor
-            em vigor acompanha cada tecla, mas reescrever o input a cada uma
-            jogaria o cursor para o fim ao editar no meio do número.
-          -->
           <input
             id="quantidade"
             type="number"
@@ -84,10 +79,6 @@
       </div>
     </section>
 
-    <!--
-      O contador vive a cada clique porque acervo e histórico já estão em
-      memória. Descobrir o vazio depois de "começar" seria tarde.
-    -->
     <div class="flex flex-wrap items-center gap-4">
       <button
         type="button"

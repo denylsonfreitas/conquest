@@ -4,11 +4,6 @@
     <p class="mt-1 text-sm text-texto-fraco">{{ ROTULO_MODO[sessao.modo()] }}</p>
   </header>
 
-  <!--
-    Dois denominadores, nenhum escondido. Só o de respondidas mentiria como
-    resultado de prova; só o da prova inteira esconderia sua taxa de acerto no
-    que você atacou.
-  -->
   <section class="cartao mb-6 p-5">
     <p class="text-3xl font-semibold text-texto">
       {{ placar().acertos }}
@@ -31,10 +26,6 @@
     }
   </section>
 
-  <!--
-    Vem antes da revisão questão a questão: é a informação que diz onde focar,
-    e está ordenada do pior para o melhor pelo mesmo motivo.
-  -->
   <h2 class="mb-3 font-semibold text-texto">Desempenho por matéria</h2>
   <ul class="cartao mb-8 divide-y divide-borda overflow-hidden">
     @for (linha of porMateria(); track linha.materia) {
@@ -86,10 +77,6 @@
             }
           </div>
 
-          <!--
-            Editar aqui dentro, sem navegar: sair da tela destruiria a sessão
-            em memória e levaria junto o resultado que você está lendo.
-          -->
           <button type="button" class="acao-inline" (click)="editar(item.questao.id)">
             {{ editandoId() === item.questao.id ? 'Fechar' : 'Editar' }}
           </button>

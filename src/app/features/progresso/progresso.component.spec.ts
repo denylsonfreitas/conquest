@@ -90,7 +90,6 @@ describe('ProgressoComponent', () => {
     const fixture = montar(async () => [r(), r({ questaoId: 'x', anulada: true, acertou: false })]);
     const texto = await assentar(fixture, 'anuladas');
     expect(texto).toContain('1 de questões anuladas, fora da conta');
-    // 1 acerto de 1 contável — a anulada não entrou no denominador.
     expect(texto).toContain('100%');
   });
 
@@ -103,7 +102,6 @@ describe('ProgressoComponent', () => {
 
     expect(texto).toContain('Onde focar');
     expect(texto).toContain('Poucas respostas ainda (menos de 10)');
-    // A de amostra pequena aparece, mas fora do ranking.
     expect(texto).toContain('RLM');
   });
 
@@ -114,7 +112,6 @@ describe('ProgressoComponent', () => {
   });
 
   it('mostra a evolução em pontos percentuais quando há o que comparar', async () => {
-    // 21 respostas: a janela é 20, então sobra uma para "antes".
     const fixture = montar(async () => serie('Português', [false, ...Array(20).fill(true)]));
     const texto = await assentar(fixture, 'Evolução');
     expect(texto).toContain('0% → 100%');

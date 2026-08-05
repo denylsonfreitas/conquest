@@ -42,34 +42,50 @@
     <details> nativo de propósito — abre, fecha e navega por teclado sem
     JavaScript nenhum, e não precisa de clique-fora para fechar.
   -->
-  <details class="group">
-    <summary
-      class="flex cursor-pointer list-none items-center gap-2 rounded-campo border border-borda px-3 py-2"
-    >
-      <span class="rotulo flex-1">Matérias</span>
-      <span class="text-sm text-texto">{{ resumoMaterias() }}</span>
-      <span class="text-texto-fraco transition group-open:rotate-180">
-        <app-icone nome="abrir" />
-      </span>
-    </summary>
+  <div>
+    <span class="rotulo">Matérias</span>
 
-    <div class="mt-2 flex flex-wrap gap-2">
-      @for (m of opcoes().materias; track m.id) {
-        <button
-          type="button"
-          class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
-          [class]="
-            materiaEscolhida(m.id)
-              ? 'bg-texto text-superficie ring-texto'
-              : 'bg-superficie text-texto ring-borda hover:bg-superficie-sutil'
-          "
-          (click)="alternarMateria(m.id)"
-        >
-          {{ m.nome }}
-        </button>
-      }
-    </div>
-  </details>
+    <!--
+      `relative` no container e `absolute` na lista: ela flutua por cima do
+      resto em vez de empurrar a tela, que é como os selects de banca e
+      concurso se comportam. Empurrar é justamente o que fazia os chips
+      atrapalharem.
+    -->
+    <details class="group relative mt-1">
+      <summary class="campo flex cursor-pointer list-none items-center gap-2">
+        <span class="flex-1" [class.text-texto-fraco]="filtros().materiaIds.length === 0">
+          {{ resumoMaterias() }}
+        </span>
+        <span class="text-texto-fraco transition group-open:rotate-180">
+          <app-icone nome="abrir" />
+        </span>
+      </summary>
+
+      <div
+        class="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-campo border border-borda bg-superficie py-1 shadow-lg"
+      >
+        @for (m of opcoes().materias; track m.id) {
+          <!--
+            Linha inteira clicável, com a marca à esquerda: é a forma de lista
+            de opções, e o alvo grande importa no tablet.
+          -->
+          <button
+            type="button"
+            class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-superficie-sutil"
+            [class]="materiaEscolhida(m.id) ? 'text-texto' : 'text-texto-fraco'"
+            (click)="alternarMateria(m.id)"
+          >
+            <span class="w-4 shrink-0 text-texto">
+              @if (materiaEscolhida(m.id)) {
+                <app-icone nome="aprovar" [tamanho]="14" />
+              }
+            </span>
+            {{ m.nome }}
+          </button>
+        }
+      </div>
+    </details>
+  </div>
 
   @if (tem()) {
     <button type="button" class="acao-inline" (click)="limpar()">Limpar filtros</button>

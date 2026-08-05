@@ -12,6 +12,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
+import { IconeComponent } from '../../shared/ui/icone.component';
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
 import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
@@ -58,6 +59,7 @@ type Status = 'carregando' | 'ok' | 'erro';
     EstadoErroComponent,
     EstadoVazioComponent,
     EditorQuestaoComponent,
+    IconeComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './revisao-questoes.component.html',

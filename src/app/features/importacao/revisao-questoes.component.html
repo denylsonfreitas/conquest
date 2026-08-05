@@ -178,6 +178,7 @@
       </div>
 
       <button type="button" class="acao-inline" (click)="alternarExpansao(q.id)">
+        <app-icone [nome]="expandidaId() === q.id ? 'fechar' : 'abrir'" />
         {{ expandidaId() === q.id ? 'Fechar' : 'Abrir' }}
       </button>
 
@@ -189,6 +190,7 @@
         [disabled]="!q.revisada && precisaAtencao(q)"
         (click)="alternarAprovacao(q)"
       >
+        <app-icone [nome]="q.revisada ? 'desfazer' : 'aprovar'" />
         {{ q.revisada ? 'Desaprovar' : 'Aprovar' }}
       </button>
     </div>

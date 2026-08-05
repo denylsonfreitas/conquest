@@ -337,12 +337,36 @@ primeira versão da tela — nunca retrofitados.
     > respostas. Passando de dezenas de milhares, agregar no banco.
 11. **Export do acervo** — botão que serializa bancas/concursos/provas/questões
     (e opcionalmente respostas) para JSON e baixa. Seguro barato contra perda.
-12. **Polimento** — responsividade do tablet, estados de erro/vazio, modo revisão
-    de erros.
+12. **Polimento** — quatro itens, nesta ordem:
 
-    > Registrado durante o passo 6: **ícones nas ações** (Abrir/Aprovar/
-    > Remover). Melhora a varredura da lista, mas é acabamento — não segurou o
-    > merge do passo 6.
+    1. **Confirmação nas exclusões**, com prévia do que o CASCADE leva junto.
+       Excluir um concurso era um clique sem pergunta, e arrastava provas,
+       questões e respostas — destruindo justamente o que o passo 11 protege.
+       Não é acabamento, é defeito; entra aqui porque é barato e mora perto.
+       A prévia diz "1 prova, 70 questões, 31 respostas do seu histórico", no
+       mesmo espírito da prévia do import: "tem certeza?" mudo não informa.
+    2. **Auditoria dos estados vazio/erro** — verificar, não presumir.
+    3. **Ícones nas ações** (Abrir/Aprovar/Remover), registrados no passo 6.
+    4. **Responsividade do tablet** — é o dispositivo alvo do `docs/03` e está
+       ausente (1 breakpoint em 4 telas, 0 nas outras 8). Medir antes de
+       espalhar `sm:`: a revisão tem oito ações inline numa linha, o acervo
+       empilha selos.
+
+    > **Critério de modal**, decidido aqui: modal serve quando a ação precisa
+    > BLOQUEAR tudo e tem saída binária — confirmar ou cancelar. Não serve para
+    > edição, que precisa do contexto em volta. Por isso as confirmações são
+    > modais, e o editor de questão, a prévia do backup e os painéis expandidos
+    > seguem embutidos.
+    >
+    > **Fora do escopo, por serem feature com nome de polimento:** atalhos de
+    > teclado, animações, PWA/offline, gráficos no progresso (recusados no passo
+    > 10) e virtualização de listas (otimização sem problema medido).
+
+13. **Modo escuro** — reposicionado, não descartado. Pela régua do passo 12 é
+    feature, não acabamento; mas o app é de uso diário e noturno de um usuário
+    só, então virou passo próprio, pequeno, em vez de ser espremido no 12 ou
+    recusado. Provável caminho: tokens de tema, já que o `styles.css` do passo 2
+    usa CSS vars.
 
 ## Higiene de dados: o Storage não segue o CASCADE
 

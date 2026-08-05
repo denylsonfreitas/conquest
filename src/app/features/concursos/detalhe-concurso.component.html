@@ -154,7 +154,7 @@
 
                   @if (prova.arquivo_path) {
                     <button type="button" class="acao-inline" (click)="abrirPdf(prova)">
-                      Ver PDF
+                      <app-icone nome="ver" /> Ver PDF
                     </button>
                   }
 
@@ -195,6 +195,7 @@
 
                   @if (podeAnexar(prova.status)) {
                     <button type="button" class="acao-inline" (click)="abrirAnexo(prova)">
+                      <app-icone nome="anexar" />
                       {{ prova.arquivo_path ? 'Substituir PDF' : 'Anexar PDF' }}
                     </button>
                   } @else {
@@ -208,9 +209,9 @@
                   <button
                     type="button"
                     class="acao-inline text-red-600"
-                    (click)="excluirProva(prova)"
+                    (click)="pedirExclusaoProva(prova)"
                   >
-                    Excluir
+                    <app-icone nome="excluir" /> Excluir
                   </button>
                 </div>
 
@@ -275,4 +276,14 @@
       </section>
     }
   }
+}
+
+@if (provaAExcluir(); as alvo) {
+  <app-confirmacao
+    [titulo]="'Excluir ' + alvo.nome + '?'"
+    [consequencias]="consequencias()"
+    [ocupado]="excluindo()"
+    (confirmar)="excluirProva(alvo)"
+    (cancelar)="cancelarExclusaoProva()"
+  />
 }

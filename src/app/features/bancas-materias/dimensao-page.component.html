@@ -48,10 +48,10 @@
             } @else {
               <span class="flex-1 text-tinta-900">{{ item.nome }}</span>
               <button type="button" class="acao-inline" (click)="iniciarEdicao(item)">
-                Renomear
+                <app-icone nome="editar" /> Renomear
               </button>
-              <button type="button" class="acao-inline text-red-600" (click)="excluir(item)">
-                Excluir
+              <button type="button" class="acao-inline text-red-600" (click)="pedirExclusao(item)">
+                <app-icone nome="excluir" /> Excluir
               </button>
             }
           </li>
@@ -59,4 +59,13 @@
       </ul>
     }
   }
+}
+
+@if (aExcluir(); as alvo) {
+  <app-confirmacao
+    [titulo]="'Excluir ' + alvo.nome + '?'"
+    [ocupado]="excluindo()"
+    (confirmar)="excluir(alvo)"
+    (cancelar)="cancelarExclusao()"
+  />
 }

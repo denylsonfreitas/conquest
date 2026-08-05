@@ -1,0 +1,42 @@
+<!--
+  Bloqueia a tela de propósito: é o critério que justifica o modal. Clicar
+  fora cancela — a saída barata tem que ser a segura.
+-->
+<div
+  class="fixed inset-0 z-50 flex items-center justify-center bg-tinta-900/40 p-4"
+  (click)="cancelar.emit()"
+>
+  <div
+    role="alertdialog"
+    aria-modal="true"
+    class="cartao w-full max-w-md p-5 shadow-lg"
+    (click)="$event.stopPropagation()"
+  >
+    <h2 class="font-semibold text-tinta-900">{{ titulo() }}</h2>
+
+    @if (consequencias().length > 0) {
+      <p class="mt-3 text-sm text-tinta-700">Isso também apaga:</p>
+      <ul class="mt-1 space-y-0.5 text-sm">
+        @for (c of consequencias(); track c) {
+          <li class="font-medium text-red-700">{{ c }}</li>
+        }
+      </ul>
+    }
+
+    <p class="mt-3 text-sm text-tinta-500">Não dá para desfazer.</p>
+
+    <div class="mt-5 flex gap-2">
+      <button
+        type="button"
+        class="btn bg-red-600 hover:bg-red-700"
+        [disabled]="ocupado()"
+        (click)="confirmar.emit()"
+      >
+        {{ ocupado() ? 'Excluindo…' : rotuloConfirmar() }}
+      </button>
+      <button type="button" class="btn-secundario" [disabled]="ocupado()" (click)="cancelar.emit()">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</div>

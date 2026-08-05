@@ -119,6 +119,7 @@
               </div>
 
               <button type="button" class="acao-inline" (click)="alternarAberta(q.id)">
+                <app-icone [nome]="abertaId() === q.id ? 'fechar' : 'editar'" />
                 {{ abertaId() === q.id ? 'Fechar' : 'Editar' }}
               </button>
             </div>

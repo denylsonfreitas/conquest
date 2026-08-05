@@ -1,21 +1,42 @@
-<div class="min-h-dvh bg-tinta-50">
-  <header class="border-b border-tinta-200 bg-white">
+<div class="min-h-dvh bg-superficie-fundo">
+  <header class="border-b border-borda bg-superficie">
     <div class="mx-auto flex max-w-4xl items-center gap-6 px-4 py-3">
-      <span class="text-lg font-semibold text-tinta-900">Conquest</span>
+      <span class="text-lg font-semibold text-texto">Conquest</span>
 
       <nav class="flex gap-1 text-sm">
         @for (item of navegacao; track item.rota) {
+          <!--
+            A cor sai de UM lugar só. Somar `text-superficie` pelo
+            routerLinkActive por cima de `text-texto-fraco` na classe base
+            deixava as duas com a mesma especificidade — quem vencia era a
+            ordem no CSS gerado, não a do template, e o item ativo saía
+            ilegível. Aqui o ternário garante que só existe uma cor de texto.
+          -->
           <a
             [routerLink]="item.rota"
-            routerLinkActive="bg-tinta-900 text-white hover:bg-tinta-900"
-            class="rounded-campo px-3 py-1.5 text-tinta-500 transition hover:bg-tinta-50"
+            routerLinkActive
+            #rla="routerLinkActive"
+            class="rounded-campo px-3 py-1.5 transition"
+            [class]="
+              rla.isActive
+                ? 'bg-texto text-superficie'
+                : 'text-texto-fraco hover:bg-superficie-sutil'
+            "
             >{{ item.rotulo }}</a
           >
         }
       </nav>
 
       <div class="ml-auto flex items-center gap-3">
-        <span class="hidden text-sm text-tinta-500 sm:inline">{{ auth.email() }}</span>
+        <span class="hidden text-sm text-texto-fraco sm:inline">{{ auth.email() }}</span>
+        <button
+          type="button"
+          class="btn-secundario"
+          [attr.aria-label]="tema.tema() === 'claro' ? 'Ativar modo escuro' : 'Ativar modo claro'"
+          (click)="tema.alternar()"
+        >
+          {{ tema.tema() === 'claro' ? '🌙' : '☀️' }}
+        </button>
         <button type="button" class="btn-secundario" (click)="sair()">Sair</button>
       </div>
     </div>

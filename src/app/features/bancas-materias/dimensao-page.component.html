@@ -1,5 +1,5 @@
 <header class="mb-6">
-  <h1 class="text-2xl font-semibold text-tinta-900">{{ titulo() }}</h1>
+  <h1 class="text-2xl font-semibold text-texto">{{ titulo() }}</h1>
 </header>
 
 <form class="mb-6 flex gap-2" (ngSubmit)="criar()">
@@ -28,16 +28,16 @@
     @if (itens().length === 0) {
       <app-estado-vazio [mensagem]="'Nenhuma ' + singular() + ' cadastrada ainda.'" />
     } @else {
-      <p class="mb-2 text-sm text-tinta-500">{{ itens().length }} {{ titulo().toLowerCase() }}</p>
+      <p class="mb-2 text-sm text-texto-fraco">{{ itens().length }} {{ titulo().toLowerCase() }}</p>
 
-      <ul class="cartao divide-y divide-tinta-200 overflow-hidden">
+      <ul class="cartao divide-y divide-borda overflow-hidden">
         @for (item of itens(); track item.id) {
           <li class="flex items-center gap-3 px-4 py-3">
             @if (editandoId() === item.id) {
               <input name="edicao" class="campo flex-1 py-1" [(ngModel)]="nomeEditado" />
               <button
                 type="button"
-                class="acao-inline font-medium text-tinta-900"
+                class="acao-inline font-medium text-texto"
                 (click)="confirmarEdicao(item)"
               >
                 Salvar
@@ -46,11 +46,11 @@
                 Cancelar
               </button>
             } @else {
-              <span class="flex-1 text-tinta-900">{{ item.nome }}</span>
+              <span class="flex-1 text-texto">{{ item.nome }}</span>
               <button type="button" class="acao-inline" (click)="iniciarEdicao(item)">
                 <app-icone nome="editar" /> Renomear
               </button>
-              <button type="button" class="acao-inline text-red-600" (click)="pedirExclusao(item)">
+              <button type="button" class="acao-inline text-perigo" (click)="pedirExclusao(item)">
                 <app-icone nome="excluir" /> Excluir
               </button>
             }

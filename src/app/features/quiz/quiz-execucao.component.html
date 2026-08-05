@@ -1,13 +1,13 @@
 @if (sessao.atual(); as q) {
   <header class="mb-4 flex items-center justify-between gap-4">
     <div>
-      <p class="text-sm text-tinta-500">
+      <p class="text-sm text-texto-fraco">
         Questão {{ sessao.indice() + 1 }} de {{ sessao.total() }}
-        <span class="text-tinta-400">
+        <span class="text-texto-fraco">
           · {{ progresso() }} {{ sessao.ehProva() ? 'marcadas' : 'respondidas' }}
         </span>
       </p>
-      <h1 class="text-lg font-semibold text-tinta-900">{{ q.materia ?? 'Sem matéria' }}</h1>
+      <h1 class="text-lg font-semibold text-texto">{{ q.materia ?? 'Sem matéria' }}</h1>
     </div>
 
     <button type="button" class="acao-inline" (click)="abandonar()">Sair do quiz</button>
@@ -24,10 +24,10 @@
         class="h-8 w-8 rounded-campo text-xs font-medium ring-1 transition"
         [class]="
           i === sessao.indice()
-            ? 'bg-tinta-900 text-white ring-tinta-900'
+            ? 'bg-texto text-superficie ring-texto'
             : sessao.situacaoDe(item) === 'marcada'
-              ? 'bg-sky-50 text-sky-700 ring-sky-300'
-              : 'bg-white text-tinta-500 ring-tinta-200 hover:bg-tinta-50'
+              ? 'bg-info-fundo text-info ring-info'
+              : 'bg-superficie text-texto-fraco ring-borda hover:bg-superficie-sutil'
         "
         [attr.aria-current]="i === sessao.indice() ? 'true' : null"
         (click)="sessao.irPara(i)"
@@ -42,7 +42,7 @@
   }
 
   <article class="cartao p-5">
-    <p class="mb-1 text-xs text-tinta-500">
+    <p class="mb-1 text-xs text-texto-fraco">
       {{ q.concurso_nome }}
       @if (q.banca_nome) {
         <span> · {{ q.banca_nome }}</span>
@@ -55,14 +55,14 @@
       }
     </p>
 
-    <p class="whitespace-pre-line text-tinta-900">{{ q.enunciado }}</p>
+    <p class="whitespace-pre-line text-texto">{{ q.enunciado }}</p>
 
     @if (q.imagem_path) {
       @if (urlImagem(); as url) {
         <img
           [src]="url"
           alt="Figura da questão"
-          class="mt-4 max-h-80 rounded-campo border border-tinta-200"
+          class="mt-4 max-h-80 rounded-campo border border-borda"
         />
       }
     }
@@ -84,15 +84,15 @@
     </ul>
 
     @if (revelado()) {
-      <div class="mt-5 border-t border-tinta-200 pt-4">
+      <div class="mt-5 border-t border-borda pt-4">
         @if (sessao.respostaAtual()?.acertou) {
-          <p class="font-medium text-emerald-700">Acertou.</p>
+          <p class="font-medium text-sucesso">Acertou.</p>
         } @else {
-          <p class="font-medium text-red-700">Errou — o gabarito é {{ q.gabarito }}.</p>
+          <p class="font-medium text-perigo">Errou — o gabarito é {{ q.gabarito }}.</p>
         }
 
         @if (q.comentario) {
-          <p class="mt-2 text-sm text-tinta-700">{{ q.comentario }}</p>
+          <p class="mt-2 text-sm text-texto">{{ q.comentario }}</p>
         }
       </div>
     }
@@ -136,13 +136,13 @@
     aqui, e não depois.
   -->
   @if (confirmandoEntrega()) {
-    <div class="cartao mt-6 border-amber-200 p-5">
-      <p class="font-medium text-tinta-900">
+    <div class="cartao mt-6 border-atencao p-5">
+      <p class="font-medium text-texto">
         Entregar {{ sessao.marcadas() }} de {{ sessao.total() }}?
       </p>
 
       @if (sessao.brancos() > 0) {
-        <p class="mt-1 text-sm font-medium text-amber-800">
+        <p class="mt-1 text-sm font-medium text-atencao">
           {{ sessao.brancos() }}
           {{ sessao.brancos() === 1 ? 'questão em branco' : 'questões em branco' }}.
         </p>

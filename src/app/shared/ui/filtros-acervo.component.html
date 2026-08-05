@@ -41,8 +41,8 @@
           class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
           [class]="
             materiaEscolhida(m.id)
-              ? 'bg-tinta-900 text-white ring-tinta-900'
-              : 'bg-white text-tinta-700 ring-tinta-200 hover:bg-tinta-50'
+              ? 'bg-texto text-superficie ring-texto'
+              : 'bg-superficie text-texto ring-borda hover:bg-superficie-sutil'
           "
           (click)="alternarMateria(m.id)"
         >

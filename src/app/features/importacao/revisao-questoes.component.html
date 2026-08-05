@@ -7,15 +7,15 @@
   }
   @case ('ok') {
     <nav class="mb-4 text-sm">
-      <a routerLink="/concursos" class="text-tinta-500 hover:underline">← Concursos</a>
+      <a routerLink="/concursos" class="text-texto-fraco hover:underline">← Concursos</a>
     </nav>
 
     <header class="mb-6">
-      <h1 class="text-2xl font-semibold text-tinta-900">Revisão</h1>
-      <p class="mt-1 text-sm text-tinta-500">
+      <h1 class="text-2xl font-semibold text-texto">Revisão</h1>
+      <p class="mt-1 text-sm text-texto-fraco">
         {{ totalAprovadas() }} de {{ questoes().length }} questões aprovadas.
         @if (concluida()) {
-          <span class="font-medium text-emerald-700">Prova pronta.</span>
+          <span class="font-medium text-sucesso">Prova pronta.</span>
         }
       </p>
     </header>
@@ -30,14 +30,14 @@
       <!-- FASE 1: mapeamento. Três decisões resolvem dezenas de questões. -->
       @if (paraMapear().length > 0) {
         <section class="cartao mb-8 p-5">
-          <h2 class="mb-4 font-semibold text-tinta-900">Matérias a mapear</h2>
+          <h2 class="mb-4 font-semibold text-texto">Matérias a mapear</h2>
 
           <ul class="space-y-3">
             @for (grupo of paraMapear(); track grupo.assunto) {
               <li class="flex flex-wrap items-center gap-2">
-                <span class="min-w-0 flex-1 text-tinta-900">
+                <span class="min-w-0 flex-1 text-texto">
                   {{ grupo.assunto }}
-                  <span class="text-tinta-500">· {{ grupo.quantidade }} questões</span>
+                  <span class="text-texto-fraco">· {{ grupo.quantidade }} questões</span>
                 </span>
 
                 <select
@@ -51,7 +51,7 @@
                   }
                 </select>
 
-                <span class="text-sm text-tinta-500">ou criar</span>
+                <span class="text-sm text-texto-fraco">ou criar</span>
                 <input
                   class="campo w-48"
                   placeholder="nova matéria"
@@ -83,7 +83,7 @@
       }
 
       @if (grupos().atencao.length > 0) {
-        <h2 class="mb-3 font-semibold text-tinta-900">
+        <h2 class="mb-3 font-semibold text-texto">
           Precisam de atenção ({{ grupos().atencao.length }})
         </h2>
         <ul class="mb-8 space-y-3">
@@ -94,7 +94,7 @@
       }
 
       @if (grupos().semPendencia.length > 0) {
-        <h2 class="mb-3 font-semibold text-tinta-900">
+        <h2 class="mb-3 font-semibold text-texto">
           Sem pendência ({{ grupos().semPendencia.length }})
         </h2>
         <ul class="mb-8 space-y-3">
@@ -105,9 +105,7 @@
       }
 
       @if (grupos().aprovadas.length > 0) {
-        <h2 class="mb-3 font-semibold text-tinta-900">
-          Aprovadas ({{ grupos().aprovadas.length }})
-        </h2>
+        <h2 class="mb-3 font-semibold text-texto">Aprovadas ({{ grupos().aprovadas.length }})</h2>
         <ul class="space-y-3">
           @for (q of grupos().aprovadas; track q.id) {
             <ng-container *ngTemplateOutlet="cartaoQuestao; context: { $implicit: q }" />
@@ -125,7 +123,7 @@
 @if (toast(); as texto) {
   <div
     role="status"
-    class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-campo bg-tinta-900 px-4 py-2 text-sm font-medium text-white shadow-lg"
+    class="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-campo bg-texto px-4 py-2 text-sm font-medium text-superficie shadow-lg"
   >
     {{ texto }}
   </div>
@@ -139,10 +137,10 @@
 <ng-template #cartaoQuestao let-q>
   <li class="cartao p-4" [class.opacity-60]="q.anulada">
     <div class="flex items-start gap-3">
-      <span class="w-8 shrink-0 font-medium text-tinta-500">{{ q.numero ?? '—' }}</span>
+      <span class="w-8 shrink-0 font-medium text-texto-fraco">{{ q.numero ?? '—' }}</span>
 
       <div class="min-w-0 flex-1">
-        <p class="text-tinta-900" [class.line-clamp-2]="expandidaId() !== q.id">
+        <p class="text-texto" [class.line-clamp-2]="expandidaId() !== q.id">
           {{ q.enunciado }}
         </p>
 
@@ -153,24 +151,26 @@
         -->
         <p class="mt-1 flex flex-wrap gap-2 text-xs">
           @if (q.materia_id) {
-            <span class="rounded-campo bg-tinta-50 px-2 py-0.5 text-tinta-700">
+            <span class="rounded-campo bg-superficie-sutil px-2 py-0.5 text-texto">
               {{ nomesMateria().get(q.materia_id) }}
             </span>
           }
           @if (q.gabarito) {
-            <span class="rounded-campo bg-emerald-50 px-2 py-0.5 text-emerald-700">
+            <span class="rounded-campo bg-sucesso-fundo px-2 py-0.5 text-sucesso">
               gabarito {{ q.gabarito }}
             </span>
           }
           <!-- Fato, não pendência: a imagem já está lá. -->
           @if (q.tem_imagem && q.imagem_path) {
-            <span class="rounded-campo bg-sky-50 px-2 py-0.5 text-sky-700">tem imagem</span>
+            <span class="rounded-campo bg-info-fundo px-2 py-0.5 text-info">tem imagem</span>
           }
           @if (q.anulada) {
-            <span class="rounded-campo bg-tinta-50 px-2 py-0.5 text-tinta-500">anulada</span>
+            <span class="rounded-campo bg-superficie-sutil px-2 py-0.5 text-texto-fraco"
+              >anulada</span
+            >
           }
           @for (motivo of motivosAtencao(q); track motivo) {
-            <span class="rounded-campo bg-amber-50 px-2 py-0.5 font-medium text-amber-800">
+            <span class="rounded-campo bg-atencao-fundo px-2 py-0.5 font-medium text-atencao">
               {{ motivo }}
             </span>
           }
@@ -185,8 +185,8 @@
       <button
         type="button"
         class="acao-inline font-medium"
-        [class.text-emerald-700]="!q.revisada"
-        [class.text-tinta-500]="q.revisada"
+        [class.text-sucesso]="!q.revisada"
+        [class.text-texto-fraco]="q.revisada"
         [disabled]="!q.revisada && precisaAtencao(q)"
         (click)="alternarAprovacao(q)"
       >
@@ -196,7 +196,7 @@
     </div>
 
     @if (expandidaId() === q.id) {
-      <div class="mt-4 border-t border-tinta-200 pt-4">
+      <div class="mt-4 border-t border-borda pt-4">
         <!--
           Mesmo editor da listagem do acervo e do resultado do quiz. O que NÃO
           vem com ele são os botões de aprovar/desaprovar: isso é da revisão.
@@ -213,7 +213,7 @@
         />
 
         @if (avisoNaoSalvo() === q.id) {
-          <p role="alert" class="mt-3 text-sm font-medium text-amber-800">Mudanças não salvas.</p>
+          <p role="alert" class="mt-3 text-sm font-medium text-atencao">Mudanças não salvas.</p>
         }
       </div>
     }

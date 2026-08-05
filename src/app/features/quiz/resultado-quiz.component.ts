@@ -138,9 +138,9 @@ export class ResultadoQuizComponent {
   }
 
   protected corPercentual(percentual: number): string {
-    if (percentual >= 70) return 'text-emerald-700';
-    if (percentual >= 50) return 'text-amber-700';
-    return 'text-red-700';
+    if (percentual >= 70) return 'text-sucesso';
+    if (percentual >= 50) return 'text-atencao';
+    return 'text-perigo';
   }
 }
 

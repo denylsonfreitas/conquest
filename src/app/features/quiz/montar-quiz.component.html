@@ -7,7 +7,7 @@
   }
   @case ('ok') {
     <header class="mb-6">
-      <h1 class="text-2xl font-semibold text-tinta-900">Montar quiz</h1>
+      <h1 class="text-2xl font-semibold text-texto">Montar quiz</h1>
     </header>
 
     @if (erroAcao(); as msg) {
@@ -24,8 +24,8 @@
               class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
               [class]="
                 modo() === m
-                  ? 'bg-tinta-900 text-white ring-tinta-900'
-                  : 'bg-white text-tinta-700 ring-tinta-200 hover:bg-tinta-50'
+                  ? 'bg-texto text-superficie ring-texto'
+                  : 'bg-superficie text-texto ring-borda hover:bg-superficie-sutil'
               "
               (click)="modo.set(m)"
             >
@@ -70,8 +70,8 @@
                 class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
                 [class]="
                   execucao() === e
-                    ? 'bg-tinta-900 text-white ring-tinta-900'
-                    : 'bg-white text-tinta-700 ring-tinta-200 hover:bg-tinta-50'
+                    ? 'bg-texto text-superficie ring-texto'
+                    : 'bg-superficie text-texto ring-borda hover:bg-superficie-sutil'
                 "
                 (click)="execucao.set(e)"
               >
@@ -79,7 +79,7 @@
               </button>
             }
           </div>
-          <p class="mt-1 text-xs text-tinta-500">{{ RESUMO_EXECUCAO[execucao()] }}</p>
+          <p class="mt-1 text-xs text-texto-fraco">{{ RESUMO_EXECUCAO[execucao()] }}</p>
         </div>
       </div>
     </section>
@@ -99,12 +99,12 @@
       </button>
 
       @if (motivoVazio(); as motivo) {
-        <p role="status" class="text-sm font-medium text-amber-800">{{ motivo }}</p>
+        <p role="status" class="text-sm font-medium text-atencao">{{ motivo }}</p>
       } @else {
-        <p role="status" class="text-sm text-tinta-500">
-          <span class="font-medium text-tinta-900">{{ disponiveis() }}</span> disponíveis
+        <p role="status" class="text-sm text-texto-fraco">
+          <span class="font-medium text-texto">{{ disponiveis() }}</span> disponíveis
           @if (vaiMontarCom() < quantidade()) {
-            <span class="text-amber-800">
+            <span class="text-atencao">
               — o quiz vai começar com {{ vaiMontarCom() }}, não {{ quantidade() }}
             </span>
           }

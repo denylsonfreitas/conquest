@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { IconeComponent } from './icone.component';
+
 import {
   alternarMateria,
   FiltrosAcervo,
@@ -24,7 +26,7 @@ import {
  */
 @Component({
   selector: 'app-filtros-acervo',
-  imports: [FormsModule],
+  imports: [FormsModule, IconeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './filtros-acervo.component.html',
 })
@@ -37,6 +39,22 @@ export class FiltrosAcervoComponent {
 
   protected readonly opcoes = computed(() => opcoesDeFiltro(this.universo(), this.filtros()));
   protected readonly tem = computed(() => temFiltro(this.filtros()));
+
+  /**
+   * Rótulo do controle fechado.
+   *
+   * Chips abertos mostram tudo, mas com dezenas de matérias viram várias
+   * linhas empurrando o resto da tela. Fechado, o filtro ocupa uma linha e
+   * ainda diz o que está ativo — a contagem substitui a leitura dos nomes.
+   */
+  protected readonly resumoMaterias = computed(() => {
+    const escolhidas = this.filtros().materiaIds;
+    if (escolhidas.length === 0) return 'Todas';
+    if (escolhidas.length === 1) {
+      return this.opcoes().materias.find((m) => m.id === escolhidas[0])?.nome ?? '1 matéria';
+    }
+    return `${escolhidas.length} matérias`;
+  });
 
   protected escolherBanca(id: string | null): void {
     this.mudou.emit(trocarBanca(id));

@@ -31,10 +31,29 @@
     </div>
   </div>
 
-  <!-- Matéria é multi-seleção; banca e concurso, não (docs/03). -->
-  <div>
-    <span class="rotulo">Matérias</span>
-    <div class="mt-1 flex flex-wrap gap-2">
+  <!--
+    Matéria é multi-seleção; banca e concurso, não (docs/03).
+
+    Recolhido num <details> em vez de chips soltos: com dezenas de matérias os
+    chips viram várias linhas e empurram a tela inteira. Fechado ocupa uma
+    linha e diz quantas estão ativas; aberto mostra TODAS as do recorte, que é
+    o que o filtro precisa oferecer.
+
+    <details> nativo de propósito — abre, fecha e navega por teclado sem
+    JavaScript nenhum, e não precisa de clique-fora para fechar.
+  -->
+  <details class="group">
+    <summary
+      class="flex cursor-pointer list-none items-center gap-2 rounded-campo border border-borda px-3 py-2"
+    >
+      <span class="rotulo flex-1">Matérias</span>
+      <span class="text-sm text-texto">{{ resumoMaterias() }}</span>
+      <span class="text-texto-fraco transition group-open:rotate-180">
+        <app-icone nome="abrir" />
+      </span>
+    </summary>
+
+    <div class="mt-2 flex flex-wrap gap-2">
       @for (m of opcoes().materias; track m.id) {
         <button
           type="button"
@@ -50,7 +69,7 @@
         </button>
       }
     </div>
-  </div>
+  </details>
 
   @if (tem()) {
     <button type="button" class="acao-inline" (click)="limpar()">Limpar filtros</button>

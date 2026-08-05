@@ -1,4 +1,3 @@
-
 export interface RespostaAnalisavel {
   readonly questaoId: string;
   readonly acertou: boolean;

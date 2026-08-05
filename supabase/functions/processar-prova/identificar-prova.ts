@@ -1,4 +1,3 @@
-
 export interface IdentificacaoProva {
   readonly cargo: string | null;
   readonly tipo: number | null;

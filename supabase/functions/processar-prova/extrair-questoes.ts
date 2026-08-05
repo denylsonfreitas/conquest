@@ -132,7 +132,9 @@ export async function extrairQuestoes(texto: string): Promise<QuestaoBruta[]> {
 
   const conteudo = candidato?.content?.parts?.[0]?.text;
   if (!conteudo) {
-    throw new LlmError(`O modelo não retornou conteúdo (finishReason: ${candidato?.finishReason}).`);
+    throw new LlmError(
+      `O modelo não retornou conteúdo (finishReason: ${candidato?.finishReason}).`,
+    );
   }
 
   let questoes: unknown;
@@ -142,6 +144,7 @@ export async function extrairQuestoes(texto: string): Promise<QuestaoBruta[]> {
     throw new LlmError('A extração não retornou JSON válido.');
   }
 
-  if (!Array.isArray(questoes)) throw new LlmError('A extração não retornou uma lista de questões.');
+  if (!Array.isArray(questoes))
+    throw new LlmError('A extração não retornou uma lista de questões.');
   return questoes as QuestaoBruta[];
 }

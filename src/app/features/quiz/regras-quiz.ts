@@ -1,4 +1,3 @@
-
 import { aplicarFiltros, FiltrosAcervo, ItemFiltravel } from '../../shared/filtros-acervo';
 
 export type ModoQuiz = 'aleatorio' | 'menos_vistas' | 'revisao_erros';

@@ -1,4 +1,3 @@
-
 export async function extrairTextoPdf(arquivo: Blob): Promise<string> {
   const { extractText, getDocumentProxy } = await import('unpdf');
 

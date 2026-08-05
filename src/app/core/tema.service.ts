@@ -14,8 +14,7 @@ export class TemaService {
       document.documentElement.dataset['tema'] = tema;
       try {
         localStorage.setItem(CHAVE, tema);
-      } catch {
-      }
+      } catch {}
     });
   }
 

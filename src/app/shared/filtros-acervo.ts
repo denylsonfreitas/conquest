@@ -1,4 +1,3 @@
-
 export interface ItemFiltravel {
   readonly id: string;
   readonly materia_id: string | null;

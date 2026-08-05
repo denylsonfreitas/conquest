@@ -1,4 +1,3 @@
-
 const MARCA_PCI = /pcimarkpci\s*[A-Za-z0-9+/=]*:?[A-Za-z0-9+/=]*/gi;
 
 const DOMINIO_PCI = /www\.pciconcursos\.com\.br/gi;

@@ -1,4 +1,3 @@
-
 export interface QuestaoParaRevisao {
   readonly id: string;
   readonly numero: number | null;

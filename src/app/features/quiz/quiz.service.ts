@@ -73,7 +73,6 @@ export class QuizService {
     return (data ?? []) as RespostaHistorico[];
   }
 
-  /** As questões sorteadas, completas, NA ORDEM do sorteio. */
   async questoes(ids: readonly string[]): Promise<QuestaoQuiz[]> {
     if (ids.length === 0) return [];
 

@@ -51,7 +51,6 @@ export const POR_PAGINA = 20;
 export class AcervoService {
   private readonly supabase = inject(SupabaseService);
 
-  /** De onde saem as opções de filtro: o acervo inteiro, com nomes. */
   async universo(): Promise<ItemComNomes[]> {
     const { data, error } = await this.supabase.client
       .from('questoes_completas')

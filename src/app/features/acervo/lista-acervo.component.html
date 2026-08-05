@@ -67,7 +67,7 @@
     } @else {
       <ul class="space-y-3">
         @for (q of questoes(); track q.id) {
-          <li class="cartao p-4" [class.opacity-60]="q.anulada">
+          <li class="cartao p-5" [class.opacity-60]="q.anulada">
             <div class="flex items-start gap-3">
               <span class="w-8 shrink-0 font-medium text-texto-fraco">{{ q.numero ?? '—' }}</span>
 

@@ -92,7 +92,6 @@ export class BackupService {
     return montarPrevia(backup, idsNoBanco, orfaos);
   }
 
-  /** Caminhos que de fato existem no bucket de imagens. */
   private async imagensNoBucket(): Promise<string[]> {
     const raiz = await this.supabase.questaoImagens.list('', { limit: 1000 });
     if (raiz.error) throw new Error(`Não foi possível ler o bucket: ${raiz.error.message}`);

@@ -30,7 +30,7 @@
       <!-- FASE 1: mapeamento. Três decisões resolvem dezenas de questões. -->
       @if (paraMapear().length > 0) {
         <section class="cartao mb-8 p-5">
-          <h2 class="mb-4 font-semibold text-texto">Matérias a mapear</h2>
+          <h2 class="mb-3 font-semibold text-texto">Matérias a mapear</h2>
 
           <ul class="space-y-3">
             @for (grupo of paraMapear(); track grupo.assunto) {
@@ -135,7 +135,7 @@
   repetição que o docs/04 manda extrair.
 -->
 <ng-template #cartaoQuestao let-q>
-  <li class="cartao p-4" [class.opacity-60]="q.anulada">
+  <li class="cartao p-5" [class.opacity-60]="q.anulada">
     <div class="flex items-start gap-3">
       <span class="w-8 shrink-0 font-medium text-texto-fraco">{{ q.numero ?? '—' }}</span>
 

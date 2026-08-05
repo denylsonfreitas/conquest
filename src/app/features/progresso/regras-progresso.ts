@@ -11,7 +11,6 @@
  * para sempre.
  */
 
-/** Uma resposta com o contexto que a estatística precisa. */
 export interface RespostaAnalisavel {
   readonly questaoId: string;
   readonly acertou: boolean;

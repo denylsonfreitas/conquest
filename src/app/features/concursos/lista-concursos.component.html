@@ -68,7 +68,7 @@
     } @else {
       <ul class="space-y-3">
         @for (concurso of concursos(); track concurso.id) {
-          <li class="cartao flex items-center gap-4 p-4">
+          <li class="cartao flex items-center gap-4 p-5">
             <div class="min-w-0 flex-1">
               <a
                 [routerLink]="['/concursos', concurso.id]"

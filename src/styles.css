@@ -1,22 +1,5 @@
-/**
- * Design system do app (docs/04 → "Estilo").
- *
- * Este arquivo é a PRIMEIRA camada: tokens da marca e classes de átomo usadas
- * em todo lugar. Só depois vêm as utilitárias do Tailwind no HTML e, por
- * último, um `.component.scss` quando a tela precisa de algo próprio.
- *
- * Continua em .css (e não .scss) de propósito: o Tailwind v4 é CSS-first e o
- * `@import "tailwindcss"` quebra dentro do Sass, que tenta resolvê-lo como
- * partial antes de o Tailwind rodar. Estilos POR COMPONENTE podem ser .scss à
- * vontade — eles não importam o Tailwind.
- */
 @import 'tailwindcss';
 
-/**
- * Tokens da marca. Declarados em @theme, viram utilitárias do Tailwind
- * automaticamente: `--color-tinta-500` habilita `bg-tinta-500`, `text-tinta-500`
- * etc. É assim que se estende o Tailwind v4 — sem tailwind.config.js.
- */
 @theme {
   --color-tinta-50: oklch(0.984 0.003 247.858);
   --color-tinta-200: oklch(0.929 0.013 255.508);
@@ -28,19 +11,12 @@
   --radius-campo: 0.5rem;
   --radius-cartao: 0.75rem;
 
-  /*
-   * PAPÉIS — a segunda camada, e a única que muda por tema.
-   *
-   * A escala `tinta-*` acima é a paleta e NÃO se inverte: `tinta-50` significa
-   * "o mais claro" em todo lugar que a usa. Inverter faria o nome mentir no
-   * escuro, e ainda seria meia inversão — `text-white` do `.btn` e o
-   * `bg-red-600` do `.btn-perigo` estão fora da escala e não acompanhariam.
-   *
-   * Quem consome cor daqui para frente aponta para o PAPEL, nunca para o tom:
-   * `bg-superficie`, `text-texto-fraco`. Trocar de tema redefine os
-   * `--papel-*` lá embaixo, e as 17 telas seguem junto sem saber que existe
-   * tema.
-   */
+  --color-marca: oklch(0.787 var(--marca-c) var(--marca-h));
+  --color-marca-forte: oklch(0.73 var(--marca-c) var(--marca-h));
+  --color-marca-contraste: var(--color-tinta-900);
+  --color-marca-sutil: var(--papel-marca-sutil);
+  --color-marca-texto: var(--papel-marca-texto);
+
   --color-superficie: var(--papel-superficie);
   --color-superficie-fundo: var(--papel-superficie-fundo);
   --color-superficie-sutil: var(--papel-superficie-sutil);
@@ -58,15 +34,13 @@
   --color-info: var(--papel-info-texto);
 }
 
-/*
- * Valores dos papéis por tema.
- *
- * `superficie-fundo` (página) e `superficie-sutil` (selo, hover) são o MESMO
- * tinta-50 no claro e divergem no escuro — é exatamente por isso que são dois
- * papéis. Colapsá-los porque hoje coincidem apagaria a distinção justamente no
- * tema em que ela aparece.
- */
 :root {
+  --marca-h: 123.6;
+  --marca-c: 0.146;
+
+  --papel-marca-sutil: oklch(0.96 0.045 var(--marca-h));
+  --papel-marca-texto: oklch(0.52 var(--marca-c) var(--marca-h));
+
   --papel-superficie: #fff;
   --papel-superficie-fundo: var(--color-tinta-50);
   --papel-superficie-sutil: var(--color-tinta-50);
@@ -74,45 +48,22 @@
   --papel-texto-fraco: var(--color-tinta-500);
   --papel-borda: var(--color-tinta-200);
 
-  color-scheme: light;
-}
-
-/*
- * CÓDIGO DE COR — o sexto papel, e o que ele NÃO é.
- *
- * Vermelho, verde, âmbar e sky aqui não são tom, são significado: erro,
- * acerto, pendência, informação. Por isso não saem da escala neutra — saem de
- * pares próprios de fundo e texto.
- *
- * No escuro a regra que os mantém legíveis é uma só: o FUNDO escurece muito e
- * o TEXTO clareia muito. Só escurecer os dois manteria o par ilegível; só
- * clarear o texto deixaria o fundo gritando. É o que faz verde de acerto e
- * vermelho de erro continuarem distinguíveis à primeira vista.
- */
-:root {
   --papel-perigo-fundo: oklch(0.954 0.02 17.4);
   --papel-perigo-texto: oklch(0.505 0.213 27.5);
-  --papel-sucesso-fundo: oklch(0.962 0.03 163);
-  --papel-sucesso-texto: oklch(0.508 0.118 165);
+  --papel-sucesso-fundo: oklch(0.962 0.03 172);
+  --papel-sucesso-texto: oklch(0.508 0.118 172);
   --papel-atencao-fundo: oklch(0.962 0.045 84);
   --papel-atencao-texto: oklch(0.473 0.113 62);
   --papel-info-fundo: oklch(0.961 0.02 236);
   --papel-info-texto: oklch(0.5 0.134 242);
+
+  color-scheme: light;
 }
 
 [data-tema='escuro'] {
-  --papel-perigo-fundo: oklch(0.28 0.07 20);
-  --papel-perigo-texto: oklch(0.78 0.15 22);
-  --papel-sucesso-fundo: oklch(0.28 0.05 165);
-  --papel-sucesso-texto: oklch(0.8 0.13 163);
-  --papel-atencao-fundo: oklch(0.3 0.06 75);
-  --papel-atencao-texto: oklch(0.83 0.12 85);
-  --papel-info-fundo: oklch(0.28 0.06 240);
-  --papel-info-texto: oklch(0.79 0.12 236);
-}
+  --papel-marca-sutil: oklch(0.3 0.06 var(--marca-h));
+  --papel-marca-texto: oklch(0.79 var(--marca-c) var(--marca-h));
 
-[data-tema='escuro'] {
-  /* O cartão é mais CLARO que a página no escuro — o relevo inverte de sinal. */
   --papel-superficie: oklch(0.26 0.035 265.755);
   --papel-superficie-fundo: oklch(0.19 0.03 265.755);
   --papel-superficie-sutil: oklch(0.33 0.035 262);
@@ -120,18 +71,22 @@
   --papel-texto-fraco: oklch(0.72 0.03 257);
   --papel-borda: oklch(0.36 0.03 260);
 
+  --papel-perigo-fundo: oklch(0.28 0.07 20);
+  --papel-perigo-texto: oklch(0.78 0.15 22);
+  --papel-sucesso-fundo: oklch(0.28 0.05 172);
+  --papel-sucesso-texto: oklch(0.8 0.13 172);
+  --papel-atencao-fundo: oklch(0.3 0.06 75);
+  --papel-atencao-texto: oklch(0.83 0.12 85);
+  --papel-info-fundo: oklch(0.28 0.06 240);
+  --papel-info-texto: oklch(0.79 0.12 236);
+
   color-scheme: dark;
 }
 
 @layer components {
-  /*
-   * Átomos como CLASSE, não como componente wrapper (docs/04): `<button
-   * class="btn">` é mais simples de manter que um <ui-botao> repassando type,
-   * disabled, aria-* e eventos. Componente só quando houver comportamento.
-   */
   .btn {
-    @apply rounded-campo bg-texto px-4 py-2 font-medium text-superficie
-           transition hover:opacity-90
+    @apply rounded-campo bg-marca px-4 py-2 font-medium text-marca-contraste
+           transition hover:bg-marca-forte
            disabled:cursor-not-allowed disabled:opacity-50;
   }
 
@@ -139,7 +94,6 @@
     @apply rounded-campo px-3 py-1.5 text-texto-fraco transition hover:bg-superficie-sutil;
   }
 
-  /* Ação destrutiva: exige contraste próprio, não é variação de tom. */
   .btn-perigo {
     @apply rounded-campo bg-red-600 px-4 py-2 font-medium text-white
            transition hover:bg-red-700;
@@ -148,7 +102,7 @@
   .campo {
     @apply w-full rounded-campo border border-borda bg-superficie px-3 py-2
            text-texto outline-none
-           focus:border-texto focus:ring-1 focus:ring-texto;
+           focus:border-marca-texto focus:ring-1 focus:ring-marca-texto;
   }
 
   .rotulo {
@@ -159,18 +113,15 @@
     @apply rounded-cartao bg-superficie ring-1 ring-borda;
   }
 
-  /* Caixa de mensagem de erro — repete em formulário e em ação de lista. */
   .alerta-erro {
     @apply rounded-campo bg-perigo-fundo px-3 py-2 text-sm text-perigo;
   }
 
-  /* Link de ação inline dentro de lista (renomear, excluir). */
   .acao-inline {
     @apply text-sm text-texto-fraco hover:underline;
   }
 }
 
-/* O triângulo nativo do <details> brigaria com a seta do próprio controle. */
 summary::-webkit-details-marker {
   display: none;
 }

@@ -7,7 +7,7 @@
   }
   @case ('ok') {
     <header class="mb-6">
-      <h1 class="text-2xl font-semibold text-tinta-900">Acervo</h1>
+      <h1 class="text-2xl font-semibold text-texto">Acervo</h1>
     </header>
 
     @if (erroAcao(); as msg) {
@@ -45,8 +45,8 @@
               class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
               [class]="
                 situacao() === s
-                  ? 'bg-tinta-900 text-white ring-tinta-900'
-                  : 'bg-white text-tinta-700 ring-tinta-200 hover:bg-tinta-50'
+                  ? 'bg-texto text-superficie ring-texto'
+                  : 'bg-superficie text-texto ring-borda hover:bg-superficie-sutil'
               "
               (click)="mudarSituacao(s)"
             >
@@ -57,8 +57,8 @@
       </div>
     </section>
 
-    <p class="mb-3 text-sm text-tinta-500">
-      <span class="font-medium text-tinta-900">{{ total() }}</span>
+    <p class="mb-3 text-sm text-texto-fraco">
+      <span class="font-medium text-texto">{{ total() }}</span>
       {{ total() === 1 ? 'questão' : 'questões' }}
     </p>
 
@@ -69,47 +69,49 @@
         @for (q of questoes(); track q.id) {
           <li class="cartao p-4" [class.opacity-60]="q.anulada">
             <div class="flex items-start gap-3">
-              <span class="w-8 shrink-0 font-medium text-tinta-500">{{ q.numero ?? '—' }}</span>
+              <span class="w-8 shrink-0 font-medium text-texto-fraco">{{ q.numero ?? '—' }}</span>
 
               <div class="min-w-0 flex-1">
-                <p class="text-tinta-900" [class.line-clamp-2]="abertaId() !== q.id">
+                <p class="text-texto" [class.line-clamp-2]="abertaId() !== q.id">
                   {{ q.enunciado }}
                 </p>
 
                 <p class="mt-1 flex flex-wrap gap-2 text-xs">
                   @if (q.materia) {
-                    <span class="rounded-campo bg-tinta-50 px-2 py-0.5 text-tinta-700">
+                    <span class="rounded-campo bg-superficie-sutil px-2 py-0.5 text-texto">
                       {{ q.materia }}
                     </span>
                   }
                   @if (q.gabarito) {
-                    <span class="rounded-campo bg-emerald-50 px-2 py-0.5 text-emerald-700">
+                    <span class="rounded-campo bg-sucesso-fundo px-2 py-0.5 text-sucesso">
                       gabarito {{ q.gabarito }}
                     </span>
                   }
                   @if (q.elegivel) {
-                    <span class="rounded-campo bg-sky-50 px-2 py-0.5 text-sky-700">elegível</span>
+                    <span class="rounded-campo bg-info-fundo px-2 py-0.5 text-info">elegível</span>
                   } @else {
-                    <span class="rounded-campo bg-amber-50 px-2 py-0.5 font-medium text-amber-800">
+                    <span
+                      class="rounded-campo bg-atencao-fundo px-2 py-0.5 font-medium text-atencao"
+                    >
                       fora dos quizzes
                     </span>
                   }
                   @if (q.anulada) {
-                    <span class="rounded-campo bg-tinta-50 px-2 py-0.5 text-tinta-500"
+                    <span class="rounded-campo bg-superficie-sutil px-2 py-0.5 text-texto-fraco"
                       >anulada</span
                     >
                   }
                   @if (!q.revisada) {
-                    <span class="rounded-campo bg-amber-50 px-2 py-0.5 text-amber-800">
+                    <span class="rounded-campo bg-atencao-fundo px-2 py-0.5 text-atencao">
                       não revisada
                     </span>
                   }
                   @if (q.tem_imagem && !q.imagem_path) {
-                    <span class="rounded-campo bg-amber-50 px-2 py-0.5 text-amber-800">
+                    <span class="rounded-campo bg-atencao-fundo px-2 py-0.5 text-atencao">
                       falta imagem
                     </span>
                   }
-                  <span class="text-tinta-500">
+                  <span class="text-texto-fraco">
                     {{ q.concurso_nome }}
                     @if (q.banca_nome) {
                       <span>· {{ q.banca_nome }}</span>
@@ -125,9 +127,9 @@
             </div>
 
             @if (abertaId() === q.id) {
-              <div class="mt-4 border-t border-tinta-200 pt-4">
+              <div class="mt-4 border-t border-borda pt-4">
                 @if (recontadas() > 0) {
-                  <p role="status" class="mb-3 text-sm font-medium text-emerald-700">
+                  <p role="status" class="mb-3 text-sm font-medium text-sucesso">
                     {{ recontadas() }}
                     {{
                       recontadas() === 1
@@ -164,7 +166,9 @@
           >
             Anterior
           </button>
-          <span class="text-sm text-tinta-500"> página {{ pagina() + 1 }} de {{ paginas() }} </span>
+          <span class="text-sm text-texto-fraco">
+            página {{ pagina() + 1 }} de {{ paginas() }}
+          </span>
           <button
             type="button"
             class="btn-secundario"

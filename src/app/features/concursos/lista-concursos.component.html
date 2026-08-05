@@ -88,11 +88,7 @@
             </div>
 
             <a [routerLink]="['/concursos', concurso.id]" class="acao-inline">Abrir</a>
-            <button
-              type="button"
-              class="acao-inline text-red-600"
-              (click)="pedirExclusao(concurso)"
-            >
+            <button type="button" class="acao-inline text-perigo" (click)="pedirExclusao(concurso)">
               <app-icone nome="excluir" /> Excluir
             </button>
           </li>

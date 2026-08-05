@@ -48,7 +48,7 @@
     ser silenciosa.
   -->
   @if (gabaritoMudou() && respostasAfetadas() > 0) {
-    <p role="status" class="text-sm font-medium text-amber-800">
+    <p role="status" class="text-sm font-medium text-atencao">
       {{ respostasAfetadas() }}
       {{
         respostasAfetadas() === 1
@@ -83,10 +83,10 @@
             <img
               [src]="url"
               [alt]="'Imagem da questão ' + questao().numero"
-              class="max-h-40 rounded-campo border border-tinta-200"
+              class="max-h-40 rounded-campo border border-borda"
             />
           }
-          <button type="button" class="acao-inline text-red-600" (click)="removerImagem.emit()">
+          <button type="button" class="acao-inline text-perigo" (click)="removerImagem.emit()">
             Remover
           </button>
         </div>
@@ -110,7 +110,7 @@
     }
   </div>
 
-  <div class="flex items-center gap-3 border-t border-tinta-200 pt-4">
+  <div class="flex items-center gap-3 border-t border-borda pt-4">
     <button type="button" class="btn" [disabled]="!tem() || salvando()" (click)="confirmar()">
       {{ salvando() ? 'Salvando…' : 'Salvar' }}
     </button>

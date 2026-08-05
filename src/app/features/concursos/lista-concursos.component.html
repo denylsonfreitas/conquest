@@ -1,6 +1,6 @@
 <header class="mb-6 flex items-start justify-between gap-4">
   <div>
-    <h1 class="text-2xl font-semibold text-tinta-900">Concursos</h1>
+    <h1 class="text-2xl font-semibold text-texto">Concursos</h1>
   </div>
 
   @if (!formAberto()) {
@@ -18,7 +18,7 @@
     <div class="grid gap-4 sm:grid-cols-2">
       <div>
         <label for="orgao" class="rotulo"
-          >Órgão <span class="text-tinta-500">(opcional)</span></label
+          >Órgão <span class="text-texto-fraco">(opcional)</span></label
         >
         <input id="orgao" class="campo mt-1" formControlName="orgao" placeholder="TRT15" />
       </div>
@@ -72,10 +72,10 @@
             <div class="min-w-0 flex-1">
               <a
                 [routerLink]="['/concursos', concurso.id]"
-                class="font-medium text-tinta-900 hover:underline"
+                class="font-medium text-texto hover:underline"
                 >{{ concurso.nome }}</a
               >
-              <p class="mt-0.5 text-sm text-tinta-500">
+              <p class="mt-0.5 text-sm text-texto-fraco">
                 @if (concurso.banca_nome) {
                   <span>{{ concurso.banca_nome }}</span>
                 } @else {

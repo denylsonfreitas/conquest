@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthService } from '../core/auth.service';
+import { TemaService } from '../core/tema.service';
 
 /**
  * Moldura das telas autenticadas: cabeçalho, navegação e o outlet das filhas.
@@ -18,6 +19,7 @@ import { AuthService } from '../core/auth.service';
 })
 export class ShellComponent {
   protected readonly auth = inject(AuthService);
+  protected readonly tema = inject(TemaService);
   private readonly router = inject(Router);
 
   /** Menu como dado, não como marcação repetida: crescer é adicionar item. */

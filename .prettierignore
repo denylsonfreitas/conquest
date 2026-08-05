@@ -1,0 +1,6 @@
+# Arquivo GERADO por `npm run db:types` (CLAUDE.md: nunca editado à mão).
+# Sem esta linha, um `prettier --write` amplo o reformata e o próximo
+# `db:types` desfaz tudo — ruído garantido no diff, nos dois sentidos.
+src/app/shared/database.types.ts
+
+dist

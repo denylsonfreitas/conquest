@@ -68,14 +68,14 @@ export class ProgressoComponent {
   }
 
   protected cor(percentual: number): string {
-    if (percentual >= 70) return 'text-emerald-700';
-    if (percentual >= 50) return 'text-amber-700';
-    return 'text-red-700';
+    if (percentual >= 70) return 'text-sucesso';
+    if (percentual >= 50) return 'text-atencao';
+    return 'text-perigo';
   }
 
   protected corDelta(delta: number): string {
-    if (delta > 0) return 'text-emerald-700';
-    if (delta < 0) return 'text-red-700';
-    return 'text-tinta-500';
+    if (delta > 0) return 'text-sucesso';
+    if (delta < 0) return 'text-perigo';
+    return 'text-texto-fraco';
   }
 }

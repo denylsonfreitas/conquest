@@ -96,14 +96,14 @@ export class QuizExecucaoComponent {
   protected estilo(letra: Letra): string {
     if (!this.revelado()) {
       return this.marcada(letra)
-        ? 'bg-tinta-900 text-white ring-tinta-900'
-        : 'bg-white ring-tinta-200 hover:bg-tinta-50';
+        ? 'bg-texto text-superficie ring-texto'
+        : 'bg-superficie text-texto ring-borda hover:bg-superficie-sutil';
     }
 
     const gabarito = this.sessao.atual()?.gabarito;
-    if (letra === gabarito) return 'bg-emerald-50 text-emerald-900 ring-emerald-300';
-    if (this.marcada(letra)) return 'bg-red-50 text-red-900 ring-red-300';
-    return 'bg-white text-tinta-500 ring-tinta-200';
+    if (letra === gabarito) return 'bg-sucesso-fundo text-sucesso ring-sucesso';
+    if (this.marcada(letra)) return 'bg-perigo-fundo text-perigo ring-perigo';
+    return 'bg-superficie text-texto-fraco ring-borda';
   }
 
   // --- entrega (modo prova) ----------------------------------------------------

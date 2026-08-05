@@ -117,15 +117,15 @@ export function rotuloStatusProva(prova: ProvaParaRegra): string {
 export function corStatusProva(prova: ProvaParaRegra): string {
   if (prova.status === 'pendente') {
     return prova.arquivo_path
-      ? 'bg-sky-50 text-sky-700 ring-sky-200'
-      : 'bg-tinta-50 text-tinta-500 ring-tinta-200';
+      ? 'bg-info-fundo text-info ring-info'
+      : 'bg-superficie-sutil text-texto-fraco ring-borda';
   }
 
   const cores: Record<Exclude<StatusProva, 'pendente'>, string> = {
     processando: 'bg-blue-50 text-blue-700 ring-blue-200',
-    aguardando_revisao: 'bg-amber-50 text-amber-700 ring-amber-200',
-    pronta: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
-    erro: 'bg-red-50 text-red-700 ring-red-200',
+    aguardando_revisao: 'bg-atencao-fundo text-atencao ring-atencao',
+    pronta: 'bg-sucesso-fundo text-sucesso ring-sucesso',
+    erro: 'bg-perigo-fundo text-perigo ring-perigo',
   };
   return cores[prova.status];
 }

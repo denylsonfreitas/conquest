@@ -4,14 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DimensaoPageComponent } from './dimensao-page.component';
 import { DimensoesService, ItemDimensao } from './dimensoes.service';
 
-/**
- * Testa os três estados que o docs/04 exige de toda tela que busca dados —
- * carregando, ok/vazio e erro — com o service dublado. Hermético: não precisa
- * da stack local de pé.
- *
- * Também cobre uma regressão real: o carregamento precisa acontecer DEPOIS de
- * o input obrigatório existir. Fazê-lo no construtor levanta NG0950.
- */
 function montar(serviceDuplo: Partial<DimensoesService>) {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
@@ -22,7 +14,6 @@ function montar(serviceDuplo: Partial<DimensoesService>) {
   return fixture;
 }
 
-/** O fetch é disparado por effect; o Angular não o rastreia no whenStable. */
 async function assentar(fixture: ComponentFixture<DimensaoPageComponent>, texto: string) {
   for (let i = 0; i < 50; i++) {
     fixture.detectChanges();
@@ -71,8 +62,6 @@ describe('DimensaoPageComponent', () => {
     const comErro = await assentar(fixture, 'Banco fora do ar');
     expect(comErro).toContain('Tentar de novo');
 
-    // Clica no botão de retry e confirma a recuperação. Busca pelo texto:
-    // querySelector('button') pegaria o "Adicionar" do formulário acima.
     Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
       .find((b) => b.textContent?.includes('Tentar de novo'))
       ?.click();
@@ -104,7 +93,6 @@ describe('DimensaoPageComponent', () => {
     });
     await assentar(fixture, 'Direito Constitucional');
 
-    // Excluir agora passa pela confirmação: o primeiro clique só abre o modal.
     const botoesExcluir = () =>
       Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).filter((b) =>
         b.textContent?.includes('Excluir'),
@@ -113,12 +101,10 @@ describe('DimensaoPageComponent', () => {
     botoesExcluir()[0]?.click();
     await assentar(fixture, 'Não dá para desfazer');
 
-    // O de dentro do modal é o último — é ele que dispara a exclusão.
     botoesExcluir().at(-1)?.click();
 
     const texto = await assentar(fixture, 'Em uso por questões');
     expect(texto).toContain('Em uso por questões');
-    // O item continua na lista: nada foi removido da UI otimisticamente.
     expect(texto).toContain('Direito Constitucional');
   });
 });

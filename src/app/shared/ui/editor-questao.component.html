@@ -7,11 +7,6 @@
     }
   </ul>
 
-  <!--
-    `ngModel` + `ngValue`, não `[value]`: o binding cru roda ANTES de o `@for`
-    criar as <option>, e o navegador descarta um valor sem opção
-    correspondente — o campo abriria vazio mesmo com a questão preenchida.
-  -->
   <div class="grid gap-3 sm:grid-cols-2">
     <div>
       <label class="rotulo">Matéria</label>
@@ -42,11 +37,6 @@
     </div>
   </div>
 
-  <!--
-    `acertou` é conta, não fato: corrigir o gabarito refaz a comparação das
-    respostas passadas. O número aparece ANTES de salvar para a mudança não
-    ser silenciosa.
-  -->
   @if (gabaritoMudou() && respostasAfetadas() > 0) {
     <p role="status" class="text-sm font-medium text-atencao">
       {{ respostasAfetadas() }}
@@ -60,11 +50,6 @@
 
   <div>
     <label class="rotulo">Comentário</label>
-    <!--
-      `change` (no blur), não `input`: com `[value]` ligado ao rascunho,
-      reescrever o campo a cada tecla joga o cursor para o fim quando a edição
-      é no meio do texto.
-    -->
     <textarea
       class="campo mt-1"
       rows="2"

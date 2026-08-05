@@ -6,18 +6,6 @@ import { extrairQuestoes, QuestaoBruta } from './extrair-questoes.ts';
 import { identificarProva, normalizar } from './identificar-prova.ts';
 import { prepararTexto } from './preparar-texto.ts';
 
-/**
- * Edge Function de extração — o coração do write-side (docs/02).
- *
- * Fluxo: PDF do Storage → texto (sem marca d'água) → LLM estrutura → casa
- * gabarito → valida com Zod → grava rascunhos → prova em aguardando_revisao.
- *
- * Invariante de estado: a prova NUNCA fica presa em 'processando'. Todo
- * caminho de saída — sucesso ou falha — reescreve o status e zera
- * `processando_desde`. O que o try/catch não cobre (timeout, OOM, deploy) é
- * coberto pelo carimbo, que permite a UI destravar.
- */
-
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -28,15 +16,12 @@ Deno.serve(async (req: Request) => {
 
   const admin = createClient(
     Deno.env.get('SUPABASE_URL')!,
-    // service_role: a função grava sem sessão de usuário. Ignora RLS por
-    // design, e por isso NUNCA pode sair daqui (docs/04).
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
   let provaId: string | undefined;
 
   try {
-    // Só usuário autenticado dispara processamento; a função não é pública.
     const token = req.headers.get('Authorization')?.replace('Bearer ', '');
     if (!token) return responder(401, { erro: 'Não autenticado.' });
     const { data: usuario } = await admin.auth.getUser(token);
@@ -66,7 +51,6 @@ function responder(status: number, corpo: unknown): Response {
 }
 
 async function marcarErro(admin: SupabaseClient, provaId: string, erro: string): Promise<void> {
-  // O CHECK do banco exige processando_desde nulo fora de 'processando'.
   await admin
     .from('provas')
     .update({ status: 'erro', erro_msg: erro, processando_desde: null })
@@ -80,21 +64,8 @@ interface Resultado {
   motivo_gabarito?: string;
 }
 
-/**
- * Texto já extraído pelo cliente.
- *
- * MEDIDO: extrair 16 páginas com pdf.js custa ~2,4s de CPU, e o Edge Runtime
- * corta bem antes disso ("CPU time hard limit reached"). O navegador não tem
- * esse limite e já lê o arquivo para calcular o hash, então extrair lá é de
- * graça.
- *
- * A garantia de privacidade não depende de quem extraiu: `garantirSemMarcaDagua`
- * roda aqui, no servidor, antes de qualquer chamada ao LLM.
- */
 interface TextoDoCliente {
-  /** Texto bruto da prova, como o pdf.js devolveu. Obrigatório. */
   texto?: string;
-  /** Texto bruto do gabarito, se houver PDF separado. */
   textoGabarito?: string;
 }
 
@@ -114,8 +85,6 @@ async function processar(
   if (prova.status === 'processando') throw new Error('A prova já está sendo processada.');
   if (!recebido.texto) throw new Error('O texto extraído da prova não foi enviado.');
 
-  // Reprocessar apaga as questões anteriores: a extração é idempotente por
-  // reconstrução, não por merge. Merge deixaria órfãs de uma extração antiga.
   await admin.from('questoes').delete().eq('prova_id', provaId);
 
   await admin
@@ -128,16 +97,11 @@ async function processar(
     })
     .eq('id', provaId);
 
-  // Ordem inegociável: limpa a marca d'água, confere que sobrou conteúdo e
-  // confere que nada escapou — só então o texto pode tocar a API do LLM.
   const textoProva = prepararTexto(recebido.texto);
 
   const brutas = await extrairQuestoes(textoProva);
   if (brutas.length === 0) throw new Error('Nenhuma questão reconhecida no PDF.');
 
-  // --- gabarito --------------------------------------------------------------
-  // Decisão: falha aqui NÃO interrompe. O texto das questões é o trabalho caro e
-  // não depende do gabarito; sem ele as questões entram sinalizadas.
   let respostas: ReadonlyMap<number, string> | null = null;
   let motivoGabarito: string | undefined;
 
@@ -165,7 +129,6 @@ async function processar(
     if (erroInsert) throw new Error(`Falha ao gravar as questões: ${erroInsert.message}`);
   }
 
-  // Nada some em silêncio: o que não pôde virar linha vai para erro_msg.
   const avisos = [
     descartadas.length > 0
       ? `${descartadas.length} questão(ões) descartada(s) na extração: nº ${descartadas.join(', ')}.`
@@ -191,7 +154,6 @@ async function processar(
   };
 }
 
-/** Matérias canônicas indexadas por nome normalizado, para casar o palpite do LLM. */
 async function carregarMaterias(admin: SupabaseClient): Promise<Map<string, string>> {
   const { data } = await admin.from('materias').select('id, nome');
   return new Map((data ?? []).map((m: { id: string; nome: string }) => [normalizar(m.nome), m.id]));
@@ -207,8 +169,6 @@ function montarQuestoes(
   const descartadas: number[] = [];
 
   for (const bruta of brutas) {
-    // O gabarito casado tem prioridade sobre o que o LLM achou: ele vem do
-    // documento oficial da banca, o outro é leitura de texto.
     const gabarito = respostas?.get(bruta.numero) ?? bruta.gabarito ?? null;
     const materiaId = bruta.materia ? (materias.get(normalizar(bruta.materia)) ?? null) : null;
 
@@ -216,19 +176,12 @@ function montarQuestoes(
       prova_id: provaId,
       numero: bruta.numero,
       materia_id: materiaId,
-      // A matéria sugerida que não casou com a lista canônica vira assunto,
-      // para a revisão não perder a informação do LLM.
       assunto: bruta.materia && !materiaId ? bruta.materia : null,
       enunciado: bruta.enunciado,
       alternativas: bruta.alternativas,
       gabarito,
       tipo: bruta.tipo,
       tem_imagem: bruta.tem_imagem,
-      // APENAS a dúvida do próprio LLM. Gabarito ausente e matéria não casada
-      // são pendências DERIVADAS das colunas, e a revisão as calcula de lá
-      // (`precisaAtencao`). Guardá-las aqui seria redundante e destrutivo: a
-      // questão continuaria marcada mesmo depois de a matéria ser atribuída,
-      // porque nada saberia distinguir qual dos motivos tinha sido resolvido.
       incerto: bruta.incerto,
       anulada: false,
       revisada: false,

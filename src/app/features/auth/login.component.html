@@ -25,7 +25,6 @@
         />
       </div>
 
-      <!-- Estado de erro: só aparece quando existe, e some na próxima tentativa. -->
       @if (erro(); as mensagem) {
         <p role="alert" class="alerta-erro">{{ mensagem }}</p>
       }

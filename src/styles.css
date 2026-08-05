@@ -169,3 +169,8 @@
     @apply text-sm text-texto-fraco hover:underline;
   }
 }
+
+/* O triângulo nativo do <details> brigaria com a seta do próprio controle. */
+summary::-webkit-details-marker {
+  display: none;
+}

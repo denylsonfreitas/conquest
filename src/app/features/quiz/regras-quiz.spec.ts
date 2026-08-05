@@ -29,7 +29,6 @@ const resp = (questao_id: string, acertou: boolean, dia: string): RespostaHistor
   respondido_em: `2026-08-${dia}T10:00:00Z`,
 });
 
-/** RNG determinístico: devolve sempre o mesmo ciclo, para o sorteio ser testável. */
 const rngFixo = (valores: number[]) => {
   let i = 0;
   return () => valores[i++ % valores.length];
@@ -65,8 +64,6 @@ describe('aplicarModo', () => {
   });
 
   it('revisão de erros usa a ÚLTIMA resposta, não "existe alguma errada"', () => {
-    // A distinção que define o modo: errei ontem, acertei hoje. A questão foi
-    // dominada e precisa sair da fila — senão o modo nunca se esvazia.
     const historico = [resp('a', false, '01'), resp('a', true, '02'), resp('b', false, '01')];
     expect(aplicarModo(candidatas, historico, 'revisao_erros').map((x) => x.id)).toEqual(['b']);
   });
@@ -91,8 +88,6 @@ describe('filaDoModo — menos vistas', () => {
   });
 
   it('NUNCA esgota — é a diferença para o modo que substituiu', () => {
-    // Com tudo respondido, "só não respondidas" devolvia vazio. Este continua
-    // devolvendo o acervo inteiro, agora ordenado por prioridade.
     const historico = acervo.map((x) => resp(x.id, true, '01'));
     expect(filaDoModo(acervo, historico, 'menos_vistas')).toHaveLength(4);
   });
@@ -104,14 +99,11 @@ describe('filaDoModo — menos vistas', () => {
       resp('b', true, '02'), // b foi vista duas vezes
       resp('c', true, '05'),
     ];
-    // 'd' nunca foi vista; entre as vistas, c (1x, 05) vem antes de a (1x, 10),
-    // e b (2x) vai para o fim.
     const fila = filaDoModo(acervo, historico, 'menos_vistas');
     expect(fila.map((x) => x.id)).toEqual(['d', 'c', 'a', 'b']);
   });
 
   it('responder de novo joga a questão para o fim, sem apagar nada', () => {
-    // É o mecanismo da rotação: a fila se reorganiza pelo ato de responder.
     const antes = [resp('a', true, '01'), resp('b', true, '02'), resp('c', true, '03')];
     const soD = filaDoModo([q('a'), q('b'), q('c')], antes, 'menos_vistas');
     expect(soD.map((x) => x.id)).toEqual(['a', 'b', 'c']);
@@ -202,8 +194,6 @@ describe('normalizarQuantidade', () => {
   });
 
   it('cai no último valor válido quando não dá para ler número', () => {
-    // Campo vazio é o estado natural de quem está apagando para redigitar —
-    // zerar o quiz nesse instante seria punir a edição.
     expect(normalizarQuantidade('', 25)).toBe(25);
     expect(normalizarQuantidade('abc', 25)).toBe(25);
   });
@@ -228,7 +218,6 @@ describe('motivoConjuntoVazio', () => {
   });
 
   it('aponta o eixo que, sozinho, destrava o conjunto', () => {
-    // O caso comum no começo: acervo de uma prova só e filtro de outra banca.
     const motivo = motivoConjuntoVazio(
       acervo,
       [],
@@ -271,8 +260,6 @@ describe('placar e desempenho', () => {
   });
 
   it('com brancos, o percentual da prova é MENOR — o de respondidas mentiria', () => {
-    // 2 de 4 respondidas é 50%; mas a prova tinha 8, então o resultado é 25%.
-    // Mostrar só o primeiro número seria dizer que você acertou metade da prova.
     const p = placar(respostas, 8);
     expect(p.brancos).toBe(4);
     expect(p.percentualRespondidas).toBe(50);
@@ -280,7 +267,6 @@ describe('placar e desempenho', () => {
   });
 
   it('sem total informado, cai no número de respostas', () => {
-    // É o caso do modo estudo encerrado cedo, antes de a tela passar o total.
     expect(placar(respostas).total).toBe(4);
   });
 
@@ -290,7 +276,6 @@ describe('placar e desempenho', () => {
   });
 
   it('agrupa por matéria e ordena do pior para o melhor', () => {
-    // A matéria que precisa de atenção aparece primeiro — é o ponto da tela.
     const materias = new Map([
       ['a', 'Português'],
       ['b', 'RLM'],

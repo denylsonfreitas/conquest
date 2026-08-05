@@ -89,20 +89,14 @@ describe('MontarQuizComponent', () => {
     const fixture = montar({ acervoElegivel, historico: async () => [] });
     expect(await assentar(fixture, 'disponíveis')).toContain('5');
 
-    // Clica no chip que o componente burro de filtros renderizou: prova a
-    // contagem E a ligação com o componente extraído.
     clicar(fixture, 'RLM')?.click();
     fixture.detectChanges();
 
     expect(controles(fixture).disponiveis()).toBe(2);
-    // O ponto do contador vivo: uma consulta só, e a contagem responde a cada
-    // clique de filtro.
     expect(acervoElegivel).toHaveBeenCalledTimes(1);
   });
 
   it('avisa antes de começar quando há menos questões que o pedido', async () => {
-    // "Pediu 50, tem 38" precisa aparecer ANTES do clique — descobrir depois
-    // seria tarde.
     const fixture = montar({ acervoElegivel: async () => acervoDe(3), historico: async () => [] });
     await assentar(fixture, 'disponíveis');
 
@@ -123,7 +117,6 @@ describe('MontarQuizComponent', () => {
     c.digitarQuantidade('999');
     expect(c.quantidade()).toBe(200);
 
-    // O campo passa a mostrar o que de fato será usado ao sair dele.
     c.normalizarCampo();
     fixture.detectChanges();
     const campo = (fixture.nativeElement as HTMLElement).querySelector('input[type=number]');
@@ -140,8 +133,6 @@ describe('MontarQuizComponent', () => {
     });
     await assentar(fixture, 'disponíveis');
 
-    // Banca Cespe só tem matéria X; escolher a banca e depois a matéria de
-    // outra banca é o beco que a mensagem precisa explicar.
     controles(fixture).filtros.set({
       bancaId: 'cespe',
       concursoId: null,
@@ -169,7 +160,6 @@ describe('MontarQuizComponent', () => {
   });
 
   it('menos vistas continua oferecendo o acervo com tudo já respondido', async () => {
-    // O precipício que o modo antigo tinha: aqui a contagem não cai a zero.
     const historico: RespostaHistorico[] = [
       { questao_id: 'q0', acertou: true, respondido_em: '2026-08-01T10:00:00Z' },
       { questao_id: 'q1', acertou: true, respondido_em: '2026-08-01T10:00:00Z' },
@@ -200,7 +190,6 @@ describe('MontarQuizComponent', () => {
     controles(fixture).digitarQuantidade('10');
     await controles(fixture).comecar();
 
-    // Sorteou 5 (tinha menos que os 10 pedidos) e só então buscou as completas.
     expect(buscar.mock.calls[0][0]).toHaveLength(5);
     expect(TestBed.inject(SessaoQuizService).questoes()).toEqual(questoes);
     expect(navigate).toHaveBeenCalledWith(['/quiz/executar']);

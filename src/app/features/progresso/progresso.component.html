@@ -11,10 +11,6 @@
     </header>
 
     @if (vazio()) {
-      <!--
-        O primeiro estado que se vê num acervo novo — e por isso o que mais
-        importa acertar. Um vazio mudo pareceria defeito.
-      -->
       <div class="cartao p-8 text-center">
         <p class="text-texto">Responda alguns quizzes para ver seu progresso.</p>
         <a routerLink="/quiz" class="btn mt-4 inline-block">Montar um quiz</a>
@@ -32,18 +28,13 @@
           {{ total().questoes }}
           {{ total().questoes === 1 ? 'questão praticada' : 'questões praticadas' }}
           @if (total().desconsideradas > 0) {
-            <!-- A banca invalidou; não conta contra você. -->
             <span> · {{ total().desconsideradas }} de questões anuladas, fora da conta </span>
           }
         </p>
       </section>
 
-      <!--
-        Últimas N contra o que veio antes, e não janela de calendário: estudo em
-        rajada faria a janela por data falar do seu ritmo, não do seu aprendizado.
-      -->
       @if (temEvolucao()) {
-        <h2 class="mb-1 font-semibold text-texto">Evolução</h2>
+        <h2 class="mb-3 font-semibold text-texto">Evolução</h2>
         <p class="mb-3 text-sm text-texto-fraco">
           últimas {{ JANELA }} respostas de cada matéria contra as anteriores
         </p>
@@ -79,10 +70,6 @@
         </ul>
       }
 
-      <!--
-        Amostra pequena não entra no ranking — 2 de 2 erradas é acaso —, mas
-        continua na tela: escondê-las faria parecer que a matéria não existe.
-      -->
       @if (fracas().poucaAmostra.length > 0) {
         <p class="mb-2 text-sm text-texto-fraco">
           Poucas respostas ainda (menos de {{ PISO }}), sem ranqueamento:

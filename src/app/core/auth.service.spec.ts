@@ -5,13 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from './auth.service';
 import { SupabaseService } from './supabase.service';
 
-/** Sessão mínima: o service só olha `user.email`. */
 const sessaoFake = { user: { email: 'eu@local.test' } } as Session;
 
-/**
- * Duplo do client do Supabase. `onAuthStateChange` guarda o callback para o
- * teste poder disparar mudanças de sessão à mão, como o Supabase faria.
- */
 function criarDuplo(sessaoInicial: Session | null) {
   let notificar: ((evento: string, sessao: Session | null) => void) | null = null;
   const signInWithPassword = vi.fn(async () => ({ data: {}, error: null }));
@@ -45,7 +40,6 @@ describe('AuthService', () => {
 
   it('começa carregando, para não deixar o guard decidir cedo demais', () => {
     const { service } = criarService(sessaoFake);
-    // Ainda no mesmo tick: getSession() é assíncrono e não resolveu.
     expect(service.carregando()).toBe(true);
     expect(service.autenticado()).toBe(false);
   });

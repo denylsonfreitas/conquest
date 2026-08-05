@@ -20,7 +20,6 @@ const r = (over: Partial<RespostaAnalisavel> = {}): RespostaAnalisavel => ({
   ...over,
 });
 
-/** N respostas de uma matéria, com carimbos crescentes. */
 const serie = (materia: string, acertos: boolean[], desdeODia = 1): RespostaAnalisavel[] =>
   acertos.map((acertou, i) =>
     r({
@@ -33,8 +32,6 @@ const serie = (materia: string, acertos: boolean[], desdeODia = 1): RespostaAnal
 
 describe('contaveis', () => {
   it('tira as anuladas da conta sem apagar nada', () => {
-    // A banca invalidou a questão; contar como erro seu seria registrar contra
-    // você algo que não valia.
     const todas = [r(), r({ anulada: true, acertou: false })];
     expect(contaveis(todas)).toHaveLength(1);
     expect(todas).toHaveLength(2);
@@ -43,7 +40,6 @@ describe('contaveis', () => {
 
 describe('totalPraticado', () => {
   it('conta respostas e questões DISTINTAS', () => {
-    // Responder a mesma questão três vezes não são três questões praticadas.
     const t = totalPraticado([
       r({ questaoId: 'a' }),
       r({ questaoId: 'a', acertou: false }),
@@ -101,7 +97,6 @@ describe('desempenho por eixo', () => {
 
 describe('evolucaoPorMateria', () => {
   it('compara as últimas N com o que veio antes', () => {
-    // 4 antigas (todas erradas) e 3 recentes (todas certas), janela de 3.
     const respostas = serie('Português', [false, false, false, false, true, true, true]);
     const [linha] = evolucaoPorMateria(respostas, 3);
 
@@ -119,7 +114,6 @@ describe('evolucaoPorMateria', () => {
   it('usa a ordem do carimbo, não a de chegada', () => {
     const embaralhadas = [...serie('Português', [false, true, true])].reverse();
     const [linha] = evolucaoPorMateria(embaralhadas, 2);
-    // As duas últimas por data são as certas.
     expect(linha.recentes.percentual).toBe(100);
     expect(linha.anteriores?.percentual).toBe(0);
   });
@@ -148,7 +142,6 @@ describe('maisFracas', () => {
     const f = maisFracas([d('Direito', 0, 2), d('Português', 5, 20), d('RLM', 15, 20)], 10);
 
     expect(f.ranqueadas.map((x) => x.chave)).toEqual(['Português', 'RLM']);
-    // Não some: some da ORDENAÇÃO, não da tela.
     expect(f.poucaAmostra.map((x) => x.chave)).toEqual(['Direito']);
   });
 
@@ -158,7 +151,6 @@ describe('maisFracas', () => {
   });
 
   it('com acervo novo, tudo cai em poucaAmostra — e isso é o certo', () => {
-    // O caso real de um histórico recém-começado: nada ranqueável ainda.
     const f = maisFracas([d('Português', 1, 3), d('RLM', 1, 1)], 10);
     expect(f.ranqueadas).toEqual([]);
     expect(f.poucaAmostra).toHaveLength(2);

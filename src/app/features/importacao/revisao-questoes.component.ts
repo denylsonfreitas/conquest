@@ -30,25 +30,6 @@ import { QuestaoRevisao, RevisaoService } from './revisao.service';
 
 type Status = 'carregando' | 'ok' | 'erro';
 
-/**
- * Revisão das questões extraídas — fecha o pipeline write-side.
- *
- * A tela é organizada pelo que economiza tempo, não pela ordem do banco:
- *
- * 1. **Mapeamento de matérias** primeiro, se houver `assunto` sem matéria
- *    canônica. Uma prova chama a seção de "Conhecimentos Específicos" trinta
- *    vezes; mapear esse nome uma vez resolve as trinta.
- * 2. **Dois grupos**: precisa de atenção e sem pendência, com a numeração
- *    original preservada dentro de cada — um sort global por gravidade
- *    embaralharia os números e impediria conferir a questão contra o PDF.
- * 3. **Aprovar em lote** o que não tem pendência, com contagem explícita.
- *
- * As ações em massa (mapear, aprovar em lote) gravam na hora: são um clique
- * deliberado sobre um conjunto nomeado. A **edição de uma questão** é a
- * exceção — acumula num rascunho e só vai ao banco no "Salvar", numa
- * requisição só. São as 2 ou 3 questões problemáticas de uma prova, não as 70:
- * o custo do botão é desprezível e ele agrupa as mudanças.
- */
 @Component({
   selector: 'app-revisao-questoes',
   imports: [
@@ -68,7 +49,6 @@ export class RevisaoQuestoesComponent {
   private readonly service = inject(RevisaoService);
   private readonly dimensoes = inject(DimensoesService);
 
-  /** Vem de `/provas/:id/revisao`. */
   readonly id = input.required<string>();
 
   protected readonly status = signal<Status>('carregando');
@@ -79,25 +59,16 @@ export class RevisaoQuestoesComponent {
   protected readonly salvando = signal(false);
   protected readonly expandidaId = signal<string | null>(null);
 
-  /** Matéria escolhida para cada grupo de assunto, antes de confirmar. */
   protected readonly escolhaMateria = signal<Record<string, string>>({});
   protected readonly novaMateria = signal<Record<string, string>>({});
 
-  /**
-   * Mudanças pendentes por questão — só os campos que realmente diferem do que
-   * está gravado. É o que permite o "Salvar" mandar uma requisição com tudo, e
-   * é o que sabe se há algo a perder ao fechar a questão.
-   */
   protected readonly rascunhos = signal<Record<string, EdicaoQuestao>>({});
 
-  /** Questão cujo fechamento foi barrado por ter rascunho. */
   protected readonly avisoNaoSalvo = signal<string | null>(null);
 
-  /** Confirmação efêmera. Fica longe dos botões para não virar um deles. */
   protected readonly toast = signal<string | null>(null);
   private temporizadorToast?: ReturnType<typeof setTimeout>;
 
-  /** URLs assinadas das imagens já anexadas, por caminho no bucket. */
   protected readonly urlsPorCaminho = signal<Record<string, string>>({});
 
   protected readonly grupos = computed(() => agruparParaRevisao(this.questoes()));
@@ -117,9 +88,6 @@ export class RevisaoQuestoesComponent {
       void this.carregar(id);
     });
 
-    // O bucket é privado: a imagem só aparece atrás de uma URL assinada, e
-    // pedi-la para as 70 questões seria desperdício. Busca sob demanda, quando
-    // a questão é aberta.
     effect(() => {
       const id = this.expandidaId();
       const questao = this.questoes().find((q) => q.id === id);
@@ -157,7 +125,6 @@ export class RevisaoQuestoesComponent {
     }
   }
 
-  /** Quanto tempo a confirmação fica na tela. */
   private static readonly MS_TOAST = 2500;
 
   private mostrarToast(texto: string): void {
@@ -169,8 +136,6 @@ export class RevisaoQuestoesComponent {
     );
   }
 
-  // --- fase 1: mapeamento de matérias -----------------------------------------
-
   protected async mapear(assunto: string, questaoIds: string[]): Promise<void> {
     if (this.salvando()) return;
     this.salvando.set(true);
@@ -179,8 +144,6 @@ export class RevisaoQuestoesComponent {
     try {
       let materiaId = this.escolhaMateria()[assunto];
 
-      // Criar inline: mandar você a /materias e voltar é a fricção que faz a
-      // revisão ser adiada.
       const nome = this.novaMateria()[assunto]?.trim();
       if (!materiaId && nome) {
         const criada = await this.dimensoes.criar('materias', nome);
@@ -215,8 +178,6 @@ export class RevisaoQuestoesComponent {
     this.novaMateria.update((atual) => ({ ...atual, [assunto]: nome }));
   }
 
-  // --- fase 2: aprovação -------------------------------------------------------
-
   protected async aprovarSemPendencia(): Promise<void> {
     const ids = this.grupos().semPendencia.map((q) => q.id);
     if (ids.length === 0 || this.salvando()) return;
@@ -237,9 +198,7 @@ export class RevisaoQuestoesComponent {
     }
   }
 
-  /** Ação de um clique só, sem campo envolvido: grava direto. */
   protected async alternarAprovacao(q: QuestaoRevisao): Promise<void> {
-    // Desaprovar devolve a prova a aguardando_revisao pelo trigger do banco.
     this.erroAcao.set(null);
     try {
       this.substituir(await this.service.editar(q.id, { revisada: !q.revisada }));
@@ -249,12 +208,6 @@ export class RevisaoQuestoesComponent {
     }
   }
 
-  // --- edição de uma questão: rascunho + Salvar --------------------------------
-
-  /**
-   * O editor avisa o que está pendente; aqui só se guarda o suficiente para
-   * proteger a saída. O rascunho em si vive lá, porque é estado de formulário.
-   */
   protected acompanhar(id: string, rascunho: EdicaoQuestao): void {
     this.avisoNaoSalvo.set(null);
     this.rascunhos.update((atual) => {
@@ -269,7 +222,6 @@ export class RevisaoQuestoesComponent {
     return this.rascunhos()[id] !== undefined;
   }
 
-  /** Uma requisição com tudo que mudou, em vez de uma por campo. */
   protected async salvar(q: QuestaoRevisao, mudancas: EdicaoQuestao): Promise<void> {
     if (this.salvando()) return;
 
@@ -280,8 +232,6 @@ export class RevisaoQuestoesComponent {
       this.descartar(q.id);
       this.mostrarToast('Salvo');
     } catch (e) {
-      // O rascunho SOBREVIVE ao erro: o texto digitado é o trabalho, e jogá-lo
-      // fora junto com a mensagem de falha seria a pior hora de perdê-lo.
       this.erroAcao.set(mensagem(e));
     } finally {
       this.salvando.set(false);
@@ -302,13 +252,6 @@ export class RevisaoQuestoesComponent {
     this.expandidaId.set(null);
   }
 
-  /**
-   * Fechar com rascunho pendente é barrado, não silencioso.
-   *
-   * Salvar exige um clique, então perder a edição também precisa exigir um:
-   * "Descartar" está ao lado do aviso. É o preço de ter botão em vez de
-   * gravação automática — e o único jeito de não pagar em edição perdida.
-   */
   protected alternarExpansao(id: string): void {
     const aberta = this.expandidaId();
 
@@ -321,14 +264,10 @@ export class RevisaoQuestoesComponent {
     this.expandidaId.set(aberta === id ? null : id);
   }
 
-  /** Enviar o arquivo JÁ É o gesto explícito; não faria sentido pedir outro. */
   protected async anexarImagem(q: QuestaoRevisao, arquivo: File): Promise<void> {
     this.erroAcao.set(null);
     try {
       const atualizada = await this.service.anexarImagem(q, arquivo);
-      // O caminho no bucket é determinístico, então trocar a imagem reaproveita
-      // o mesmo endereço: sem invalidar, a miniatura continuaria mostrando a
-      // figura antiga com uma URL assinada ainda válida.
       if (atualizada.imagem_path) this.esquecerUrl(atualizada.imagem_path);
       this.substituir(atualizada);
       this.mostrarToast(q.imagem_path ? 'Imagem trocada' : 'Imagem anexada');
@@ -361,7 +300,6 @@ export class RevisaoQuestoesComponent {
     this.questoes.update((atual) => atual.map((x) => (x.id === q.id ? q : x)));
   }
 
-  // Regras puras reexpostas ao template.
   protected readonly precisaAtencao = precisaAtencao;
   protected readonly motivosAtencao = motivosAtencao;
   protected readonly podeAprovar = podeAprovar;

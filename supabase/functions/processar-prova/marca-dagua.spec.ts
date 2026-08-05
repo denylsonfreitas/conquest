@@ -2,11 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { garantirSemMarcaDagua, removerMarcaDagua } from './marca-dagua.ts';
 
-/**
- * Trecho fiel ao que o unpdf extrai de um PDF do pciconcursos. Os dois blocos
- * base64 são exatamente o formato real: decodificam para IP e data/hora de
- * quem baixou. Note que o domínio vem COLADO no conteúdo seguinte.
- */
 const PAGINA_REAL = [
   'pcimarkpci MjgwNDoyOWI4OjUwOGM6MDExOTowMDdhOjIwYzY6ZDU3NjpmY2Ew:U2F0LCAwMSBBdWcgMjAyNiAxMzoxNDozMCAtMDMwMA==',
   'www.pciconcursos.com.brEMPRESA DE TECNOLOGIA E INFORMAÇÕES DA',
@@ -23,7 +18,6 @@ describe('removerMarcaDagua', () => {
 
   it('elimina o base64 que carrega IP e data do download', () => {
     const limpo = removerMarcaDagua(PAGINA_REAL);
-    // Este blob decodifica para um endereço IPv6 real. Não pode sair daqui.
     expect(limpo).not.toContain('MjgwNDoyOWI4');
     expect(limpo).not.toContain('U2F0LCAwMSBBdWcg');
   });
@@ -31,7 +25,6 @@ describe('removerMarcaDagua', () => {
   it('elimina o domínio mesmo colado ao conteúdo, sem levar o texto junto', () => {
     const limpo = removerMarcaDagua(PAGINA_REAL);
     expect(limpo).not.toContain('pciconcursos');
-    // O conteúdo que vinha grudado sobrevive inteiro.
     expect(limpo).toContain('EMPRESA DE TECNOLOGIA E INFORMAÇÕES DA');
   });
 
@@ -39,7 +32,6 @@ describe('removerMarcaDagua', () => {
     const limpo = removerMarcaDagua(PAGINA_REAL);
     expect(limpo).toContain('É preciso estar atento e forte.');
     expect(limpo).toContain('(A) Existe uma oração subordinada.');
-    // A quebra entre número e enunciado é o que separa uma questão da outra.
     expect(limpo).toMatch(/1\n/);
   });
 

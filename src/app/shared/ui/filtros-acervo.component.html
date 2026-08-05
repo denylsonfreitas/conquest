@@ -31,28 +31,44 @@
     </div>
   </div>
 
-  <!-- Matéria é multi-seleção; banca e concurso, não (docs/03). -->
   <div>
     <span class="rotulo">Matérias</span>
-    <div class="mt-1 flex flex-wrap gap-2">
-      @for (m of opcoes().materias; track m.id) {
-        <button
-          type="button"
-          class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
-          [class]="
-            materiaEscolhida(m.id)
-              ? 'bg-texto text-superficie ring-texto'
-              : 'bg-superficie text-texto ring-borda hover:bg-superficie-sutil'
-          "
-          (click)="alternarMateria(m.id)"
-        >
-          {{ m.nome }}
-        </button>
-      }
-    </div>
+
+    <details class="group relative mt-1 mb-4">
+      <summary class="campo flex cursor-pointer list-none items-center gap-2">
+        <span class="flex-1" [class.text-texto]="filtros().materiaIds.length === 0">
+          {{ resumoMaterias() }}
+        </span>
+        <span class="text-texto transition group-open:rotate-180">
+          <app-icone nome="abrir" />
+        </span>
+      </summary>
+
+      <div
+        class="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-campo border border-borda bg-superficie py-1 shadow-lg"
+      >
+        @for (m of opcoes().materias; track m.id) {
+          <button
+            type="button"
+            class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-superficie-sutil"
+            [class]="materiaEscolhida(m.id) ? 'text-texto' : 'text-texto-fraco'"
+            (click)="alternarMateria(m.id)"
+          >
+            <span class="w-4 shrink-0 text-texto">
+              @if (materiaEscolhida(m.id)) {
+                <app-icone nome="aprovar" [tamanho]="14" />
+              }
+            </span>
+            {{ m.nome }}
+          </button>
+        }
+      </div>
+    </details>
   </div>
 
   @if (tem()) {
-    <button type="button" class="acao-inline" (click)="limpar()">Limpar filtros</button>
+    <div style="display: flex; justify-content: flex-end;">
+    <button type="button" class="rounded-campo px-3 py-1.5 text-sm ring-1" (click)="limpar()">Limpar filtros</button>
+    </div>
   }
 </div>

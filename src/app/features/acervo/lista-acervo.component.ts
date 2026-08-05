@@ -26,14 +26,6 @@ import {
 
 type Status = 'carregando' | 'ok' | 'erro';
 
-/**
- * Listagem e edição do acervo.
- *
- * A diferença que define a tela: ela mostra o acervo INTEIRO, não só o
- * elegível. É onde se caça a questão que não virou elegível — a sem imagem, a
- * anulada, a que nunca foi revisada. Por isso o filtro de situação existe aqui
- * e não no quiz: as duas telas têm relação oposta com a elegibilidade.
- */
 @Component({
   selector: 'app-lista-acervo',
   imports: [
@@ -88,8 +80,6 @@ export class ListaAcervoComponent {
   constructor() {
     void this.carregar();
 
-    // Qualquer mudança de recorte volta para a primeira página e refaz a
-    // consulta: a busca é em SQL, não em memória.
     effect(() => {
       this.filtros();
       this.situacao();
@@ -160,20 +150,12 @@ export class ListaAcervoComponent {
     this.busca.set(termo);
   }
 
-  /**
-   * Abrir outra questão com trabalho pendente é barrado, como na revisão:
-   * salvar exige um clique, então perder também precisa exigir um.
-   */
   protected alternarAberta(id: string): void {
     if (this.pendenteId() !== null) return;
     this.abertaId.update((atual) => (atual === id ? null : id));
     this.respostasAfetadas.set(0);
   }
 
-  /**
-   * O rascunho do editor chega aqui para duas coisas: proteger a saída e
-   * prever quantas respostas o trigger vai recontar, antes de salvar.
-   */
   protected async acompanhar(questao: QuestaoAcervo, rascunho: EdicaoQuestao): Promise<void> {
     const pendente = Object.keys(rascunho).length > 0;
     this.pendenteId.set(pendente ? questao.id : null);
@@ -190,8 +172,6 @@ export class ListaAcervoComponent {
     this.salvando.set(true);
     this.erroAcao.set(null);
     try {
-      // Conta ANTES de salvar: depois do UPDATE o trigger já corrigiu, e não
-      // haveria mais como saber quantas mudaram.
       const afetadas =
         mudancas.gabarito !== undefined
           ? await this.service.respostasAfetadas(questao.id, mudancas.gabarito)
@@ -208,7 +188,6 @@ export class ListaAcervoComponent {
     }
   }
 
-  /** Quantas respostas o trigger recontou no último salvamento. */
   protected readonly recontadas = signal(0);
 
   protected async anexarImagem(questao: QuestaoAcervo, arquivo: File): Promise<void> {

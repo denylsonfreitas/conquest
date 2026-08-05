@@ -1,30 +1,6 @@
 import { normalizar } from './identificar-prova.ts';
 import type { IdentificacaoProva } from './identificar-prova.ts';
 
-/**
- * Casamento de gabarito em PDF separado.
- *
- * REGRA INEGOCIÁVEL: só aplica se a seleção for inequívoca — um único bloco
- * casando cargo e tipo, E com a mesma quantidade de respostas que a extração
- * encontrou de questões. Qualquer ambiguidade resulta em NÃO aplicar.
- *
- * A razão é a hierarquia de erro. Gabarito ausente é visível e recuperável na
- * revisão. Gabarito ERRADO é invisível: você estuda semanas com a resposta
- * trocada e nunca é avisado. Trocar o segundo pelo primeiro é sempre a decisão
- * certa, mesmo quando custa trabalho manual.
- *
- * A conferência de contagem é uma validação cruzada: dois caminhos
- * independentes (extração das questões e leitura da grade de respostas)
- * chegando ao mesmo número. Discordância significa que pelo menos um está
- * errado — e não dá para saber qual.
- */
-
-/** Formato real do gabarito da DATAPREV/FGV: título + grade em pares de linhas.
- *
- *   ATI - DESENVOLVIMENTO DE SOFTWARE – PROVA TIPO 1
- *   1 2 3 4 5 6 7 8 9 10 ...
- *   E D C C A D C D A D  ...
- */
 const TITULO_BLOCO = /^(.+?)\s+[–-]\s+PROVA\s+TIPO\s+(\d+)\s*$/i;
 const LINHA_NUMEROS = /^\s*\d+(?:\s+\d+)+\s*$/;
 const LINHA_LETRAS = /^\s*[A-E](?:\s+[A-E])+\s*$/i;
@@ -39,10 +15,6 @@ export type ResultadoCasamento =
   | { readonly aplicavel: true; readonly respostas: ReadonlyMap<number, string> }
   | { readonly aplicavel: false; readonly motivo: string };
 
-/**
- * Lê todos os blocos do PDF de gabarito. Um concurso inteiro costuma ter
- * dezenas — um por cargo × tipo.
- */
 export function lerBlocos(textoGabarito: string): BlocoGabarito[] {
   const linhas = textoGabarito.split('\n');
   const blocos: BlocoGabarito[] = [];
@@ -69,9 +41,6 @@ export function lerBlocos(textoGabarito: string): BlocoGabarito[] {
 
     if (LINHA_LETRAS.test(conteudo) && numerosPendentes) {
       const letras = conteudo.toUpperCase().split(/\s+/);
-      // Só casa se as duas linhas tiverem o mesmo tamanho. Grade desalinhada
-      // deslocaria TODAS as respostas seguintes — exatamente o erro silencioso
-      // que este módulo existe para evitar.
       if (letras.length === numerosPendentes.length) {
         numerosPendentes.forEach((n, i) => atual!.respostas.set(n, letras[i]));
       }

@@ -35,23 +35,10 @@ const COLUNAS =
 
 export const POR_PAGINA = 20;
 
-/**
- * Data access do acervo.
- *
- * Ao contrário do quiz, esta tela filtra em SQL: ela carrega enunciados e
- * pagina, então trazer tudo para a memória seria o desperdício que no quiz é
- * economia. Mesma pergunta, cargas diferentes — por isso `aplicarFiltros` (que
- * o quiz usa em memória) não é reaproveitado aqui.
- *
- * E ao contrário do quiz, ela mostra o acervo INTEIRO, não só o elegível: é
- * onde se caça a questão que não virou elegível. Filtrar por elegibilidade
- * esconderia o que a tela existe para achar.
- */
 @Injectable({ providedIn: 'root' })
 export class AcervoService {
   private readonly supabase = inject(SupabaseService);
 
-  /** De onde saem as opções de filtro: o acervo inteiro, com nomes. */
   async universo(): Promise<ItemComNomes[]> {
     const { data, error } = await this.supabase.client
       .from('questoes_completas')
@@ -75,8 +62,6 @@ export class AcervoService {
     if (filtros.concursoId) consulta = consulta.eq('concurso_id', filtros.concursoId);
     if (filtros.materiaIds.length > 0) consulta = consulta.in('materia_id', filtros.materiaIds);
 
-    // A situação é a leitura da elegibilidade pelos seus componentes: cada
-    // opção corresponde a um motivo concreto de a questão estar ou não pronta.
     if (situacao === 'elegivel') consulta = consulta.eq('elegivel', true);
     if (situacao === 'anulada') consulta = consulta.eq('anulada', true);
     if (situacao === 'nao_revisada') consulta = consulta.eq('revisada', false);
@@ -86,9 +71,6 @@ export class AcervoService {
 
     const termo = busca.trim();
     if (termo) {
-      // Sem índice, isto é um seq-scan. Com o acervo atual é instantâneo;
-      // quando crescer, a resposta é um índice trigram — não uma gambiarra
-      // no cliente.
       consulta = consulta.or(`enunciado.ilike.%${termo}%,comentario.ilike.%${termo}%`);
     }
 
@@ -101,12 +83,6 @@ export class AcervoService {
     return { questoes: (data ?? []) as QuestaoAcervo[], total: count ?? 0 };
   }
 
-  /**
-   * Quantas respostas passadas o trigger vai recontar se o gabarito mudar.
-   *
-   * Só uma previsão para a tela poder avisar antes: quem realmente reconta é o
-   * `recalcular_acertos` no banco, que vale para qualquer caminho de edição.
-   */
   async respostasAfetadas(questaoId: string, novoGabarito: Letra | null): Promise<number> {
     const { data, error } = await this.supabase.client
       .from('respostas')
@@ -127,8 +103,6 @@ export class AcervoService {
 
     if (error) throw new Error(traduzir(error.code, error.message));
 
-    // Relê da VIEW: `elegivel` e os nomes são calculados lá, e a tela precisa
-    // deles atualizados — editar pode ter mudado a elegibilidade da questão.
     const { data: completa, error: erroLeitura } = await this.supabase.client
       .from('questoes_completas')
       .select(COLUNAS)
@@ -153,7 +127,6 @@ export class AcervoService {
   }
 }
 
-/** Postgres: CHECK violado — aprovada exige matéria e gabarito. */
 const CHECK_VIOLADO = '23514';
 
 function traduzir(codigo: string | undefined, mensagem: string): string {

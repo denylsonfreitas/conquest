@@ -128,7 +128,6 @@ describe('ListaConcursosComponent', () => {
     c.form.setValue({ nome: 'Sem banca', orgao: '', banca_id: '' });
     await c.criar();
 
-    // '' quebraria o insert: banca_id é uuid, e o campo é opcional no docs/01.
     expect(criar).toHaveBeenCalledWith({ nome: 'Sem banca', orgao: null, banca_id: null });
   });
 });

@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { IconeComponent } from './icone.component';
+
 import {
   alternarMateria,
   FiltrosAcervo,
@@ -11,25 +13,13 @@ import {
   trocarConcurso,
 } from '../filtros-acervo';
 
-/**
- * Os três eixos de filtro do acervo: banca, concurso e matéria.
- *
- * Burro por contrato (docs/04): `input()`/`output()`, sem service e sem estado
- * próprio. Ele não sabe se está numa montagem de quiz ou numa listagem — recebe
- * o conjunto de onde tirar as opções, recebe os filtros em vigor, e devolve os
- * novos. Quem guarda o estado é o pai.
- *
- * Extraído na segunda ocorrência, quando a listagem do acervo passou a precisar
- * da mesma coisa — não antes.
- */
 @Component({
   selector: 'app-filtros-acervo',
-  imports: [FormsModule],
+  imports: [FormsModule, IconeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './filtros-acervo.component.html',
 })
 export class FiltrosAcervoComponent {
-  /** De onde saem as opções: só aparece o que existe neste conjunto. */
   readonly universo = input.required<readonly ItemComNomes[]>();
   readonly filtros = input.required<FiltrosAcervo>();
 
@@ -37,6 +27,15 @@ export class FiltrosAcervoComponent {
 
   protected readonly opcoes = computed(() => opcoesDeFiltro(this.universo(), this.filtros()));
   protected readonly tem = computed(() => temFiltro(this.filtros()));
+
+  protected readonly resumoMaterias = computed(() => {
+    const escolhidas = this.filtros().materiaIds;
+    if (escolhidas.length === 0) return 'Todas';
+    if (escolhidas.length === 1) {
+      return this.opcoes().materias.find((m) => m.id === escolhidas[0])?.nome ?? '1 matéria';
+    }
+    return `${escolhidas.length} matérias`;
+  });
 
   protected escolherBanca(id: string | null): void {
     this.mudou.emit(trocarBanca(id));

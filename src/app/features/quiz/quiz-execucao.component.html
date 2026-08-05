@@ -13,10 +13,6 @@
     <button type="button" class="acao-inline" (click)="abandonar()">Sair do quiz</button>
   </header>
 
-  <!--
-    A folha de respostas. Com 50 questões, "Anterior/Próxima" não serve: é
-    preciso ver de longe o que ficou em branco e pular direto para lá.
-  -->
   <div class="mb-6 flex flex-wrap gap-1.5">
     @for (item of sessao.questoes(); track item.id; let i = $index) {
       <button
@@ -130,11 +126,6 @@
     }
   </div>
 
-  <!--
-    O único momento em que dá para voltar: depois da entrega o feedback está
-    revelado e não há como "desentregar". Por isso a contagem de brancos vem
-    aqui, e não depois.
-  -->
   @if (confirmandoEntrega()) {
     <div class="cartao mt-6 border-atencao p-5">
       <p class="font-medium text-texto">

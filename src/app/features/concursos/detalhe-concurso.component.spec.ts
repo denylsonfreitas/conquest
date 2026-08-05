@@ -31,7 +31,6 @@ const PROVA: Prova = {
   created_at: '2026-08-01T12:00:00+00:00',
 };
 
-/** A mesma prova depois do anexo: hash e caminho preenchidos, status intacto. */
 const PROVA_COM_PDF: Prova = {
   ...PROVA,
   arquivo_path: 'c1/p1.pdf',
@@ -122,7 +121,6 @@ describe('DetalheConcursoComponent', () => {
     const fixture = montar({}, { listarPorConcurso: async () => [PROVA_COM_PDF] });
     const texto = await assentar(fixture, 'Aguardando processamento');
     expect(texto).not.toContain('Sem PDF');
-    // O passo 4 termina aqui: nada foi processado ainda.
     expect(PROVA_COM_PDF.status).toBe('pendente');
   });
 
@@ -145,7 +143,6 @@ describe('DetalheConcursoComponent', () => {
   it('diz como sair do impasse quando a prova já foi extraída', async () => {
     const extraida: Prova = { ...PROVA_COM_PDF, status: 'aguardando_revisao' };
     const fixture = montar({}, { listarPorConcurso: async () => [extraida] });
-    // O rótulo antigo ("PDF travado") dizia o quê, não o porquê nem a saída.
     const texto = await assentar(fixture, 'apague a prova');
     expect(texto).toContain('Extraída');
   });
@@ -187,7 +184,6 @@ describe('DetalheConcursoComponent', () => {
 
     const texto = await assentar(fixture, 'já foi importado');
     expect(texto).toContain('Prova antiga');
-    // A prova continua sem PDF: nada foi vinculado.
     expect(texto).toContain('Sem PDF');
   });
 
@@ -226,7 +222,6 @@ describe('DetalheConcursoComponent', () => {
     };
     const fixture = montar({}, { listarPorConcurso: async () => [comErro] });
     const texto = await assentar(fixture, 'escaneado');
-    // E oferece retentar sem exigir reupload.
     expect(texto).toContain('Tentar de novo');
   });
 

@@ -3,14 +3,6 @@ import { Routes } from '@angular/router';
 import { authGuard, visitanteGuard } from './core/auth.guard';
 import { ROTA_INICIAL } from './core/rotas';
 
-/**
- * Rotas standalone com `loadComponent` (docs/04): cada tela vira um chunk
- * próprio, carregado só quando visitada.
- *
- * Duas zonas: `/login` para quem não tem sessão, e tudo o mais aninhado sob o
- * ShellComponent, protegido pelo authGuard. Colocar o guard na rota-pai
- * protege todas as filhas de uma vez — não dá para esquecer de uma.
- */
 export const routes: Routes = [
   {
     path: 'login',
@@ -30,8 +22,6 @@ export const routes: Routes = [
           ),
       },
       {
-        // `:id` chega no input() do componente pelo withComponentInputBinding,
-        // mesmo mecanismo que entrega o `data` das rotas de dimensão.
         path: 'concursos/:id',
         loadComponent: () =>
           import('./features/concursos/detalhe-concurso.component').then(
@@ -56,8 +46,6 @@ export const routes: Routes = [
           import('./features/quiz/montar-quiz.component').then((m) => m.MontarQuizComponent),
       },
       {
-        // A sessão vive em memória (o quiz é efêmero, docs/01): entrar por aqui
-        // sem ter montado devolve para /quiz, não quebra.
         path: 'quiz/executar',
         loadComponent: () =>
           import('./features/quiz/quiz-execucao.component').then((m) => m.QuizExecucaoComponent),
@@ -74,8 +62,6 @@ export const routes: Routes = [
       },
       {
         path: 'materias',
-        // `data` alimenta o input `tabela` do componente via
-        // withComponentInputBinding(), então uma tela serve as duas rotas.
         data: { tabela: 'materias' },
         loadComponent: () =>
           import('./features/bancas-materias/dimensao-page.component').then(

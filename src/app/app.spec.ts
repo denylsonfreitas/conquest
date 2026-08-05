@@ -8,7 +8,6 @@ describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      // A raiz só hospeda o <router-outlet>, que precisa do roteador provido.
       providers: [provideRouter([])],
     }).compileComponents();
   });

@@ -12,19 +12,6 @@ import { Letra } from '../../shared/models';
 import { QuizService } from './quiz.service';
 import { SessaoQuizService } from './sessao-quiz.service';
 
-/**
- * Execução do quiz — uma questão por vez, em dois modos.
- *
- * **Estudo:** marcar grava na hora, a resposta certa aparece na hora, e não se
- * remarca. O valor é o compromisso.
- *
- * **Prova:** marcar só registra a intenção, remarcar é livre, e nada é
- * revelado até a entrega. É o simulado.
- *
- * Toda a sessão está no `SessaoQuizService`; esta tela só renderiza e despacha.
- * Sem sessão em memória (recarregou a página, entrou pela URL) ela volta para a
- * montagem: o quiz é efêmero por decisão do docs/01.
- */
 @Component({
   selector: 'app-quiz-execucao',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,10 +25,8 @@ export class QuizExecucaoComponent {
   protected readonly erro = signal<string | null>(null);
   protected readonly ocupado = signal(false);
   protected readonly urlImagem = signal<string | null>(null);
-  /** Passo de confirmação da entrega, onde os brancos são contados. */
   protected readonly confirmandoEntrega = signal(false);
 
-  /** Só revela certo/errado no modo estudo, e só depois de responder. */
   protected readonly revelado = computed(
     () => this.sessao.revelaFeedback() && this.sessao.respostaAtual() !== null,
   );
@@ -55,8 +40,6 @@ export class QuizExecucaoComponent {
       if (!this.sessao.ativa()) void this.router.navigate(['/quiz']);
     });
 
-    // A imagem é parte do enunciado: sem ela a questão não se responde — é a
-    // mesma regra de elegibilidade, agora do lado de quem estuda.
     effect(() => {
       const caminho = this.sessao.atual()?.imagem_path;
       this.urlImagem.set(null);
@@ -74,7 +57,6 @@ export class QuizExecucaoComponent {
 
   protected async marcar(letra: Letra): Promise<void> {
     if (this.ocupado()) return;
-    // No estudo, marcado é marcado. Na prova, remarcar é o ponto.
     if (!this.sessao.ehProva() && this.sessao.respostaAtual()) return;
 
     this.ocupado.set(true);
@@ -92,7 +74,6 @@ export class QuizExecucaoComponent {
     return this.sessao.letraAtual() === letra;
   }
 
-  /** Cor da alternativa: seleção antes de revelar, acerto/erro depois. */
   protected estilo(letra: Letra): string {
     if (!this.revelado()) {
       return this.marcada(letra)
@@ -106,8 +87,6 @@ export class QuizExecucaoComponent {
     return 'bg-superficie text-texto-fraco ring-borda';
   }
 
-  // --- entrega (modo prova) ----------------------------------------------------
-
   protected pedirEntrega(): void {
     this.confirmandoEntrega.set(true);
   }
@@ -116,12 +95,6 @@ export class QuizExecucaoComponent {
     this.confirmandoEntrega.set(false);
   }
 
-  /**
-   * Entrega: um INSERT com tudo. Só aqui as marcações viram respostas.
-   *
-   * Se falhar, nada foi gravado e as marcações continuam na tela — o insert é
-   * atômico justamente para não existir simulado meio entregue.
-   */
   protected async entregar(): Promise<void> {
     if (this.ocupado()) return;
     this.ocupado.set(true);
@@ -142,8 +115,6 @@ export class QuizExecucaoComponent {
   }
 
   protected async abandonar(): Promise<void> {
-    // No estudo as respostas já dadas ficam no banco e contam. Na prova, as
-    // marcações somem sem virar nada — é o preço de gravar só na entrega.
     this.sessao.encerrar();
     await this.router.navigate(['/quiz']);
   }

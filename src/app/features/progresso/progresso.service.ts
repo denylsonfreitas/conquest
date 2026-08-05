@@ -16,22 +16,6 @@ interface LinhaQuestao {
   anulada: boolean;
 }
 
-/**
- * Data access do progresso — read-only, sem exceção.
- *
- * Não existe tabela de estatística e não deve existir (docs/03): tudo é
- * derivado de `respostas` subindo a árvore. Esta tela não escreve nada.
- *
- * Duas consultas e a junção em memória, mesmo padrão e mesmo argumento do
- * passo 7: é o que deixa as regras serem funções puras testáveis sem banco.
- * Uma view agregadora ou uma RPC dariam o número pronto e esconderiam a regra
- * dos testes — e as regras aqui (o que conta, o que ranqueia, o que compara)
- * são exatamente a parte que precisa ser testável.
- *
- * ONDE ISSO DEIXA DE VALER: a alguns milhares de respostas continua trivial.
- * Passando de dezenas de milhares, a resposta é agregar no banco — não um
- * remendo no cliente.
- */
 @Injectable({ providedIn: 'root' })
 export class ProgressoService {
   private readonly supabase = inject(SupabaseService);
@@ -59,9 +43,6 @@ export class ProgressoService {
         respondidoEm: r.respondido_em,
         materia: questao?.materia ?? null,
         bancaNome: questao?.banca_nome ?? null,
-        // Sem questão correspondente não há como saber; tratar como não
-        // anulada mantém a resposta na conta em vez de sumir com ela em
-        // silêncio. Na prática o CASCADE impede o caso.
         anulada: questao?.anulada ?? false,
       };
     });

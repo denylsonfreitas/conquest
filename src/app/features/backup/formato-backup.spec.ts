@@ -44,7 +44,6 @@ describe('compararTabela', () => {
   });
 
   it('arquivo igual ao banco: tudo é sobrescrita, nada some', () => {
-    // O caso que morde: exportar segunda, revisar terça, restaurar quarta.
     const d = compararTabela('questoes', ['a', 'b'], ['a', 'b']);
     expect(d).toMatchObject({ criar: 0, atualizar: 2, soNoBanco: 0 });
   });
@@ -58,7 +57,6 @@ describe('montarPrevia', () => {
       dados: { ...vazio() },
     };
     const ids = idsVazios();
-    // Simula ids sem precisar montar linhas completas.
     const previa = montarPrevia(
       { ...backup, dados: { ...backup.dados } },
       { ...ids, questoes: ['x'] },
@@ -79,8 +77,6 @@ describe('acharPonteirosOrfaos', () => {
   ];
 
   it('acha quem aponta para imagem que não está no bucket', () => {
-    // Os binários ficam fora do backup, então o restore deixa ponteiros sem
-    // arquivo — e a view mede elegibilidade pelo ponteiro, não pelo arquivo.
     expect(acharPonteirosOrfaos(questoes, ['p/a.png'])).toEqual(['b']);
   });
 
@@ -142,7 +138,6 @@ describe('nomeDoArquivo', () => {
 
 describe('ORDEM_IMPORTACAO', () => {
   it('põe as dependências antes dos dependentes', () => {
-    // A FK recusaria uma questão cuja prova ainda não existe.
     const posicao = (t: TabelaBackup) => ORDEM_IMPORTACAO.indexOf(t);
     expect(posicao('bancas')).toBeLessThan(posicao('concursos'));
     expect(posicao('concursos')).toBeLessThan(posicao('provas'));

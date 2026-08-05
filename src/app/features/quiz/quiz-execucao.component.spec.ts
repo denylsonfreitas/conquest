@@ -52,7 +52,6 @@ async function assentar(fixture: ComponentFixture<QuizExecucaoComponent>, texto:
   return (fixture.nativeElement as HTMLElement).textContent ?? '';
 }
 
-/** Deixa o clique assentar.  volta cedo quando o texto já estava lá. */
 async function respirar(fixture: ComponentFixture<QuizExecucaoComponent>) {
   await new Promise((r) => setTimeout(r, 20));
   fixture.detectChanges();
@@ -87,7 +86,6 @@ describe('QuizExecucaoComponent', () => {
     expect(registrar).toHaveBeenCalledWith([
       expect.objectContaining({ questao_id: 'q1', letra_marcada: 'A', acertou: true }),
     ]);
-    // Grava na hora — é o que faz interromper o quiz não perder nada.
     expect(registrar.mock.calls[0][0][0].quiz_sessao_id).toBeTruthy();
   });
 
@@ -113,7 +111,6 @@ describe('QuizExecucaoComponent', () => {
     expect(texto).not.toContain('Errou');
     expect(texto).not.toContain('Acertou');
     expect(registrar).not.toHaveBeenCalled();
-    // Marcação é intenção; ela não vira resposta antes da entrega.
     expect(sessao.respostas()).toEqual([]);
     expect(sessao.marcadas()).toBe(1);
   });
@@ -143,7 +140,6 @@ describe('QuizExecucaoComponent', () => {
     clicar(fixture, 'primeira')?.click();
     await respirar(fixture);
 
-    // Confirmação: é o último momento em que dá para voltar.
     clicar(fixture, 'Entregar')?.click();
     const aviso = await assentar(fixture, 'em branco');
     expect(aviso).toContain('2 questões em branco');
@@ -154,7 +150,6 @@ describe('QuizExecucaoComponent', () => {
       ?.click();
     await new Promise((r) => setTimeout(r, 20));
 
-    // Uma chamada, com as marcadas apenas: branco não vira linha.
     expect(registrar).toHaveBeenCalledTimes(1);
     expect(registrar.mock.calls[0][0]).toHaveLength(1);
     expect(registrar.mock.calls[0][0][0].questao_id).toBe('q1');
@@ -183,7 +178,6 @@ describe('QuizExecucaoComponent', () => {
 
     expect(await assentar(fixture, 'Sem conexão')).toContain('Sem conexão');
     expect(sessao.respostas()).toEqual([]);
-    // A marcação sobrevive: o simulado inteiro não pode sumir por um erro de rede.
     expect(sessao.marcadas()).toBe(1);
   });
   it('não deixa responder duas vezes a mesma questão', async () => {
@@ -201,7 +195,6 @@ describe('QuizExecucaoComponent', () => {
   });
 
   it('mantém a resposta local fora quando o banco recusa', async () => {
-    // Placar que o banco não conhece seria pior do que repetir o clique.
     const fixture = montar({
       registrar: async () => {
         throw new Error('Sem conexão');

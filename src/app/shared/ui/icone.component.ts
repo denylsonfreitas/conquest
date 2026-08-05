@@ -1,20 +1,8 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-/**
- * Ícones das ações inline.
- *
- * SVG inline, sem biblioteca: são oito traços simples, e uma dependência
- * externa custaria mais que eles valem. `currentColor` no stroke faz o ícone
- * herdar a cor do botão — é o que impede a versão vermelha do "excluir" de
- * precisar de um ícone próprio.
- *
- * Acompanham o rótulo, nunca o substituem: ícone sozinho vira adivinhação, e o
- * ganho aqui é varredura visual da lista, não economia de espaço.
- */
 export type NomeIcone =
   'abrir' | 'fechar' | 'aprovar' | 'desfazer' | 'editar' | 'excluir' | 'anexar' | 'ver';
 
-/** Traços do `<path>` de cada ícone, num grid de 24. */
 const TRACOS: Record<NomeIcone, string> = {
   abrir: 'M6 9l6 6 6-6',
   fechar: 'M18 15l-6-6-6 6',

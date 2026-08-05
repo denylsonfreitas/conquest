@@ -58,7 +58,6 @@ const controles = (fixture: ComponentFixture<BackupComponent>) =>
     previa: () => Previa | null;
   };
 
-/** Simula o input de arquivo entregando o texto ao componente. */
 function eventoDeArquivo(texto: string, nome = 'backup.json'): Event {
   const arquivo = { name: nome, text: async () => texto } as unknown as File;
   return { target: { files: [arquivo], value: '' } } as unknown as Event;
@@ -78,12 +77,10 @@ describe('BackupComponent', () => {
 
     await controles(fixture).escolherArquivo(eventoDeArquivo('{"foo":1}'));
     expect(await assentar(fixture, 'não é um backup')).toContain('não é um backup');
-    // Validação vem ANTES de qualquer leitura do banco.
     expect(prever).not.toHaveBeenCalled();
   });
 
   it('mostra a prévia e avisa quantas linhas serão sobrescritas', async () => {
-    // O aviso que evita: exportar segunda, revisar terça, restaurar quarta.
     const fixture = montar({
       ler: () => backup(),
       prever: async () => previa(),
@@ -149,7 +146,6 @@ describe('BackupComponent', () => {
   });
 
   it('diz que a importação é retomável quando falha no meio', async () => {
-    // Não é atômica; a idempotência é o que substitui a transação.
     const fixture = montar({
       ler: () => backup(),
       prever: async () => previa(),

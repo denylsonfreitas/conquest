@@ -12,10 +12,6 @@ const base = {
   tipo: 'multipla_escolha',
 };
 
-/**
- * Trava as invariantes do schema canônico. Se alguma destas quebrar, dado
- * inválido passa a atravessar a fronteira entre os subsistemas (docs/00).
- */
 describe('schema canônico', () => {
   it('aplica defaults', () => {
     const r = QuestaoNovaSchema.parse(base);
@@ -64,8 +60,6 @@ describe('schema canônico', () => {
   });
 
   it('aceita questão sem gabarito casado — sinaliza, não barra', () => {
-    // Caso central do passo 5: o gabarito veio em PDF separado e não casou.
-    // A questão precisa entrar em rascunho, senão a prova inteira se perde.
     const r = QuestaoNovaSchema.safeParse({ ...base, gabarito: null, incerto: true });
     expect(r.success, JSON.stringify(r.error?.issues)).toBe(true);
     expect(r.data?.incerto).toBe(true);

@@ -13,18 +13,6 @@ import { ConcursoComBanca, ConcursosService } from './concursos.service';
 
 type Status = 'carregando' | 'ok' | 'erro';
 
-/**
- * Lista de concursos e formulário de criação.
- *
- * O formulário fica na mesma tela em vez de rota própria: são três campos e
- * criar um concurso é o caminho natural de quem está olhando a lista vazia.
- *
- * O `select` de banca é alimentado pela tabela `bancas` — é aqui que a
- * normalização do docs/01 deixa de ser teoria e vira UX: você escolhe "FCC" de
- * uma lista em vez de digitar. Ele é deliberadamente específico deste
- * formulário; quando a revisão precisar de um select de matérias, aí extraímos
- * um genérico com dois casos reais na mão.
- */
 @Component({
   selector: 'app-lista-concursos',
   imports: [
@@ -70,7 +58,6 @@ export class ListaConcursosComponent {
     this.erroCarga.set(null);
     this.erroAcao.set(null);
     try {
-      // As duas buscas são independentes: em paralelo, não em sequência.
       const [concursos, bancas] = await Promise.all([
         this.service.listar(),
         this.dimensoes.listar('bancas'),
@@ -106,7 +93,6 @@ export class ListaConcursosComponent {
       const criado = await this.service.criar({
         nome,
         orgao: orgao || null,
-        // '' é o valor da opção "sem banca"; o banco espera null.
         banca_id: banca_id || null,
       });
       this.concursos.update((atual) => [criado, ...atual]);
@@ -118,7 +104,6 @@ export class ListaConcursosComponent {
     }
   }
 
-  /** Nada é apagado antes da confirmação mostrar o que vai junto. */
   protected async pedirExclusao(concurso: ConcursoComBanca): Promise<void> {
     this.erroAcao.set(null);
     this.aExcluir.set(concurso);

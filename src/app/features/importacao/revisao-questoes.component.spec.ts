@@ -60,7 +60,6 @@ async function assentar(fixture: ComponentFixture<RevisaoQuestoesComponent>, tex
   return (fixture.nativeElement as HTMLElement).textContent ?? '';
 }
 
-/** Os membros da edição são `protected`: o template os vê, o teste precisa deles. */
 function editor(fixture: ComponentFixture<RevisaoQuestoesComponent>) {
   return fixture.componentInstance as unknown as {
     acompanhar: (id: string, rascunho: Record<string, unknown>) => void;
@@ -115,7 +114,6 @@ describe('RevisaoQuestoesComponent', () => {
     ];
     const fixture = montar({ listar: async () => questoes });
     const texto = await assentar(fixture, 'Matérias a mapear');
-    // Uma linha resolve trinta questões — é o ponto da fase.
     expect(texto).toContain('Conhecimentos Específicos');
     expect(texto).toContain('30 questões');
   });
@@ -137,7 +135,6 @@ describe('RevisaoQuestoesComponent', () => {
     await c.mapear('Conhecimentos Específicos', ['a', 'b']);
 
     expect(mapearAssunto).toHaveBeenCalledWith(['a', 'b'], 'm2');
-    // Some da fase de mapeamento depois de resolvido.
     expect(await assentar(fixture, 'Sem pendência')).not.toContain('Matérias a mapear');
   });
 
@@ -180,8 +177,6 @@ describe('RevisaoQuestoesComponent', () => {
   });
 
   it('mostra cada pendência como selo na lista FECHADA', async () => {
-    // O ponto do agrupamento morre se for preciso abrir 70 questões para
-    // descobrir qual delas depende de imagem.
     const fixture = montar({
       listar: async () => [
         base({ id: 'a', numero: 29, tem_imagem: true, imagem_path: null }),
@@ -193,7 +188,6 @@ describe('RevisaoQuestoesComponent', () => {
     expect(texto).toContain('precisa de imagem');
     expect(texto).toContain('sem matéria');
     expect(texto).toContain('extração duvidou');
-    // Nada foi expandido: os selos vêm da lista fechada.
     expect(texto).not.toContain('Comentário');
   });
 
@@ -206,9 +200,6 @@ describe('RevisaoQuestoesComponent', () => {
   });
 
   it('abre os campos já preenchidos com o valor da questão', async () => {
-    // O bug: `[value]` no <select> corria antes de o @for criar as <option>, o
-    // navegador descartava o valor sem opção correspondente, e o campo abria
-    // "— sem matéria —" enquanto o selo do cabeçalho mostrava a matéria.
     const fixture = montar({ listar: async () => [base({ materia_id: 'm2', gabarito: 'B' })] });
     await assentar(fixture, 'Enunciado da questão');
 
@@ -223,8 +214,6 @@ describe('RevisaoQuestoesComponent', () => {
   });
 
   it('mostra a imagem anexada e deixa removê-la', async () => {
-    // `imagem_path` preenchido e upload perdido eram indistinguíveis na tela:
-    // nenhum dos dois mostrava figura nenhuma.
     const removerImagem = vi.fn(async () => base({ tem_imagem: true, imagem_path: null }));
     const fixture = montar({
       listar: async () => [base({ tem_imagem: true, imagem_path: 'p1/q1' })],
@@ -271,11 +260,8 @@ describe('RevisaoQuestoesComponent', () => {
 
     const c = editor(fixture);
     c.alternarExpansao('q1');
-    // Espera o editor montar: ao nascer ele emite rascunho vazio, e anunciar a
-    // pendência antes disso seria apagado por esse primeiro aviso.
     await assentar(fixture, 'Salvar');
 
-    // É o editor que avisa o pai sobre o que está pendente.
     c.acompanhar('q1', { gabarito: 'B' });
     c.alternarExpansao('q1');
 
@@ -320,8 +306,6 @@ describe('RevisaoQuestoesComponent', () => {
   });
 
   it('mostra cada pendência como selo na lista FECHADA', async () => {
-    // O ponto do agrupamento morre se for preciso abrir 70 questões para
-    // descobrir qual delas depende de imagem.
     const fixture = montar({
       listar: async () => [
         base({ id: 'a', numero: 29, tem_imagem: true, imagem_path: null }),
@@ -333,7 +317,6 @@ describe('RevisaoQuestoesComponent', () => {
     expect(texto).toContain('precisa de imagem');
     expect(texto).toContain('sem matéria');
     expect(texto).toContain('extração duvidou');
-    // Nada foi expandido: os selos vêm da lista fechada.
     expect(texto).not.toContain('Comentário');
   });
 
@@ -346,9 +329,6 @@ describe('RevisaoQuestoesComponent', () => {
   });
 
   it('abre os campos já preenchidos com o valor da questão', async () => {
-    // O bug: `[value]` no <select> corria antes de o @for criar as <option>, o
-    // navegador descartava o valor sem opção correspondente, e o campo abria
-    // "— sem matéria —" enquanto o selo do cabeçalho mostrava a matéria.
     const fixture = montar({ listar: async () => [base({ materia_id: 'm2', gabarito: 'B' })] });
     await assentar(fixture, 'Enunciado da questão');
 
@@ -363,8 +343,6 @@ describe('RevisaoQuestoesComponent', () => {
   });
 
   it('mostra a imagem anexada e deixa removê-la', async () => {
-    // `imagem_path` preenchido e upload perdido eram indistinguíveis na tela:
-    // nenhum dos dois mostrava figura nenhuma.
     const removerImagem = vi.fn(async () => base({ tem_imagem: true, imagem_path: null }));
     const fixture = montar({
       listar: async () => [base({ tem_imagem: true, imagem_path: 'p1/q1' })],

@@ -44,8 +44,6 @@ describe('precisaAtencao', () => {
   });
 
   it('trata anulada como decisão tomada, não como pendência', () => {
-    // Anulada fica fora dos quizzes de qualquer jeito; cobrar matéria dela
-    // seria trabalho sem destino.
     expect(precisaAtencao(limpa({ anulada: true, materia_id: null, gabarito: null }))).toBe(false);
   });
 });
@@ -57,9 +55,6 @@ describe('motivosAtencao', () => {
   });
 
   it('lista TODOS os motivos, não só o primeiro', () => {
-    // Cada motivo vira um selo na lista fechada. Esconder um deles obrigaria a
-    // abrir a questão para descobrir o que ainda falta — o que a lista existe
-    // justamente para evitar.
     const motivos = motivosAtencao(
       limpa({ materia_id: null, gabarito: null, tem_imagem: true, incerto: true }),
     );
@@ -108,8 +103,6 @@ describe('podeAprovar', () => {
 
 describe('agruparParaRevisao', () => {
   it('preserva a numeração original dentro de cada grupo', () => {
-    // Um sort global por gravidade embaralharia os números e impediria
-    // conferir a questão contra o PDF.
     const qs = [
       limpa({ id: 'c', numero: 30 }),
       limpa({ id: 'a', numero: 10, gabarito: null }),
@@ -132,7 +125,6 @@ describe('agruparParaRevisao', () => {
 
 describe('assuntosParaMapear', () => {
   it('agrupa por assunto, do maior para o menor', () => {
-    // É o que troca 41 atribuições idênticas por 3 decisões.
     const qs = [
       ...Array.from({ length: 30 }, (_, i) =>
         limpa({ id: `e${i}`, materia_id: null, assunto: 'Conhecimentos Específicos' }),

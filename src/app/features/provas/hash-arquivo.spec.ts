@@ -10,8 +10,6 @@ describe('bytesParaHex', () => {
 
 describe('calcularSha256', () => {
   it('produz o hash conhecido de "abc"', async () => {
-    // Vetor de teste oficial do SHA-256: garante que é o algoritmo certo, e não
-    // só "alguma string de 64 caracteres".
     expect(await calcularSha256(new Blob(['abc']))).toBe(
       'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
     );

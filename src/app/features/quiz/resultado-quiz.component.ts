@@ -17,16 +17,6 @@ import { QuestaoQuiz } from './quiz.service';
 import { desempenhoPorMateria, placar, ROTULO_MODO } from './regras-quiz';
 import { SessaoQuizService } from './sessao-quiz.service';
 
-/**
- * Resultado do quiz.
- *
- * Lê a sessão que ainda está em memória — por isso `encerrar()` não é chamado
- * ao terminar as questões, só ao sair daqui ou montar outro quiz.
- *
- * O desempenho por matéria vem antes da revisão questão a questão porque é a
- * informação mais útil do docs/03: diz onde focar. O placar geral só diz como
- * foi.
- */
 @Component({
   selector: 'app-resultado-quiz',
   imports: [RouterLink, EditorQuestaoComponent],
@@ -38,14 +28,6 @@ export class ResultadoQuizComponent {
   private readonly acervo = inject(AcervoService);
   private readonly dimensoes = inject(DimensoesService);
 
-  /**
-   * Editar a questão AQUI, embutido, e não numa rota própria.
-   *
-   * A sessão do quiz vive em memória: navegar para uma tela de edição a
-   * destruiria, e você perderia o resultado que estava lendo. O docs/03 pede o
-   * atalho justamente para o momento em que você percebe o erro respondendo —
-   * seria contraditório que usá-lo custasse o resultado.
-   */
   protected readonly editandoId = signal<string | null>(null);
   protected readonly materias = signal<ItemDimensao[]>([]);
   protected readonly salvando = signal(false);
@@ -54,20 +36,12 @@ export class ResultadoQuizComponent {
   protected readonly respostasAfetadas = signal(0);
   protected readonly sessao = inject(SessaoQuizService);
 
-  /**
-   * O total vem do TAMANHO DO QUIZ, não da contagem de respostas.
-   *
-   * Sem isso, deixar questões em branco (ou encerrar cedo no modo estudo)
-   * melhoraria o percentual em vez de piorá-lo — o denominador encolheria
-   * junto. Uma regra só, sem exceção por modo.
-   */
   protected readonly placar = computed(() => placar(this.sessao.respostas(), this.sessao.total()));
 
   protected readonly porMateria = computed(() =>
     desempenhoPorMateria(this.sessao.respostas(), this.sessao.materiaPorQuestao()),
   );
 
-  /** As questões respondidas, com a resposta dada ao lado, na ordem do quiz. */
   protected readonly revisao = computed(() => {
     const respostas = new Map(this.sessao.respostas().map((r) => [r.questaoId, r]));
     return this.sessao
@@ -80,7 +54,6 @@ export class ResultadoQuizComponent {
 
   constructor() {
     effect(() => {
-      // Sem sessão não há resultado a mostrar: recarregar a página cai aqui.
       if (!this.sessao.ativa()) void this.router.navigate(['/quiz']);
     });
   }
@@ -106,13 +79,6 @@ export class ResultadoQuizComponent {
     this.respostasAfetadas.set(await this.acervo.respostasAfetadas(questao.id, rascunho.gabarito));
   }
 
-  /**
-   * Salvar NÃO recarrega o quiz nem mexe no placar já mostrado.
-   *
-   * O placar é o retrato do que aconteceu naquela sessão; corrigir o gabarito
-   * agora reconta as respostas no banco (pelo trigger), e é lá que a correção
-   * vale — nas estatísticas e na fila de revisão de erros, não no retrato.
-   */
   protected async salvar(questao: QuestaoQuiz, mudancas: EdicaoQuestao): Promise<void> {
     if (this.salvando()) return;
     this.salvando.set(true);

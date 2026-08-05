@@ -4,3 +4,4 @@
 src/app/shared/database.types.ts
 
 dist
+.types.tmp

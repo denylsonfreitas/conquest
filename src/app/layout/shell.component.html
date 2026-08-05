@@ -5,10 +5,23 @@
 
       <nav class="flex gap-1 text-sm">
         @for (item of navegacao; track item.rota) {
+          <!--
+            A cor sai de UM lugar só. Somar `text-superficie` pelo
+            routerLinkActive por cima de `text-texto-fraco` na classe base
+            deixava as duas com a mesma especificidade — quem vencia era a
+            ordem no CSS gerado, não a do template, e o item ativo saía
+            ilegível. Aqui o ternário garante que só existe uma cor de texto.
+          -->
           <a
             [routerLink]="item.rota"
-            routerLinkActive="bg-texto text-superficie hover:bg-texto"
-            class="rounded-campo px-3 py-1.5 text-texto-fraco transition hover:bg-superficie-sutil"
+            routerLinkActive
+            #rla="routerLinkActive"
+            class="rounded-campo px-3 py-1.5 transition"
+            [class]="
+              rla.isActive
+                ? 'bg-texto text-superficie'
+                : 'text-texto-fraco hover:bg-superficie-sutil'
+            "
             >{{ item.rotulo }}</a
           >
         }

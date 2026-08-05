@@ -5,11 +5,14 @@
   </header>
 
   <section class="cartao mb-6 p-5">
-    <p class="text-3xl font-semibold text-texto">
+    <p class="numero text-3xl font-semibold text-texto">
       {{ placar().acertos }}
       <span class="text-texto-fraco">de {{ placar().respondidas }} respondidas</span>
     </p>
-    <p class="mt-1 text-lg font-medium" [class]="corPercentual(placar().percentualRespondidas)">
+    <p
+      class="numero mt-1 text-lg font-medium"
+      [class]="corPercentual(placar().percentualRespondidas)"
+    >
       {{ placar().percentualRespondidas }}%
     </p>
 
@@ -31,8 +34,11 @@
     @for (linha of porMateria(); track linha.materia) {
       <li class="flex items-center gap-4 px-4 py-3">
         <span class="min-w-0 flex-1 text-texto">{{ linha.materia }}</span>
-        <span class="text-sm text-texto-fraco">{{ linha.acertos }}/{{ linha.total }}</span>
-        <span class="w-12 text-right font-medium" [class]="corPercentual(linha.percentual)">
+        <span class="numero text-sm text-texto-fraco">{{ linha.acertos }}/{{ linha.total }}</span>
+        <span
+          class="numero w-12 text-right font-medium"
+          [class]="corPercentual(linha.percentual)"
+        >
           {{ linha.percentual }}%
         </span>
       </li>

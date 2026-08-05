@@ -17,11 +17,11 @@
       </div>
     } @else {
       <section class="cartao mb-6 p-5">
-        <p class="text-3xl font-semibold text-texto">
+        <p class="numero text-3xl font-semibold text-texto">
           {{ total().acertos }}
           <span class="text-texto-fraco">de {{ total().respostas }}</span>
         </p>
-        <p class="mt-1 text-lg font-medium" [class]="cor(total().percentual)">
+        <p class="numero mt-1 text-lg font-medium" [class]="cor(total().percentual)">
           {{ total().percentual }}%
         </p>
         <p class="mt-2 text-sm text-texto-fraco">
@@ -43,10 +43,10 @@
             @if (linha.delta !== null) {
               <li class="flex items-center gap-4 px-4 py-3">
                 <span class="min-w-0 flex-1 text-texto">{{ linha.materia }}</span>
-                <span class="text-sm text-texto-fraco">
+                <span class="numero text-sm text-texto-fraco">
                   {{ linha.anteriores?.percentual }}% → {{ linha.recentes.percentual }}%
                 </span>
-                <span class="w-16 text-right font-medium" [class]="corDelta(linha.delta)">
+                <span class="numero w-16 text-right font-medium" [class]="corDelta(linha.delta)">
                   {{ linha.delta > 0 ? '+' : '' }}{{ linha.delta }} pp
                 </span>
               </li>
@@ -61,8 +61,8 @@
           @for (d of fracas().ranqueadas; track d.chave) {
             <li class="flex items-center gap-4 px-4 py-3">
               <span class="min-w-0 flex-1 text-texto">{{ d.chave }}</span>
-              <span class="text-sm text-texto-fraco">{{ d.acertos }}/{{ d.total }}</span>
-              <span class="w-12 text-right font-medium" [class]="cor(d.percentual)">
+              <span class="numero text-sm text-texto-fraco">{{ d.acertos }}/{{ d.total }}</span>
+              <span class="numero w-12 text-right font-medium" [class]="cor(d.percentual)">
                 {{ d.percentual }}%
               </span>
             </li>
@@ -78,8 +78,8 @@
           @for (d of fracas().poucaAmostra; track d.chave) {
             <li class="flex items-center gap-4 px-4 py-3">
               <span class="min-w-0 flex-1 text-texto">{{ d.chave }}</span>
-              <span class="text-sm text-texto-fraco">{{ d.acertos }}/{{ d.total }}</span>
-              <span class="w-12 text-right text-texto-fraco">{{ d.percentual }}%</span>
+              <span class="numero text-sm text-texto-fraco">{{ d.acertos }}/{{ d.total }}</span>
+              <span class="numero w-12 text-right text-texto-fraco">{{ d.percentual }}%</span>
             </li>
           }
         </ul>

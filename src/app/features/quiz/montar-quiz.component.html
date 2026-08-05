@@ -93,7 +93,7 @@
         <p role="status" class="text-sm font-medium text-atencao">{{ motivo }}</p>
       } @else {
         <p role="status" class="text-sm text-texto-fraco">
-          <span class="font-medium text-texto">{{ disponiveis() }}</span> disponíveis
+          <span class="numero font-medium text-texto">{{ disponiveis() }}</span> disponíveis
           @if (vaiMontarCom() < quantidade()) {
             <span class="text-atencao">
               — o quiz vai começar com {{ vaiMontarCom() }}, não {{ quantidade() }}

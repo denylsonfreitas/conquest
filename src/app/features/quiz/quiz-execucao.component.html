@@ -1,7 +1,7 @@
 @if (sessao.atual(); as q) {
   <header class="mb-4 flex items-center justify-between gap-4">
     <div>
-      <p class="text-sm text-texto-fraco">
+      <p class="numero text-sm text-texto-fraco">
         Questão {{ sessao.indice() + 1 }} de {{ sessao.total() }}
         <span class="text-texto-fraco">
           · {{ progresso() }} {{ sessao.ehProva() ? 'marcadas' : 'respondidas' }}

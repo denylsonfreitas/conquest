@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 
 import { consequenciasDaExclusao } from '../../shared/consequencias-exclusao';
 import { ConfirmacaoComponent } from '../../shared/ui/confirmacao.component';
+import { IconeComponent } from '../../shared/ui/icone.component';
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
 import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
@@ -33,6 +34,7 @@ type Status = 'carregando' | 'ok' | 'erro';
     EstadoErroComponent,
     EstadoVazioComponent,
     ConfirmacaoComponent,
+    IconeComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './lista-concursos.component.html',

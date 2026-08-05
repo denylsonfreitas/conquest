@@ -104,10 +104,17 @@ describe('DimensaoPageComponent', () => {
     });
     await assentar(fixture, 'Direito Constitucional');
 
-    const excluir = Array.from(
-      (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
-    ).find((b) => b.textContent?.includes('Excluir'));
-    excluir?.click();
+    // Excluir agora passa pela confirmação: o primeiro clique só abre o modal.
+    const botoesExcluir = () =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).filter((b) =>
+        b.textContent?.includes('Excluir'),
+      );
+
+    botoesExcluir()[0]?.click();
+    await assentar(fixture, 'Não dá para desfazer');
+
+    // O de dentro do modal é o último — é ele que dispara a exclusão.
+    botoesExcluir().at(-1)?.click();
 
     const texto = await assentar(fixture, 'Em uso por questões');
     expect(texto).toContain('Em uso por questões');

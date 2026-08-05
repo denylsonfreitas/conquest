@@ -9,6 +9,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { ConfirmacaoComponent } from '../../shared/ui/confirmacao.component';
+import { IconeComponent } from '../../shared/ui/icone.component';
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
 import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
@@ -29,7 +31,14 @@ type Status = 'carregando' | 'ok' | 'erro';
  */
 @Component({
   selector: 'app-dimensao-page',
-  imports: [FormsModule, EstadoCarregandoComponent, EstadoErroComponent, EstadoVazioComponent],
+  imports: [
+    FormsModule,
+    EstadoCarregandoComponent,
+    EstadoErroComponent,
+    EstadoVazioComponent,
+    ConfirmacaoComponent,
+    IconeComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dimensao-page.component.html',
 })
@@ -43,6 +52,8 @@ export class DimensaoPageComponent {
   protected readonly itens = signal<ItemDimensao[]>([]);
   protected readonly erroCarga = signal<string | null>(null);
   protected readonly erroAcao = signal<string | null>(null);
+  protected readonly aExcluir = signal<ItemDimensao | null>(null);
+  protected readonly excluindo = signal(false);
   protected readonly salvando = signal(false);
   protected readonly novoNome = signal('');
   protected readonly editandoId = signal<string | null>(null);
@@ -122,14 +133,33 @@ export class DimensaoPageComponent {
     }
   }
 
+  protected pedirExclusao(item: ItemDimensao): void {
+    this.erroAcao.set(null);
+    this.aExcluir.set(item);
+  }
+
+  protected cancelarExclusao(): void {
+    this.aExcluir.set(null);
+  }
+
+  /**
+   * Sem prévia de cascata aqui: o RESTRICT do docs/01 impede excluir dimensão
+   * em uso, então não há o que arrastar. O que resta é o engano — apagar a
+   * banca errada da lista.
+   */
   protected async excluir(item: ItemDimensao): Promise<void> {
     this.erroAcao.set(null);
+    this.excluindo.set(true);
     try {
       await this.service.excluir(this.tabela(), item.id);
       this.itens.update((atual) => atual.filter((i) => i.id !== item.id));
+      this.aExcluir.set(null);
     } catch (e) {
       // Caso mais comum aqui: RESTRICT porque a dimensão está em uso.
       this.erroAcao.set(mensagem(e));
+      this.aExcluir.set(null);
+    } finally {
+      this.excluindo.set(false);
     }
   }
 }

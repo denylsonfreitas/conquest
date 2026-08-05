@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 
+import { IconeComponent } from '../../shared/ui/icone.component';
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
 import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
@@ -41,6 +42,7 @@ type Status = 'carregando' | 'ok' | 'erro';
     EstadoVazioComponent,
     EditorQuestaoComponent,
     FiltrosAcervoComponent,
+    IconeComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './lista-acervo.component.html',

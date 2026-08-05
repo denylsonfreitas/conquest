@@ -2,6 +2,9 @@ import { ChangeDetectionStrategy, Component, effect, inject, input, signal } fro
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
+import { consequenciasDaExclusao } from '../../shared/consequencias-exclusao';
+import { ConfirmacaoComponent } from '../../shared/ui/confirmacao.component';
+import { IconeComponent } from '../../shared/ui/icone.component';
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
 import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
@@ -38,6 +41,8 @@ type Status = 'carregando' | 'ok' | 'erro';
     EstadoCarregandoComponent,
     EstadoErroComponent,
     EstadoVazioComponent,
+    ConfirmacaoComponent,
+    IconeComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './detalhe-concurso.component.html',
@@ -55,6 +60,9 @@ export class DetalheConcursoComponent {
   protected readonly provas = signal<Prova[]>([]);
   protected readonly erroCarga = signal<string | null>(null);
   protected readonly erroAcao = signal<string | null>(null);
+  protected readonly provaAExcluir = signal<Prova | null>(null);
+  protected readonly consequencias = signal<string[]>([]);
+  protected readonly excluindo = signal(false);
   protected readonly salvando = signal(false);
   protected readonly formAberto = signal(false);
 
@@ -127,13 +135,34 @@ export class DetalheConcursoComponent {
     }
   }
 
+  protected async pedirExclusaoProva(prova: Prova): Promise<void> {
+    this.erroAcao.set(null);
+    this.provaAExcluir.set(prova);
+    this.consequencias.set([]);
+    try {
+      this.consequencias.set(
+        consequenciasDaExclusao(await this.provasService.impactoDaExclusao(prova.id)),
+      );
+    } catch (e) {
+      this.erroAcao.set(mensagem(e));
+    }
+  }
+
+  protected cancelarExclusaoProva(): void {
+    this.provaAExcluir.set(null);
+  }
+
   protected async excluirProva(prova: Prova): Promise<void> {
     this.erroAcao.set(null);
+    this.excluindo.set(true);
     try {
       await this.provasService.excluir(prova);
+      this.provaAExcluir.set(null);
       this.provas.update((atual) => atual.filter((p) => p.id !== prova.id));
     } catch (e) {
       this.erroAcao.set(mensagem(e));
+    } finally {
+      this.excluindo.set(false);
     }
   }
 

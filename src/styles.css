@@ -17,6 +17,11 @@
   --color-marca-sutil: var(--papel-marca-sutil);
   --color-marca-texto: var(--papel-marca-texto);
 
+  --color-perigo-solido: oklch(0.577 0.245 27.3);
+  --color-perigo-solido-forte: oklch(0.52 0.235 27.3);
+  --color-perigo-solido-contraste: oklch(1 0 0);
+  --color-veu: oklch(0 0 0);
+
   --color-superficie: var(--papel-superficie);
   --color-superficie-fundo: var(--papel-superficie-fundo);
   --color-superficie-sutil: var(--papel-superficie-sutil);
@@ -95,8 +100,9 @@
   }
 
   .btn-perigo {
-    @apply rounded-campo bg-red-600 px-4 py-2 font-medium text-white
-           transition hover:bg-red-700;
+    @apply rounded-campo bg-perigo-solido px-4 py-2 font-medium text-perigo-solido-contraste
+           transition hover:bg-perigo-solido-forte
+           disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .campo {

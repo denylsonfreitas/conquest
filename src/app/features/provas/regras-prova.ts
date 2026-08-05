@@ -70,7 +70,7 @@ export function corStatusProva(prova: ProvaParaRegra): string {
   }
 
   const cores: Record<Exclude<StatusProva, 'pendente'>, string> = {
-    processando: 'bg-blue-50 text-blue-700 ring-blue-200',
+    processando: 'bg-info-fundo text-info ring-info',
     aguardando_revisao: 'bg-atencao-fundo text-atencao ring-atencao',
     pronta: 'bg-sucesso-fundo text-sucesso ring-sucesso',
     erro: 'bg-perigo-fundo text-perigo ring-perigo',

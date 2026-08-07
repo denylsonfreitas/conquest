@@ -12,7 +12,8 @@
   --radius-campo: 0.5rem;
   --radius-cartao: 0.75rem;
 
-  --font-titulo: 'Archivo Variable', var(--font-sans);
+  --font-sans: 'Archivo Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-titulo: var(--font-sans);
 
   --color-marca: oklch(0.787 var(--marca-c) var(--marca-h));
   --color-marca-forte: oklch(0.73 var(--marca-c) var(--marca-h));
@@ -95,7 +96,6 @@
   h1,
   h2,
   h3 {
-    font-family: var(--font-titulo);
     letter-spacing: -0.02em;
   }
 }

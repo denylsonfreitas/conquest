@@ -30,6 +30,36 @@ describe('schema canônico', () => {
     expect(QuestaoNovaSchema.safeParse({ ...base, alternativas: alts }).success).toBe(false);
   });
 
+  it('aceita alternativa de figura, que vem sem texto, quando a questão depende de imagem', () => {
+    const figuras = {
+      ...base,
+      gabarito: 'A',
+      tem_imagem: true,
+      alternativas: [
+        { letra: 'A', texto: '' },
+        { letra: 'B', texto: '' },
+        { letra: 'C', texto: '' },
+        { letra: 'D', texto: '' },
+        { letra: 'E', texto: '' },
+      ],
+    };
+    const r = QuestaoNovaSchema.safeParse(figuras);
+    expect(r.success, JSON.stringify(r.error?.issues)).toBe(true);
+  });
+
+  it('rejeita alternativa sem texto quando nada indica que era figura', () => {
+    const semTexto = {
+      ...base,
+      alternativas: [
+        { letra: 'A', texto: '' },
+        { letra: 'B', texto: 'dois' },
+      ],
+    };
+    const r = QuestaoNovaSchema.safeParse(semTexto);
+    expect(r.success).toBe(false);
+    expect(JSON.stringify(r.error?.issues)).toContain('dependente de imagem');
+  });
+
   it('rejeita revisada sem materia_id', () => {
     expect(QuestaoNovaSchema.safeParse({ ...base, revisada: true }).success).toBe(false);
     const ok = QuestaoNovaSchema.safeParse({

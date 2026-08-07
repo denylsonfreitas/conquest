@@ -1,15 +1,7 @@
 import { garantirSemMarcaDagua } from './marca-dagua.ts';
+import { QuestaoBruta } from './questao-bruta.ts';
 
-export interface QuestaoBruta {
-  numero: number;
-  materia: string | null;
-  enunciado: string;
-  alternativas: { letra: string; texto: string }[];
-  gabarito: string | null;
-  tipo: 'multipla_escolha' | 'certo_errado';
-  tem_imagem: boolean;
-  incerto: boolean;
-}
+export type { QuestaoBruta };
 
 export class LlmError extends Error {
   constructor(mensagem: string) {
@@ -73,6 +65,10 @@ REGRAS INEGOCIÁVEIS
 4. ALTERNATIVAS. Vêm como "(A) texto", "(B) texto"... Preserve a ordem e a
    letra. Se uma questão tiver menos de 2 alternativas, ainda assim devolva o
    que encontrou e marque "incerto": true.
+   - Quando a alternativa é uma FIGURA (aparece só "(A)", "(B)"... sem texto,
+     porque a opção é um desenho, gráfico ou diagrama), devolva a letra com
+     "texto": "" e marque "tem_imagem": true. Nunca descreva a figura nem
+     invente um texto para ela — a revisão anexa a imagem depois.
 
 5. TIPO. "multipla_escolha" quando há opções A–E. "certo_errado" no estilo
    Cebraspe, em que a questão é uma afirmação a julgar; nesse caso as

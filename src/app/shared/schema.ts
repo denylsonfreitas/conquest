@@ -85,7 +85,7 @@ export const ProvaNovaSchema = ProvaSchema.omit({ id: true, created_at: true })
 
 export const AlternativaSchema = z.object({
   letra: LetraSchema,
-  texto: textoObrigatorio,
+  texto: z.string().trim(),
 });
 
 const questaoCampos = z.object({
@@ -108,9 +108,10 @@ const questaoCampos = z.object({
 
 type CamposVerificaveis = {
   readonly gabarito?: string | null;
-  readonly alternativas: readonly { readonly letra: string }[];
+  readonly alternativas: readonly { readonly letra: string; readonly texto: string }[];
   readonly materia_id?: string | null;
   readonly revisada: boolean;
+  readonly tem_imagem?: boolean;
 };
 
 const gabaritoExisteNasAlternativas = (q: CamposVerificaveis): boolean =>
@@ -120,6 +121,9 @@ const revisadaExigeGabarito = (q: CamposVerificaveis): boolean => !q.revisada ||
 
 const letrasNaoRepetem = (q: CamposVerificaveis): boolean =>
   new Set(q.alternativas.map((a) => a.letra)).size === q.alternativas.length;
+
+const alternativaSemTextoExigeImagem = (q: CamposVerificaveis): boolean =>
+  q.alternativas.every((a) => a.texto.length > 0) || q.tem_imagem === true;
 
 const revisadaExigeMateria = (q: CamposVerificaveis): boolean =>
   !q.revisada || (q.materia_id !== null && q.materia_id !== undefined);
@@ -137,6 +141,10 @@ export const QuestaoSchema = questaoCampos
   })
   .refine(letrasNaoRepetem, {
     error: 'há letras de alternativa repetidas',
+    path: ['alternativas'],
+  })
+  .refine(alternativaSemTextoExigeImagem, {
+    error: 'alternativa sem texto só é aceita em questão marcada como dependente de imagem',
     path: ['alternativas'],
   })
   .refine(revisadaExigeMateria, {
@@ -170,6 +178,10 @@ export const QuestaoNovaSchema = questaoCampos
   })
   .refine(letrasNaoRepetem, {
     error: 'há letras de alternativa repetidas',
+    path: ['alternativas'],
+  })
+  .refine(alternativaSemTextoExigeImagem, {
+    error: 'alternativa sem texto só é aceita em questão marcada como dependente de imagem',
     path: ['alternativas'],
   })
   .refine(revisadaExigeMateria, {

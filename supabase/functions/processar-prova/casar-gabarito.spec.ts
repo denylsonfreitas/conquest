@@ -24,6 +24,31 @@ const PROVA = [
 
 const IDENT = identificarProva(PROVA);
 
+const GABARITO_EM_PARES = [
+  'BANCO DO BRASIL - Prova A - Escriturário – Agente Comercial',
+  'SELEÇÃO EXTERNA 2022 / 001 - EDITAL No 01 – 2022/001 BB - Prova realizada em: 23/04/2023',
+  'GABARITO 1',
+  'LÍNGUA PORTUGUESA',
+  '1 - B 2 - B 3 - E 4 - C 5 - A',
+  'BANCO DO BRASIL - Prova Agente de Tecnologia – Microrregião 158 -TI',
+  'SELEÇÃO EXTERNA 2022 / 001 - EDITAL No 01 – 2022/001 BB - Prova realizada em: 23/04/2023',
+  'GABARITO 1',
+  'LÍNGUA PORTUGUESA',
+  '1 - A 2 - E 3 - C 4- D 5 - A',
+  'BANCO DO BRASIL - Prova Agente de Tecnologia – Microrregião 158 -TI',
+  'GABARITO 2',
+  '1 - C 2 - C 3 - C 4 - C 5 - C',
+].join('\n');
+
+const PROVA_COM_RODAPE = [
+  'BANCO DO BRASIL GABARITO',
+  'AGENTE DE TECNOLOGIA - Microrregião 158 - TI',
+  'a) este caderno, com o tema da Redação e 70 questões objetivas',
+  'AGENTE DE TECNOLOGIA - Microrregião 158 -TI GABARITO 1',
+  'AGENTE DE TECNOLOGIA - Microrregião 158 -TI4GABARITO 1',
+  'AGENTE DE TECNOLOGIA - Microrregião 158 -TI10GABARITO 1',
+].join('\n');
+
 describe('identificarProva', () => {
   it('extrai as três coordenadas do texto, sem digitação manual', () => {
     expect(IDENT).toEqual({
@@ -95,5 +120,51 @@ describe('casarGabarito', () => {
 
   it('casa ignorando caixa e acento entre prova e gabarito', () => {
     expect(casarGabarito(GABARITO, IDENT, 5).aplicavel).toBe(true);
+  });
+});
+
+describe('provas que se identificam pelo rodapé, com gabarito em pares', () => {
+  const ident = identificarProva(PROVA_COM_RODAPE);
+
+  it('tira cargo e tipo do rodapé que se repete página a página', () => {
+    expect(ident).toEqual({
+      cargo: 'AGENTE DE TECNOLOGIA - Microrregião 158 -TI',
+      tipo: 1,
+      cor: null,
+    });
+  });
+
+  it('não confunde o número da página com o fim do cargo', () => {
+    const umaPagina = identificarProva('CARGO X -TI7GABARITO 3');
+    expect(umaPagina.cargo).toBe('CARGO X -TI');
+    expect(umaPagina.tipo).toBe(3);
+  });
+
+  it('lê os pares número-letra, inclusive o que veio sem espaço no traço', () => {
+    const blocos = lerBlocos(GABARITO_EM_PARES);
+    expect(blocos.map((b) => b.tipo)).toEqual([1, 1, 2]);
+    expect([...blocos[1].respostas.entries()]).toEqual([
+      [1, 'A'],
+      [2, 'E'],
+      [3, 'C'],
+      [4, 'D'],
+      [5, 'A'],
+    ]);
+  });
+
+  it('não deixa "Prova realizada em" virar nome de cargo', () => {
+    const cargos = lerBlocos(GABARITO_EM_PARES).map((b) => b.cargo);
+    expect(cargos.some((c) => /realizada/i.test(c))).toBe(false);
+  });
+
+  it('escolhe o bloco do cargo certo entre os cinco tipos do PDF', () => {
+    const r = casarGabarito(GABARITO_EM_PARES, ident, 5);
+    expect(r.aplicavel).toBe(true);
+    if (r.aplicavel) expect([...r.respostas.values()]).toEqual(['A', 'E', 'C', 'D', 'A']);
+  });
+
+  it('o formato em grade continua tendo precedência sobre o em pares', () => {
+    expect(lerBlocos(GABARITO).map((b) => b.tipo)).toEqual([1, 1, 2]);
+    expect(identificarProva(PROVA).cor).toBe('BRANCA');
   });
 });

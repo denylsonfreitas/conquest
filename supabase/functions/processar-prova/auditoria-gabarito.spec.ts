@@ -13,22 +13,38 @@ async function texto(caminho: string): Promise<string> {
   return text;
 }
 
-const PROVA = 'provas/prova_real.pdf';
-const GABARITO = 'provas/gabarito_real.pdf';
+const PARES = [
+  {
+    nome: 'grade numérica',
+    prova: 'provas/prova_real.pdf',
+    gabarito: 'provas/gabarito_real.pdf',
+  },
+  {
+    nome: 'pares número-letra',
+    prova: 'provas/escriturario_agente_de_tecnologia.pdf',
+    gabarito: 'provas/gabarito.pdf',
+  },
+];
 
-const temPdfs = existsSync(PROVA) && existsSync(GABARITO);
+describe('auditoria do gabarito contra o PDF oficial', () => {
+  for (const par of PARES) {
+    const temPdfs = existsSync(par.prova) && existsSync(par.gabarito);
 
-describe.skipIf(!temPdfs)('auditoria do gabarito contra o PDF oficial', () => {
-  it('casa 70 respostas e imprime a tabela oficial numero → letra', async () => {
-    const textoProva = prepararTexto(await texto(PROVA));
-    const textoGabarito = prepararTexto(await texto(GABARITO));
+    it.skipIf(!temPdfs)(
+      `casa 70 respostas e imprime a tabela oficial numero → letra (${par.nome})`,
+      async () => {
+        const textoProva = prepararTexto(await texto(par.prova));
+        const textoGabarito = prepararTexto(await texto(par.gabarito));
 
-    const casamento = casarGabarito(textoGabarito, identificarProva(textoProva), 70);
-    if (!casamento.aplicavel) throw new Error(`gabarito não aplicável — ${casamento.motivo}`);
+        const casamento = casarGabarito(textoGabarito, identificarProva(textoProva), 70);
+        if (!casamento.aplicavel) throw new Error(`gabarito não aplicável — ${casamento.motivo}`);
 
-    const oficial = [...casamento.respostas.entries()].sort((a, b) => a[0] - b[0]);
-    expect(oficial).toHaveLength(70);
+        const oficial = [...casamento.respostas.entries()].sort((a, b) => a[0] - b[0]);
+        expect(oficial).toHaveLength(70);
 
-    console.log('OFICIAL=' + oficial.map(([n, l]) => `${n}:${l}`).join(','));
-  }, 120_000);
+        console.log(`OFICIAL[${par.nome}]=` + oficial.map(([n, l]) => `${n}:${l}`).join(','));
+      },
+      120_000,
+    );
+  }
 });

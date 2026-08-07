@@ -1,10 +1,19 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { consequenciasDaExclusao } from '../../shared/consequencias-exclusao';
 import { ConfirmacaoComponent } from '../../shared/ui/confirmacao.component';
 import { IconeComponent } from '../../shared/ui/icone.component';
+import { ModalComponent } from '../../shared/ui/modal.component';
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
 import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
@@ -32,6 +41,7 @@ type Status = 'carregando' | 'ok' | 'erro';
     EstadoVazioComponent,
     ConfirmacaoComponent,
     IconeComponent,
+    ModalComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './detalhe-concurso.component.html',
@@ -151,6 +161,12 @@ export class DetalheConcursoComponent {
   }
 
   protected readonly anexandoEm = signal<string | null>(null);
+
+  protected readonly provaAnexando = computed(() => {
+    const id = this.anexandoEm();
+    return id === null ? null : (this.provas().find((p) => p.id === id) ?? null);
+  });
+
   protected readonly pdfEscolhido = signal<File | null>(null);
   protected readonly gabaritoEscolhido = signal<File | null>(null);
   protected readonly fase = signal<FaseAnexo | null>(null);

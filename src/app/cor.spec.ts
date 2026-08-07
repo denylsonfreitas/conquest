@@ -57,7 +57,10 @@ const PROIBIDOS: readonly { nome: string; padrao: RegExp }[] = [
   { nome: 'função de cor crua', padrao: /\b(?:rgba?|hsla?|oklch|oklab|lab|lch)\(/g },
   {
     nome: 'utilitária da paleta nativa do Tailwind',
-    padrao: new RegExp(`(?<![\\w-])(?:${PREFIXOS})-(?:${PALETA_NATIVA})(?:-\\d{2,3})?(?![\\w-])`, 'g'),
+    padrao: new RegExp(
+      `(?<![\\w-])(?:${PREFIXOS})-(?:${PALETA_NATIVA})(?:-\\d{2,3})?(?![\\w-])`,
+      'g',
+    ),
   },
 ];
 

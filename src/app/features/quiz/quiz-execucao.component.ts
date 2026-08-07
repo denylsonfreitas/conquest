@@ -77,7 +77,7 @@ export class QuizExecucaoComponent {
   protected estilo(letra: Letra): string {
     if (!this.revelado()) {
       return this.marcada(letra)
-        ? 'bg-texto text-superficie ring-texto'
+        ? 'bg-marca text-marca-contraste ring-marca'
         : 'bg-superficie text-texto ring-borda hover:bg-superficie-sutil';
     }
 

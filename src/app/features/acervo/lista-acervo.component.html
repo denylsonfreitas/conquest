@@ -14,7 +14,7 @@
       <p role="alert" class="alerta-erro mb-4">{{ msg }}</p>
     }
 
-    <section class="cartao mb-6 space-y-5 p-5">
+    <section class="cartao mb-6 space-y-5 p-4 sm:p-5">
       <div>
         <label for="busca" class="rotulo">Buscar</label>
         <input
@@ -41,7 +41,7 @@
               class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
               [class]="
                 situacao() === s
-                  ? 'bg-texto text-superficie ring-texto'
+                  ? 'bg-marca text-marca-contraste ring-marca'
                   : 'bg-superficie text-texto ring-borda hover:bg-superficie-sutil'
               "
               (click)="mudarSituacao(s)"
@@ -63,7 +63,7 @@
     } @else {
       <ul class="space-y-3">
         @for (q of questoes(); track q.id) {
-          <li class="cartao p-5" [class.opacity-60]="q.anulada">
+          <li class="cartao p-4 sm:p-5" [class.opacity-60]="q.anulada">
             <div class="flex items-start gap-3">
               <span class="w-8 shrink-0 font-medium text-texto-fraco">{{ q.numero ?? '—' }}</span>
 

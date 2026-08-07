@@ -17,10 +17,10 @@
     @for (item of sessao.questoes(); track item.id; let i = $index) {
       <button
         type="button"
-        class="h-8 w-8 rounded-campo text-xs font-medium ring-1 transition"
+        class="h-9 w-9 rounded-campo text-xs font-medium ring-1 transition"
         [class]="
           i === sessao.indice()
-            ? 'bg-texto text-superficie ring-texto'
+            ? 'bg-marca text-marca-contraste ring-marca'
             : sessao.situacaoDe(item) === 'marcada'
               ? 'bg-info-fundo text-info ring-info'
               : 'bg-superficie text-texto-fraco ring-borda hover:bg-superficie-sutil'
@@ -37,7 +37,7 @@
     <p role="alert" class="alerta-erro mb-4">{{ msg }}</p>
   }
 
-  <article class="cartao p-5">
+  <article class="cartao p-4 sm:p-5">
     <p class="mb-1 text-xs text-texto-fraco">
       {{ q.concurso_nome }}
       @if (q.banca_nome) {
@@ -127,7 +127,7 @@
   </div>
 
   @if (confirmandoEntrega()) {
-    <div class="cartao mt-6 border-atencao p-5">
+    <div class="cartao mt-6 border-atencao p-4 sm:p-5">
       <p class="font-medium text-texto">
         Entregar {{ sessao.marcadas() }} de {{ sessao.total() }}?
       </p>

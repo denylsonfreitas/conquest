@@ -67,8 +67,14 @@
   </div>
 
   @if (tem()) {
-    <div style="display: flex; justify-content: flex-end;">
-    <button type="button" class="rounded-campo px-3 py-1.5 text-sm ring-1" (click)="limpar()">Limpar filtros</button>
+    <div class="flex justify-end">
+      <button
+        type="button"
+        class="rounded-campo px-3 py-1.5 text-sm text-texto-fraco ring-1 ring-borda transition hover:bg-superficie-sutil"
+        (click)="limpar()"
+      >
+        Limpar filtros
+      </button>
     </div>
   }
 </div>

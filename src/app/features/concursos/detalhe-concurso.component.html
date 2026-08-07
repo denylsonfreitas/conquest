@@ -37,7 +37,11 @@
         </div>
 
         @if (formAberto()) {
-          <form class="cartao mb-6 space-y-4 p-5" [formGroup]="form" (ngSubmit)="criarProva()">
+          <form
+            class="cartao mb-6 space-y-4 p-4 sm:p-5"
+            [formGroup]="form"
+            (ngSubmit)="criarProva()"
+          >
             <div>
               <label for="prova-nome" class="rotulo">Nome</label>
               <input

@@ -9,7 +9,7 @@
 </header>
 
 @if (formAberto()) {
-  <form class="cartao mb-6 space-y-4 p-5" [formGroup]="form" (ngSubmit)="criar()">
+  <form class="cartao mb-6 space-y-4 p-4 sm:p-5" [formGroup]="form" (ngSubmit)="criar()">
     <div>
       <label for="nome" class="rotulo">Nome</label>
       <input id="nome" class="campo mt-1" formControlName="nome" placeholder="TRT 15ª Região" />

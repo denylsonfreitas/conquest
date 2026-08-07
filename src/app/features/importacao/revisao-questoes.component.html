@@ -29,7 +29,7 @@
       <app-estado-vazio mensagem="Esta prova ainda não tem questões extraídas." />
     } @else {
       @if (paraMapear().length > 0) {
-        <section class="cartao mb-8 p-5">
+        <section class="cartao mb-8 p-4 sm:p-5">
           <h2 class="mb-3 font-semibold text-texto">Matérias a mapear</h2>
 
           <ul class="space-y-3">
@@ -125,7 +125,7 @@
 }
 
 <ng-template #cartaoQuestao let-q>
-  <li class="cartao p-5" [class.opacity-60]="q.anulada">
+  <li class="cartao p-4 sm:p-5" [class.opacity-60]="q.anulada">
     <div class="flex items-start gap-3">
       <span class="w-8 shrink-0 font-medium text-texto-fraco">{{ q.numero ?? '—' }}</span>
 

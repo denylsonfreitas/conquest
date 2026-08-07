@@ -11,12 +11,12 @@
     </header>
 
     @if (vazio()) {
-      <div class="cartao p-8 text-center">
+      <div class="cartao p-6 sm:p-8 text-center">
         <p class="text-texto">Responda alguns quizzes para ver seu progresso.</p>
         <a routerLink="/quiz" class="btn mt-4 inline-block">Montar um quiz</a>
       </div>
     } @else {
-      <section class="cartao mb-6 p-5">
+      <section class="cartao mb-6 p-4 sm:p-5">
         <p class="numero text-3xl font-semibold text-texto">
           {{ total().acertos }}
           <span class="text-texto-fraco">de {{ total().respostas }}</span>

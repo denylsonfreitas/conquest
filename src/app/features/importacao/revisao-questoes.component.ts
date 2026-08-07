@@ -302,6 +302,12 @@ export class RevisaoQuestoesComponent {
 
   protected readonly precisaAtencao = precisaAtencao;
   protected readonly motivosAtencao = motivosAtencao;
+
+  protected rotuloAprovacao(q: QuestaoRevisao): string {
+    if (q.revisada) return 'Desaprovar';
+    const pendencias = motivosAtencao(q);
+    return pendencias.length > 0 ? `Falta resolver: ${pendencias.join(', ')}` : 'Aprovar';
+  }
   protected readonly podeAprovar = podeAprovar;
   protected readonly LETRAS = ['A', 'B', 'C', 'D', 'E'] as const;
 }

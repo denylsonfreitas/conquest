@@ -51,14 +51,22 @@ function montar(concursos: Partial<ConcursosService>, provas: Partial<ProvasServ
   return fixture;
 }
 
+function legivel(fixture: ComponentFixture<DetalheConcursoComponent>): string {
+  const raiz = fixture.nativeElement as HTMLElement;
+  const rotulos = Array.from(raiz.querySelectorAll('[aria-label]'))
+    .map((e) => e.getAttribute('aria-label'))
+    .join(' ');
+  return `${raiz.textContent ?? ''} ${rotulos}`;
+}
+
 async function assentar(fixture: ComponentFixture<DetalheConcursoComponent>, texto: string) {
   for (let i = 0; i < 50; i++) {
     fixture.detectChanges();
-    if (((fixture.nativeElement as HTMLElement).textContent ?? '').includes(texto)) break;
+    if (legivel(fixture).includes(texto)) break;
     await new Promise((r) => setTimeout(r, 5));
   }
   fixture.detectChanges();
-  return (fixture.nativeElement as HTMLElement).textContent ?? '';
+  return legivel(fixture);
 }
 
 describe('DetalheConcursoComponent', () => {
@@ -143,8 +151,13 @@ describe('DetalheConcursoComponent', () => {
   it('diz como sair do impasse quando a prova já foi extraída', async () => {
     const extraida: Prova = { ...PROVA_COM_PDF, status: 'aguardando_revisao' };
     const fixture = montar({}, { listarPorConcurso: async () => [extraida] });
-    const texto = await assentar(fixture, 'apague a prova');
-    expect(texto).toContain('Extraída');
+    const texto = await assentar(fixture, 'invalidaria as questões');
+    expect(texto).toContain('já foi extraída');
+
+    const dicas = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('[data-dica]'),
+    ).map((e) => e.getAttribute('data-dica') ?? '');
+    expect(dicas.some((d) => d.includes('invalidaria as questões'))).toBe(true);
   });
 
   it('anexa o PDF escolhido e atualiza a prova na lista', async () => {

@@ -64,7 +64,7 @@
     } @else {
       <ul class="space-y-3">
         @for (concurso of concursos(); track concurso.id) {
-          <li class="cartao flex items-center gap-4 p-5">
+          <li class="cartao flex items-center gap-3 p-4 sm:p-5">
             <div class="min-w-0 flex-1">
               <a
                 [routerLink]="['/concursos', concurso.id]"
@@ -83,9 +83,22 @@
               </p>
             </div>
 
-            <a [routerLink]="['/concursos', concurso.id]" class="acao-inline">Abrir</a>
-            <button type="button" class="acao-inline text-perigo" (click)="pedirExclusao(concurso)">
-              <app-icone nome="excluir" /> Excluir
+            <a
+              [routerLink]="['/concursos', concurso.id]"
+              class="acao-icone dica"
+              aria-label="Abrir concurso"
+              data-dica="Abrir concurso"
+            >
+              <app-icone nome="ver" [tamanho]="18" />
+            </a>
+            <button
+              type="button"
+              class="acao-icone acao-icone-perigo dica"
+              aria-label="Excluir concurso"
+              data-dica="Excluir concurso"
+              (click)="pedirExclusao(concurso)"
+            >
+              <app-icone nome="excluir" [tamanho]="18" />
             </button>
           </li>
         }

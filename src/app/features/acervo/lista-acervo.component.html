@@ -116,9 +116,14 @@
                 </p>
               </div>
 
-              <button type="button" class="acao-inline" (click)="alternarAberta(q.id)">
-                <app-icone [nome]="abertaId() === q.id ? 'fechar' : 'editar'" />
-                {{ abertaId() === q.id ? 'Fechar' : 'Editar' }}
+              <button
+                type="button"
+                class="acao-icone dica"
+                [attr.aria-label]="abertaId() === q.id ? 'Fechar edição' : 'Editar questão'"
+                [attr.data-dica]="abertaId() === q.id ? 'Fechar edição' : 'Editar questão'"
+                (click)="alternarAberta(q.id)"
+              >
+                <app-icone [nome]="abertaId() === q.id ? 'fechar' : 'editar'" [tamanho]="18" />
               </button>
             </div>
 

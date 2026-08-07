@@ -95,9 +95,9 @@
         } @else {
           <ul class="space-y-3">
             @for (prova of provas(); track prova.id) {
-              <li class="cartao p-5">
-                <div class="flex items-center gap-4">
-                  <div class="min-w-0 flex-1">
+              <li class="cartao p-4 sm:p-5">
+                <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                  <div class="min-w-0 flex-1 basis-56">
                     <p class="font-medium text-texto">{{ prova.nome }}</p>
                     <p class="mt-0.5 text-sm text-texto-fraco">
                       @if (prova.ano) {
@@ -139,68 +139,96 @@
                     }
                   </div>
 
-                  <span
-                    class="shrink-0 rounded-campo px-2 py-1 text-xs font-medium ring-1"
-                    [class]="corStatus(prova)"
-                  >
-                    {{ rotuloStatus(prova) }}
-                  </span>
-
-                  @if (prova.arquivo_path) {
-                    <button type="button" class="acao-inline" (click)="abrirPdf(prova)">
-                      <app-icone nome="ver" /> Ver PDF
-                    </button>
-                  }
-
-                  @if (prova.status === 'aguardando_revisao' || prova.status === 'pronta') {
-                    <a
-                      [routerLink]="['/provas', prova.id, 'revisao']"
-                      class="acao-inline font-medium text-texto"
-                      >Revisar</a
-                    >
-                  }
-
-                  @if (podeProcessar(prova)) {
-                    <button
-                      type="button"
-                      class="acao-inline font-medium text-texto"
-                      [disabled]="processandoId() !== null"
-                      (click)="processar(prova)"
-                    >
-                      {{ prova.status === 'erro' ? 'Tentar de novo' : 'Processar' }}
-                    </button>
-                  }
-
-                  @if (estaTravada(prova)) {
-                    <button
-                      type="button"
-                      class="acao-inline text-atencao"
-                      (click)="destravar(prova)"
-                    >
-                      Destravar
-                    </button>
-                  }
-
-                  @if (podeAnexar(prova.status)) {
-                    <button type="button" class="acao-inline" (click)="abrirAnexo(prova)">
-                      <app-icone nome="anexar" />
-                      {{ prova.arquivo_path ? 'Substituir PDF' : 'Anexar PDF' }}
-                    </button>
-                  } @else {
+                  <div class="flex flex-wrap items-center justify-end gap-1">
                     <span
-                      class="text-sm text-texto-fraco"
-                      [title]="motivoBloqueio(prova.status) ?? ''"
-                      >{{ rotuloBloqueio(prova.status) }}</span
+                      class="mr-1 rounded-campo px-2 py-1 text-xs font-medium ring-1"
+                      [class]="corStatus(prova)"
                     >
-                  }
+                      {{ rotuloStatus(prova) }}
+                    </span>
 
-                  <button
-                    type="button"
-                    class="acao-inline text-perigo"
-                    (click)="pedirExclusaoProva(prova)"
-                  >
-                    <app-icone nome="excluir" /> Excluir
-                  </button>
+                    @if (prova.arquivo_path) {
+                      <button
+                        type="button"
+                        class="acao-icone dica"
+                        aria-label="Ver PDF"
+                        data-dica="Ver PDF"
+                        (click)="abrirPdf(prova)"
+                      >
+                        <app-icone nome="ver" [tamanho]="18" />
+                      </button>
+                    }
+
+                    @if (prova.status === 'aguardando_revisao' || prova.status === 'pronta') {
+                      <a
+                        [routerLink]="['/provas', prova.id, 'revisao']"
+                        class="acao-icone dica text-texto"
+                        aria-label="Revisar questões"
+                        data-dica="Revisar questões"
+                      >
+                        <app-icone nome="revisar" [tamanho]="18" />
+                      </a>
+                    }
+
+                    @if (podeProcessar(prova)) {
+                      <button
+                        type="button"
+                        class="acao-icone dica text-texto"
+                        [attr.aria-label]="prova.status === 'erro' ? 'Tentar de novo' : 'Processar'"
+                        [attr.data-dica]="prova.status === 'erro' ? 'Tentar de novo' : 'Processar'"
+                        [disabled]="processandoId() !== null"
+                        (click)="processar(prova)"
+                      >
+                        <app-icone
+                          [nome]="prova.status === 'erro' ? 'repetir' : 'processar'"
+                          [tamanho]="18"
+                        />
+                      </button>
+                    }
+
+                    @if (estaTravada(prova)) {
+                      <button
+                        type="button"
+                        class="acao-icone dica text-atencao"
+                        aria-label="Destravar"
+                        data-dica="Destravar — o processamento passou do tempo esperado"
+                        (click)="destravar(prova)"
+                      >
+                        <app-icone nome="destravar" [tamanho]="18" />
+                      </button>
+                    }
+
+                    @if (podeAnexar(prova.status)) {
+                      <button
+                        type="button"
+                        class="acao-icone dica"
+                        [attr.aria-label]="prova.arquivo_path ? 'Substituir PDF' : 'Anexar PDF'"
+                        [attr.data-dica]="prova.arquivo_path ? 'Substituir PDF' : 'Anexar PDF'"
+                        (click)="abrirAnexo(prova)"
+                      >
+                        <app-icone nome="anexar" [tamanho]="18" />
+                      </button>
+                    } @else {
+                      <button
+                        type="button"
+                        class="acao-icone dica cursor-default"
+                        [attr.aria-label]="motivoBloqueio(prova.status)"
+                        [attr.data-dica]="motivoBloqueio(prova.status)"
+                      >
+                        <app-icone nome="bloqueado" [tamanho]="18" />
+                      </button>
+                    }
+
+                    <button
+                      type="button"
+                      class="acao-icone acao-icone-perigo dica"
+                      aria-label="Excluir prova"
+                      data-dica="Excluir prova"
+                      (click)="pedirExclusaoProva(prova)"
+                    >
+                      <app-icone nome="excluir" [tamanho]="18" />
+                    </button>
+                  </div>
                 </div>
 
                 @if (anexandoEm() === prova.id) {

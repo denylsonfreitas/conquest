@@ -142,6 +142,49 @@
   .acao-inline {
     @apply text-sm text-texto-fraco hover:underline;
   }
+
+  .acao-icone {
+    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-campo
+           text-texto-fraco transition
+           hover:bg-superficie-sutil hover:text-texto
+           focus-visible:ring-1 focus-visible:ring-marca-texto focus-visible:outline-none
+           disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent;
+  }
+
+  .acao-icone-perigo {
+    @apply text-perigo hover:bg-perigo-fundo hover:text-perigo;
+  }
+}
+
+.dica {
+  position: relative;
+}
+
+.dica::after {
+  content: attr(data-dica);
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.375rem);
+  z-index: 30;
+  width: max-content;
+  max-width: 14rem;
+  border-radius: var(--radius-campo);
+  background-color: var(--color-texto);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  font-weight: 400;
+  white-space: normal;
+  color: var(--color-superficie);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms;
+}
+
+.dica:hover::after,
+.dica:focus::after,
+.dica:focus-within::after {
+  opacity: 1;
 }
 
 summary::-webkit-details-marker {

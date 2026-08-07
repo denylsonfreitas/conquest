@@ -161,21 +161,26 @@
         </p>
       </div>
 
-      <button type="button" class="acao-inline" (click)="alternarExpansao(q.id)">
-        <app-icone [nome]="expandidaId() === q.id ? 'fechar' : 'abrir'" />
-        {{ expandidaId() === q.id ? 'Fechar' : 'Abrir' }}
+      <button
+        type="button"
+        class="acao-icone dica"
+        [attr.aria-label]="expandidaId() === q.id ? 'Fechar questão' : 'Abrir questão'"
+        [attr.data-dica]="expandidaId() === q.id ? 'Fechar questão' : 'Abrir questão'"
+        (click)="alternarExpansao(q.id)"
+      >
+        <app-icone [nome]="expandidaId() === q.id ? 'fechar' : 'abrir'" [tamanho]="18" />
       </button>
 
       <button
         type="button"
-        class="acao-inline font-medium"
+        class="acao-icone dica"
         [class.text-sucesso]="!q.revisada"
-        [class.text-texto-fraco]="q.revisada"
+        [attr.aria-label]="rotuloAprovacao(q)"
+        [attr.data-dica]="rotuloAprovacao(q)"
         [disabled]="!q.revisada && precisaAtencao(q)"
         (click)="alternarAprovacao(q)"
       >
-        <app-icone [nome]="q.revisada ? 'desfazer' : 'aprovar'" />
-        {{ q.revisada ? 'Desaprovar' : 'Aprovar' }}
+        <app-icone [nome]="q.revisada ? 'desfazer' : 'aprovar'" [tamanho]="18" />
       </button>
     </div>
 

@@ -1,7 +1,20 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 export type NomeIcone =
-  'abrir' | 'fechar' | 'aprovar' | 'desfazer' | 'editar' | 'excluir' | 'anexar' | 'ver';
+  | 'abrir'
+  | 'fechar'
+  | 'aprovar'
+  | 'desfazer'
+  | 'editar'
+  | 'excluir'
+  | 'anexar'
+  | 'ver'
+  | 'revisar'
+  | 'processar'
+  | 'repetir'
+  | 'destravar'
+  | 'bloqueado'
+  | 'info';
 
 const TRACOS: Record<NomeIcone, string> = {
   abrir: 'M6 9l6 6 6-6',
@@ -12,6 +25,12 @@ const TRACOS: Record<NomeIcone, string> = {
   excluir: 'M3 6h18 M8 6V4h8v2 M19 6l-1 14H6L5 6',
   anexar: 'M12 5v14 M5 12h14',
   ver: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z M12 15a3 3 0 100-6 3 3 0 000 6',
+  revisar: 'M9 11l3 3 8-8 M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11',
+  processar: 'M7 4l12 8-12 8z',
+  repetir: 'M20 12a8 8 0 11-2.3-5.6 M20 3v5h-5',
+  destravar: 'M8 10V7a4 4 0 017.5-2 M5 10h14v10H5z',
+  bloqueado: 'M8 10V7a4 4 0 018 0v3 M5 10h14v10H5z',
+  info: 'M12 16v-5 M12 8h.01 M21 12a9 9 0 11-18 0 9 9 0 0118 0',
 };
 
 @Component({

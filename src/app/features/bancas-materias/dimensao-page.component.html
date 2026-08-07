@@ -45,12 +45,24 @@
                 Cancelar
               </button>
             } @else {
-              <span class="flex-1 text-texto">{{ item.nome }}</span>
-              <button type="button" class="acao-inline" (click)="iniciarEdicao(item)">
-                <app-icone nome="editar" /> Renomear
+              <span class="min-w-0 flex-1 text-texto">{{ item.nome }}</span>
+              <button
+                type="button"
+                class="acao-icone dica"
+                aria-label="Renomear"
+                data-dica="Renomear"
+                (click)="iniciarEdicao(item)"
+              >
+                <app-icone nome="editar" [tamanho]="18" />
               </button>
-              <button type="button" class="acao-inline text-perigo" (click)="pedirExclusao(item)">
-                <app-icone nome="excluir" /> Excluir
+              <button
+                type="button"
+                class="acao-icone acao-icone-perigo dica"
+                aria-label="Excluir"
+                data-dica="Excluir"
+                (click)="pedirExclusao(item)"
+              >
+                <app-icone nome="excluir" [tamanho]="18" />
               </button>
             }
           </li>

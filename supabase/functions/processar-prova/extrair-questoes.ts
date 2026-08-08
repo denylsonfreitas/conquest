@@ -86,6 +86,21 @@ REGRAS INEGOCIÁVEIS
 
 8. IGNORE tudo que não é questão: capa, instruções ao candidato, cabeçalho e
    rodapé de página, numeração de página, avisos sobre cartão de respostas.
+
+9. QUEBRAS DE LINHA SÃO CONTEÚDO. Preserve com "\\n" as quebras que carregam
+   sentido: cada linha de um trecho de código, cada item de uma lista, cada
+   verso. Nunca junte tudo num parágrafo só — em código, a quebra é sintaxe.
+
+10. TABELAS. Reproduza uma linha por linha da tabela, separando as células com
+    " | ", inclusive a linha de cabeçalho. Célula vazia vira "-". Assim:
+
+      nome | menorIdade | maiorIdade
+      Jovens | - | 19
+      Adultos | 20 | 59
+
+    Sem o separador, "Jovens 19" e "Adultos 20 59" ficam impossíveis de ler.
+    Se a tabela for uma IMAGEM (não há texto algum para transcrever), aí sim
+    marque "tem_imagem": true e siga a regra 6.
 `.trim();
 
 export async function extrairQuestoes(texto: string): Promise<QuestaoBruta[]> {

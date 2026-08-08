@@ -68,7 +68,7 @@
         <li>
           <button
             type="button"
-            class="w-full rounded-campo px-4 py-3 text-left ring-1 transition"
+            class="w-full rounded-campo px-4 py-3 text-left whitespace-pre-line ring-1 transition"
             [class]="estilo(alt.letra)"
             [disabled]="ocupado() || (!sessao.ehProva() && sessao.respostaAtual() !== null)"
             (click)="marcar(alt.letra)"

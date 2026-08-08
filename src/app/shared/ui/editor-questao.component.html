@@ -1,7 +1,7 @@
 <div class="space-y-4">
   <ul class="space-y-1 text-sm">
     @for (alt of questao().alternativas; track alt.letra) {
-      <li [class.font-medium]="alt.letra === valor('gabarito')">
+      <li class="whitespace-pre-line" [class.font-medium]="alt.letra === valor('gabarito')">
         ({{ alt.letra }}) {{ alt.texto }}
       </li>
     }

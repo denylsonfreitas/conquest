@@ -68,12 +68,11 @@
               <span class="w-8 shrink-0 font-medium text-texto-fraco">{{ q.numero ?? '—' }}</span>
 
               <div class="min-w-0 flex-1">
-                <p
-                  class="whitespace-pre-line text-texto"
-                  [class.line-clamp-2]="abertaId() !== q.id"
-                >
-                  {{ q.enunciado }}
-                </p>
+                @if (abertaId() === q.id) {
+                  <app-enunciado [texto]="q.enunciado" />
+                } @else {
+                  <p class="line-clamp-2 whitespace-pre-line text-texto">{{ q.enunciado }}</p>
+                }
 
                 <p class="mt-1 flex flex-wrap gap-2 text-xs">
                   @if (q.materia) {

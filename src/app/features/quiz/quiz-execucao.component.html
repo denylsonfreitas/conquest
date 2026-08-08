@@ -51,7 +51,7 @@
       }
     </p>
 
-    <p class="whitespace-pre-line text-texto">{{ q.enunciado }}</p>
+    <app-enunciado [texto]="q.enunciado" />
 
     @if (q.imagem_path) {
       @if (urlImagem(); as url) {

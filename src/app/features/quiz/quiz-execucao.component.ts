@@ -9,11 +9,13 @@ import {
 import { Router } from '@angular/router';
 
 import { Letra } from '../../shared/models';
+import { EnunciadoComponent } from '../../shared/ui/enunciado.component';
 import { QuizService } from './quiz.service';
 import { SessaoQuizService } from './sessao-quiz.service';
 
 @Component({
   selector: 'app-quiz-execucao',
+  imports: [EnunciadoComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './quiz-execucao.component.html',
 })

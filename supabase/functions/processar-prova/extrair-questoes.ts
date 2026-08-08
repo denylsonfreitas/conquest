@@ -91,6 +91,27 @@ REGRAS INEGOCIÁVEIS
    sentido: cada linha de um trecho de código, cada item de uma lista, cada
    verso. Nunca junte tudo num parágrafo só — em código, a quebra é sintaxe.
 
+9b. CÓDIGO VEM CERCADO. Todo trecho de código, comando SQL ou saída de console
+    dentro do enunciado vai entre linhas com três crases, com a linguagem na
+    cerca de abertura quando der para saber:
+
+      A seguir, um fragmento em Java.
+      \`\`\`java
+      public class Main {
+      public static void main(String[] args) {
+      }
+      }
+      \`\`\`
+      O que será exibido?
+
+    A cerca fica sozinha na linha, sem texto ao lado. É ela que faz o app
+    exibir o trecho em fonte monoespaçada, separado da prosa.
+
+    A extração do PDF apaga o recuo à esquerda, então as linhas chegam todas
+    coladas na margem. Deixe assim: NÃO reindente, não adivinhe onde o bloco
+    abria ou fechava. Em Python o recuo é semântica, e um recuo inventado
+    muda o que o código faz — pior que um código sem recuo.
+
 10. TABELAS. Reproduza uma linha por linha da tabela, separando as células com
     " | ", inclusive a linha de cabeçalho. Célula vazia vira "-". Assim:
 

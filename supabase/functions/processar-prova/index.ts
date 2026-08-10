@@ -1,20 +1,24 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import { casarGabarito } from './casar-gabarito.ts';
+import { cabecalhosCors } from './cors.ts';
 import { extrairQuestoes } from './extrair-questoes.ts';
 import { identificarProva, normalizar } from './identificar-prova.ts';
 import { Descarte, montarQuestoes } from './montar-questoes.ts';
 import { prepararTexto } from './preparar-texto.ts';
 
-const CORS = {
-  'Access-Control-Allow-Origin': Deno.env.get('ORIGEM_PERMITIDA') ?? '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  Vary: 'Origin',
-};
-
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  // Lido por requisição, e não uma vez no arranque, para trocar a variável no
+  // painel valer sem esperar a instância reciclar.
+  const cors = cabecalhosCors(Deno.env.get('ORIGEM_PERMITIDA'), req.headers.get('Origin'));
+
+  const responder = (status: number, corpo: unknown): Response =>
+    new Response(JSON.stringify(corpo), {
+      status,
+      headers: { ...cors, 'content-type': 'application/json' },
+    });
+
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   const admin = createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -53,13 +57,6 @@ Deno.serve(async (req: Request) => {
     return responder(500, { erro: mensagem });
   }
 });
-
-function responder(status: number, corpo: unknown): Response {
-  return new Response(JSON.stringify(corpo), {
-    status,
-    headers: { ...CORS, 'content-type': 'application/json' },
-  });
-}
 
 async function marcarErro(admin: SupabaseClient, provaId: string, erro: string): Promise<void> {
   await admin

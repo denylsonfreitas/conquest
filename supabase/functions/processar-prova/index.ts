@@ -7,8 +7,10 @@ import { Descarte, montarQuestoes } from './montar-questoes.ts';
 import { prepararTexto } from './preparar-texto.ts';
 
 const CORS = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ORIGEM_PERMITIDA') ?? '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  Vary: 'Origin',
 };
 
 Deno.serve(async (req: Request) => {
@@ -26,6 +28,15 @@ Deno.serve(async (req: Request) => {
     if (!token) return responder(401, { erro: 'Não autenticado.' });
     const { data: usuario } = await admin.auth.getUser(token);
     if (!usuario?.user) return responder(401, { erro: 'Sessão inválida.' });
+
+    // Estar autenticado não basta: esta função gasta cota paga do Gemini, então
+    // quem não é o dono para aqui, mesmo que tenha conseguido criar uma conta.
+    const { data: dono } = await admin
+      .from('dono')
+      .select('id')
+      .eq('id', usuario.user.id)
+      .maybeSingle();
+    if (!dono) return responder(403, { erro: 'Sem permissão.' });
 
     const corpo = await req.json();
     provaId = corpo.prova_id;

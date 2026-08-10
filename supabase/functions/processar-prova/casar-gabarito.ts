@@ -5,6 +5,11 @@ const TITULO_BLOCO = /^(.+?)\s+[–-]\s+PROVA\s+TIPO\s+(\d+)\s*$/i;
 const LINHA_NUMEROS = /^\s*\d+(?:\s+\d+)+\s*$/;
 const LINHA_LETRAS = /^\s*[A-E](?:\s+[A-E])+\s*$/i;
 
+const TITULO_CARGO = /^.+?\s*[–-]\s*Prova\s+(?!realizada\b)(.+?)\s*$/i;
+const TITULO_TIPO = /^GABARITO\s+(\d+)\s*$/i;
+const LINHA_PARES = /^(?:\s*\d+\s*[–-]\s*[A-E]\s*)+$/i;
+const PAR_NUMERO_LETRA = /(\d+)\s*[–-]\s*([A-E])/gi;
+
 export interface BlocoGabarito {
   readonly cargo: string;
   readonly tipo: number;
@@ -16,6 +21,11 @@ export type ResultadoCasamento =
   | { readonly aplicavel: false; readonly motivo: string };
 
 export function lerBlocos(textoGabarito: string): BlocoGabarito[] {
+  const emGrade = lerBlocosEmGrade(textoGabarito);
+  return emGrade.length > 0 ? emGrade : lerBlocosEmPares(textoGabarito);
+}
+
+function lerBlocosEmGrade(textoGabarito: string): BlocoGabarito[] {
   const linhas = textoGabarito.split('\n');
   const blocos: BlocoGabarito[] = [];
 
@@ -49,6 +59,38 @@ export function lerBlocos(textoGabarito: string): BlocoGabarito[] {
   }
 
   if (atual) blocos.push(atual);
+  return blocos;
+}
+
+function lerBlocosEmPares(textoGabarito: string): BlocoGabarito[] {
+  const blocos: BlocoGabarito[] = [];
+
+  let cargoCorrente: string | null = null;
+  let atual: { cargo: string; tipo: number; respostas: Map<number, string> } | null = null;
+
+  for (const bruta of textoGabarito.split('\n')) {
+    const linha = bruta.trim();
+
+    const tipo = TITULO_TIPO.exec(linha);
+    if (tipo && cargoCorrente) {
+      atual = { cargo: cargoCorrente, tipo: Number(tipo[1]), respostas: new Map() };
+      blocos.push(atual);
+      continue;
+    }
+
+    const cargo = TITULO_CARGO.exec(linha);
+    if (cargo) {
+      cargoCorrente = cargo[1].trim();
+      continue;
+    }
+
+    if (atual && LINHA_PARES.test(linha)) {
+      for (const par of linha.matchAll(PAR_NUMERO_LETRA)) {
+        atual.respostas.set(Number(par[1]), par[2].toUpperCase());
+      }
+    }
+  }
+
   return blocos;
 }
 

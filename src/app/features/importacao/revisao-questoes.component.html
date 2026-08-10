@@ -13,7 +13,8 @@
     <header class="mb-6">
       <h1 class="text-2xl font-semibold text-texto">Revisão</h1>
       <p class="mt-1 text-sm text-texto-fraco">
-        {{ totalAprovadas() }} de {{ questoes().length }} questões aprovadas.
+        <span class="numero">{{ totalAprovadas() }} de {{ questoes().length }}</span> questões
+        aprovadas.
         @if (concluida()) {
           <span class="font-medium text-sucesso">Prova pronta.</span>
         }
@@ -28,7 +29,7 @@
       <app-estado-vazio mensagem="Esta prova ainda não tem questões extraídas." />
     } @else {
       @if (paraMapear().length > 0) {
-        <section class="cartao mb-8 p-5">
+        <section class="cartao mb-8 p-4 sm:p-5">
           <h2 class="mb-3 font-semibold text-texto">Matérias a mapear</h2>
 
           <ul class="space-y-3">
@@ -124,14 +125,16 @@
 }
 
 <ng-template #cartaoQuestao let-q>
-  <li class="cartao p-5" [class.opacity-60]="q.anulada">
+  <li class="cartao p-4 sm:p-5" [class.opacity-60]="q.anulada">
     <div class="flex items-start gap-3">
       <span class="w-8 shrink-0 font-medium text-texto-fraco">{{ q.numero ?? '—' }}</span>
 
       <div class="min-w-0 flex-1">
-        <p class="text-texto" [class.line-clamp-2]="expandidaId() !== q.id">
-          {{ q.enunciado }}
-        </p>
+        @if (expandidaId() === q.id) {
+          <app-enunciado [texto]="q.enunciado" />
+        } @else {
+          <p class="line-clamp-2 whitespace-pre-line text-texto">{{ q.enunciado }}</p>
+        }
 
         <p class="mt-1 flex flex-wrap gap-2 text-xs">
           @if (q.materia_id) {
@@ -160,21 +163,26 @@
         </p>
       </div>
 
-      <button type="button" class="acao-inline" (click)="alternarExpansao(q.id)">
-        <app-icone [nome]="expandidaId() === q.id ? 'fechar' : 'abrir'" />
-        {{ expandidaId() === q.id ? 'Fechar' : 'Abrir' }}
+      <button
+        type="button"
+        class="acao-icone dica"
+        [attr.aria-label]="expandidaId() === q.id ? 'Fechar questão' : 'Abrir questão'"
+        [attr.data-dica]="expandidaId() === q.id ? 'Fechar questão' : 'Abrir questão'"
+        (click)="alternarExpansao(q.id)"
+      >
+        <app-icone [nome]="expandidaId() === q.id ? 'fechar' : 'abrir'" [tamanho]="18" />
       </button>
 
       <button
         type="button"
-        class="acao-inline font-medium"
+        class="acao-icone dica"
         [class.text-sucesso]="!q.revisada"
-        [class.text-texto-fraco]="q.revisada"
+        [attr.aria-label]="rotuloAprovacao(q)"
+        [attr.data-dica]="rotuloAprovacao(q)"
         [disabled]="!q.revisada && precisaAtencao(q)"
         (click)="alternarAprovacao(q)"
       >
-        <app-icone [nome]="q.revisada ? 'desfazer' : 'aprovar'" />
-        {{ q.revisada ? 'Desaprovar' : 'Aprovar' }}
+        <app-icone [nome]="q.revisada ? 'desfazer' : 'aprovar'" [tamanho]="18" />
       </button>
     </div>
 

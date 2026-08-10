@@ -1,7 +1,10 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
+import { ModalComponent } from './modal.component';
+
 @Component({
   selector: 'app-confirmacao',
+  imports: [ModalComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './confirmacao.component.html',
 })

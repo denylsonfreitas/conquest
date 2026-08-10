@@ -3,50 +3,54 @@
     <h1 class="text-2xl font-semibold text-texto">Concursos</h1>
   </div>
 
-  @if (!formAberto()) {
-    <button type="button" class="btn shrink-0" (click)="abrirForm()">Novo concurso</button>
-  }
+  <button type="button" class="btn shrink-0" (click)="abrirForm()">Novo concurso</button>
 </header>
 
-@if (formAberto()) {
-  <form class="cartao mb-6 space-y-4 p-5" [formGroup]="form" (ngSubmit)="criar()">
-    <div>
-      <label for="nome" class="rotulo">Nome</label>
-      <input id="nome" class="campo mt-1" formControlName="nome" placeholder="TRT 15ª Região" />
-    </div>
-
-    <div class="grid gap-4 sm:grid-cols-2">
-      <div>
-        <label for="orgao" class="rotulo"
-          >Órgão <span class="text-texto-fraco">(opcional)</span></label
-        >
-        <input id="orgao" class="campo mt-1" formControlName="orgao" placeholder="TRT15" />
-      </div>
-
-      <div>
-        <label for="banca" class="rotulo">Banca</label>
-        <select id="banca" class="campo mt-1" formControlName="banca_id">
-          <option value="">Sem banca definida</option>
-          @for (banca of bancas(); track banca.id) {
-            <option [value]="banca.id">{{ banca.nome }}</option>
-          }
-        </select>
-      </div>
-    </div>
-
-    @if (erroAcao(); as msg) {
-      <p role="alert" class="alerta-erro">{{ msg }}</p>
-    }
-
-    <div class="flex gap-2">
-      <button type="submit" class="btn" [disabled]="form.invalid || salvando()">
-        {{ salvando() ? 'Salvando...' : 'Criar concurso' }}
-      </button>
-      <button type="button" class="btn-secundario" (click)="fecharForm()">Cancelar</button>
-    </div>
-  </form>
-} @else if (erroAcao(); as msg) {
+@if (!formAberto() && erroAcao(); as msg) {
   <p role="alert" class="alerta-erro mb-4">{{ msg }}</p>
+}
+
+@if (formAberto()) {
+  <app-modal titulo="Novo concurso" [bloqueado]="salvando()" (fechar)="fecharForm()">
+    <form class="space-y-4" [formGroup]="form" (ngSubmit)="criar()">
+      <div>
+        <label for="nome" class="rotulo">Nome</label>
+        <input id="nome" class="campo mt-1" formControlName="nome" placeholder="TRT 15ª Região" />
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="orgao" class="rotulo"
+            >Órgão <span class="text-texto-fraco">(opcional)</span></label
+          >
+          <input id="orgao" class="campo mt-1" formControlName="orgao" placeholder="TRT15" />
+        </div>
+
+        <div>
+          <label for="banca" class="rotulo">Banca</label>
+          <select id="banca" class="campo mt-1" formControlName="banca_id">
+            <option value="">Sem banca definida</option>
+            @for (banca of bancas(); track banca.id) {
+              <option [value]="banca.id">{{ banca.nome }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      @if (erroAcao(); as msg) {
+        <p role="alert" class="alerta-erro">{{ msg }}</p>
+      }
+
+      <div class="flex gap-2">
+        <button type="submit" class="btn" [disabled]="form.invalid || salvando()">
+          {{ salvando() ? 'Salvando...' : 'Criar concurso' }}
+        </button>
+        <button type="button" class="btn-secundario" [disabled]="salvando()" (click)="fecharForm()">
+          Cancelar
+        </button>
+      </div>
+    </form>
+  </app-modal>
 }
 
 @switch (status()) {
@@ -64,7 +68,7 @@
     } @else {
       <ul class="space-y-3">
         @for (concurso of concursos(); track concurso.id) {
-          <li class="cartao flex items-center gap-4 p-5">
+          <li class="cartao flex items-center gap-3 p-4 sm:p-5">
             <div class="min-w-0 flex-1">
               <a
                 [routerLink]="['/concursos', concurso.id]"
@@ -83,9 +87,22 @@
               </p>
             </div>
 
-            <a [routerLink]="['/concursos', concurso.id]" class="acao-inline">Abrir</a>
-            <button type="button" class="acao-inline text-perigo" (click)="pedirExclusao(concurso)">
-              <app-icone nome="excluir" /> Excluir
+            <a
+              [routerLink]="['/concursos', concurso.id]"
+              class="acao-icone dica"
+              aria-label="Abrir concurso"
+              data-dica="Abrir concurso"
+            >
+              <app-icone nome="ver" [tamanho]="18" />
+            </a>
+            <button
+              type="button"
+              class="acao-icone acao-icone-perigo dica"
+              aria-label="Excluir concurso"
+              data-dica="Excluir concurso"
+              (click)="pedirExclusao(concurso)"
+            >
+              <app-icone nome="excluir" [tamanho]="18" />
             </button>
           </li>
         }

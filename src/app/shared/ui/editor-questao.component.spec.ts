@@ -145,4 +145,21 @@ describe('EditorQuestaoComponent', () => {
 
     expect(recebido).toHaveBeenCalledWith(arquivo);
   });
+
+  it('mantém a quebra de linha da alternativa sem herdar a indentação do template', () => {
+    const fixture = montar(
+      questao({
+        alternativas: [
+          { letra: 'A', texto: 'primeira\nsegunda' },
+          { letra: 'B', texto: 'dois' },
+        ],
+      }),
+    );
+
+    const primeira = (fixture.nativeElement as HTMLElement).querySelector('li') as HTMLElement;
+
+    expect(primeira.textContent?.trim()).toBe('(A) primeira\nsegunda');
+    expect(primeira.textContent).not.toMatch(/\n\s*\n/);
+    expect(primeira.className).toContain('whitespace-pre-line');
+  });
 });

@@ -9,11 +9,13 @@ import {
 import { Router } from '@angular/router';
 
 import { Letra } from '../../shared/models';
+import { EnunciadoComponent } from '../../shared/ui/enunciado.component';
 import { QuizService } from './quiz.service';
 import { SessaoQuizService } from './sessao-quiz.service';
 
 @Component({
   selector: 'app-quiz-execucao',
+  imports: [EnunciadoComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './quiz-execucao.component.html',
 })
@@ -77,7 +79,7 @@ export class QuizExecucaoComponent {
   protected estilo(letra: Letra): string {
     if (!this.revelado()) {
       return this.marcada(letra)
-        ? 'bg-texto text-superficie ring-texto'
+        ? 'bg-marca text-marca-contraste ring-marca'
         : 'bg-superficie text-texto ring-borda hover:bg-superficie-sutil';
     }
 

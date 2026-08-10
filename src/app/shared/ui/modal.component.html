@@ -1,0 +1,30 @@
+<div
+  class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-veu/50 p-4 sm:items-center"
+  (click)="pedirFechar()"
+>
+  <div
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="idTitulo"
+    class="cartao my-auto w-full p-4 shadow-lg sm:p-5"
+    [class]="largura() === 'media' ? 'max-w-md' : 'max-w-lg'"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="mb-4 flex items-start justify-between gap-4">
+      <h2 [id]="idTitulo" class="font-semibold text-texto">{{ titulo() }}</h2>
+
+      <button
+        type="button"
+        class="acao-icone dica -mt-1.5 -mr-1.5"
+        aria-label="Fechar"
+        data-dica="Fechar"
+        [disabled]="bloqueado()"
+        (click)="pedirFechar()"
+      >
+        <app-icone nome="cancelar" [tamanho]="18" />
+      </button>
+    </div>
+
+    <ng-content />
+  </div>
+</div>

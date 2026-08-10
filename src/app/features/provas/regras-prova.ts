@@ -36,11 +36,6 @@ export function podeAnexarPdf(status: StatusProva): boolean {
   return status === 'pendente' || status === 'erro';
 }
 
-export function rotuloBloqueioAnexo(status: StatusProva): string | null {
-  if (podeAnexarPdf(status)) return null;
-  return status === 'processando' ? 'Processando…' : 'Extraída — apague a prova para trocar o PDF';
-}
-
 export function motivoBloqueioAnexo(status: StatusProva): string | null {
   if (podeAnexarPdf(status)) return null;
   return status === 'processando'
@@ -70,7 +65,7 @@ export function corStatusProva(prova: ProvaParaRegra): string {
   }
 
   const cores: Record<Exclude<StatusProva, 'pendente'>, string> = {
-    processando: 'bg-blue-50 text-blue-700 ring-blue-200',
+    processando: 'bg-info-fundo text-info ring-info',
     aguardando_revisao: 'bg-atencao-fundo text-atencao ring-atencao',
     pronta: 'bg-sucesso-fundo text-sucesso ring-sucesso',
     erro: 'bg-perigo-fundo text-perigo ring-perigo',

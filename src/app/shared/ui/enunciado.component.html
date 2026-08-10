@@ -1,0 +1,10 @@
+<div class="space-y-3">
+  @for (bloco of blocos(); track $index) {
+    @if (bloco.tipo === 'codigo') {
+      <!-- prettier-ignore -->
+      <pre class="overflow-x-auto rounded-campo bg-superficie-sutil px-3 py-2 font-mono text-xs leading-relaxed text-texto ring-1 ring-borda"><code>{{ bloco.texto }}</code></pre>
+    } @else {
+      <p class="whitespace-pre-line text-texto">{{ bloco.texto }}</p>
+    }
+  }
+</div>

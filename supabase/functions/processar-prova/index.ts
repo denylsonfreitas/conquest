@@ -1,14 +1,16 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import { QuestaoNovaSchema } from '../../../src/app/shared/schema.ts';
 import { casarGabarito } from './casar-gabarito.ts';
-import { extrairQuestoes, QuestaoBruta } from './extrair-questoes.ts';
+import { extrairQuestoes } from './extrair-questoes.ts';
 import { identificarProva, normalizar } from './identificar-prova.ts';
+import { Descarte, montarQuestoes } from './montar-questoes.ts';
 import { prepararTexto } from './preparar-texto.ts';
 
 const CORS = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('ORIGEM_PERMITIDA') ?? '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  Vary: 'Origin',
 };
 
 Deno.serve(async (req: Request) => {
@@ -26,6 +28,15 @@ Deno.serve(async (req: Request) => {
     if (!token) return responder(401, { erro: 'Não autenticado.' });
     const { data: usuario } = await admin.auth.getUser(token);
     if (!usuario?.user) return responder(401, { erro: 'Sessão inválida.' });
+
+    // Estar autenticado não basta: esta função gasta cota paga do Gemini, então
+    // quem não é o dono para aqui, mesmo que tenha conseguido criar uma conta.
+    const { data: dono } = await admin
+      .from('dono')
+      .select('id')
+      .eq('id', usuario.user.id)
+      .maybeSingle();
+    if (!dono) return responder(403, { erro: 'Sem permissão.' });
 
     const corpo = await req.json();
     provaId = corpo.prova_id;
@@ -60,6 +71,7 @@ async function marcarErro(admin: SupabaseClient, provaId: string, erro: string):
 interface Resultado {
   gravadas: number;
   descartadas: number;
+  motivos_descarte?: Descarte[];
   gabarito_aplicado: boolean;
   motivo_gabarito?: string;
 }
@@ -130,9 +142,7 @@ async function processar(
   }
 
   const avisos = [
-    descartadas.length > 0
-      ? `${descartadas.length} questão(ões) descartada(s) na extração: nº ${descartadas.join(', ')}.`
-      : null,
+    ...descartadas.map((d) => `Questão ${d.numero} não entrou — ${d.motivo}`),
     motivoGabarito ? `Gabarito não aplicado — ${motivoGabarito}` : null,
   ].filter(Boolean);
 
@@ -149,6 +159,7 @@ async function processar(
   return {
     gravadas: validas.length,
     descartadas: descartadas.length,
+    motivos_descarte: descartadas.length > 0 ? descartadas : undefined,
     gabarito_aplicado: respostas !== null,
     motivo_gabarito: motivoGabarito,
   };
@@ -157,40 +168,4 @@ async function processar(
 async function carregarMaterias(admin: SupabaseClient): Promise<Map<string, string>> {
   const { data } = await admin.from('materias').select('id, nome');
   return new Map((data ?? []).map((m: { id: string; nome: string }) => [normalizar(m.nome), m.id]));
-}
-
-function montarQuestoes(
-  brutas: QuestaoBruta[],
-  provaId: string,
-  respostas: ReadonlyMap<number, string> | null,
-  materias: Map<string, string>,
-) {
-  const validas: unknown[] = [];
-  const descartadas: number[] = [];
-
-  for (const bruta of brutas) {
-    const gabarito = respostas?.get(bruta.numero) ?? bruta.gabarito ?? null;
-    const materiaId = bruta.materia ? (materias.get(normalizar(bruta.materia)) ?? null) : null;
-
-    const candidata = {
-      prova_id: provaId,
-      numero: bruta.numero,
-      materia_id: materiaId,
-      assunto: bruta.materia && !materiaId ? bruta.materia : null,
-      enunciado: bruta.enunciado,
-      alternativas: bruta.alternativas,
-      gabarito,
-      tipo: bruta.tipo,
-      tem_imagem: bruta.tem_imagem,
-      incerto: bruta.incerto,
-      anulada: false,
-      revisada: false,
-    };
-
-    const validacao = QuestaoNovaSchema.safeParse(candidata);
-    if (validacao.success) validas.push(validacao.data);
-    else descartadas.push(bruta.numero);
-  }
-
-  return { validas, descartadas };
 }

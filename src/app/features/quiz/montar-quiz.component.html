@@ -14,7 +14,7 @@
       <p role="alert" class="alerta-erro mb-4">{{ msg }}</p>
     }
 
-    <section class="cartao mb-6 space-y-5 p-5">
+    <section class="cartao mb-6 space-y-5 p-4 sm:p-5">
       <div>
         <span class="rotulo">Modo</span>
         <div class="mt-1 flex flex-wrap gap-2">
@@ -24,7 +24,7 @@
               class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
               [class]="
                 modo() === m
-                  ? 'bg-texto text-superficie ring-texto'
+                  ? 'bg-marca text-marca-contraste ring-marca'
                   : 'bg-superficie text-texto ring-borda hover:bg-superficie-sutil'
               "
               (click)="modo.set(m)"
@@ -65,7 +65,7 @@
                 class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
                 [class]="
                   execucao() === e
-                    ? 'bg-texto text-superficie ring-texto'
+                    ? 'bg-marca text-marca-contraste ring-marca'
                     : 'bg-superficie text-texto ring-borda hover:bg-superficie-sutil'
                 "
                 (click)="execucao.set(e)"
@@ -93,7 +93,7 @@
         <p role="status" class="text-sm font-medium text-atencao">{{ motivo }}</p>
       } @else {
         <p role="status" class="text-sm text-texto-fraco">
-          <span class="font-medium text-texto">{{ disponiveis() }}</span> disponíveis
+          <span class="numero font-medium text-texto">{{ disponiveis() }}</span> disponíveis
           @if (vaiMontarCom() < quantidade()) {
             <span class="text-atencao">
               — o quiz vai começar com {{ vaiMontarCom() }}, não {{ quantidade() }}

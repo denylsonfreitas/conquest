@@ -31,62 +31,71 @@
             <h2 class="text-lg font-semibold text-texto">Provas</h2>
           </div>
 
-          @if (!formAberto()) {
-            <button type="button" class="btn shrink-0" (click)="abrirForm()">Nova prova</button>
-          }
+          <button type="button" class="btn shrink-0" (click)="abrirForm()">Nova prova</button>
         </div>
 
         @if (formAberto()) {
-          <form class="cartao mb-6 space-y-4 p-5" [formGroup]="form" (ngSubmit)="criarProva()">
-            <div>
-              <label for="prova-nome" class="rotulo">Nome</label>
-              <input
-                id="prova-nome"
-                class="campo mt-1"
-                formControlName="nome"
-                placeholder="Analista Judiciário — Área Judiciária"
-              />
-            </div>
-
-            <div class="grid gap-4 sm:grid-cols-2">
+          <app-modal titulo="Nova prova" [bloqueado]="salvando()" (fechar)="fecharForm()">
+            <form class="space-y-4" [formGroup]="form" (ngSubmit)="criarProva()">
               <div>
-                <label for="prova-ano" class="rotulo">
-                  Ano <span class="text-texto-fraco">(opcional)</span>
-                </label>
+                <label for="prova-nome" class="rotulo">Nome</label>
                 <input
-                  id="prova-ano"
-                  type="number"
+                  id="prova-nome"
                   class="campo mt-1"
-                  formControlName="ano"
-                  placeholder="2024"
+                  formControlName="nome"
+                  placeholder="Analista Judiciário — Área Judiciária"
                 />
               </div>
 
-              <div>
-                <label for="prova-cargo" class="rotulo">
-                  Cargo <span class="text-texto-fraco">(opcional)</span>
-                </label>
-                <input
-                  id="prova-cargo"
-                  class="campo mt-1"
-                  formControlName="cargo"
-                  placeholder="Analista Judiciário"
-                />
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label for="prova-ano" class="rotulo">
+                    Ano <span class="text-texto-fraco">(opcional)</span>
+                  </label>
+                  <input
+                    id="prova-ano"
+                    type="number"
+                    class="campo mt-1"
+                    formControlName="ano"
+                    placeholder="2024"
+                  />
+                </div>
+
+                <div>
+                  <label for="prova-cargo" class="rotulo">
+                    Cargo <span class="text-texto-fraco">(opcional)</span>
+                  </label>
+                  <input
+                    id="prova-cargo"
+                    class="campo mt-1"
+                    formControlName="cargo"
+                    placeholder="Analista Judiciário"
+                  />
+                </div>
               </div>
-            </div>
 
-            @if (erroAcao(); as msg) {
-              <p role="alert" class="alerta-erro">{{ msg }}</p>
-            }
+              @if (erroAcao(); as msg) {
+                <p role="alert" class="alerta-erro">{{ msg }}</p>
+              }
 
-            <div class="flex gap-2">
-              <button type="submit" class="btn" [disabled]="form.invalid || salvando()">
-                {{ salvando() ? 'Salvando...' : 'Registrar prova' }}
-              </button>
-              <button type="button" class="btn-secundario" (click)="fecharForm()">Cancelar</button>
-            </div>
-          </form>
-        } @else if (erroAcao(); as msg) {
+              <div class="flex gap-2">
+                <button type="submit" class="btn" [disabled]="form.invalid || salvando()">
+                  {{ salvando() ? 'Salvando...' : 'Registrar prova' }}
+                </button>
+                <button
+                  type="button"
+                  class="btn-secundario"
+                  [disabled]="salvando()"
+                  (click)="fecharForm()"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </app-modal>
+        }
+
+        @if (!formAberto() && erroAcao(); as msg) {
           <p role="alert" class="alerta-erro mb-4">{{ msg }}</p>
         }
 
@@ -95,9 +104,9 @@
         } @else {
           <ul class="space-y-3">
             @for (prova of provas(); track prova.id) {
-              <li class="cartao p-5">
-                <div class="flex items-center gap-4">
-                  <div class="min-w-0 flex-1">
+              <li class="cartao p-4 sm:p-5">
+                <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                  <div class="min-w-0 flex-1 basis-56">
                     <p class="font-medium text-texto">{{ prova.nome }}</p>
                     <p class="mt-0.5 text-sm text-texto-fraco">
                       @if (prova.ano) {
@@ -139,124 +148,97 @@
                     }
                   </div>
 
-                  <span
-                    class="shrink-0 rounded-campo px-2 py-1 text-xs font-medium ring-1"
-                    [class]="corStatus(prova)"
-                  >
-                    {{ rotuloStatus(prova) }}
-                  </span>
-
-                  @if (prova.arquivo_path) {
-                    <button type="button" class="acao-inline" (click)="abrirPdf(prova)">
-                      <app-icone nome="ver" /> Ver PDF
-                    </button>
-                  }
-
-                  @if (prova.status === 'aguardando_revisao' || prova.status === 'pronta') {
-                    <a
-                      [routerLink]="['/provas', prova.id, 'revisao']"
-                      class="acao-inline font-medium text-texto"
-                      >Revisar</a
-                    >
-                  }
-
-                  @if (podeProcessar(prova)) {
-                    <button
-                      type="button"
-                      class="acao-inline font-medium text-texto"
-                      [disabled]="processandoId() !== null"
-                      (click)="processar(prova)"
-                    >
-                      {{ prova.status === 'erro' ? 'Tentar de novo' : 'Processar' }}
-                    </button>
-                  }
-
-                  @if (estaTravada(prova)) {
-                    <button
-                      type="button"
-                      class="acao-inline text-atencao"
-                      (click)="destravar(prova)"
-                    >
-                      Destravar
-                    </button>
-                  }
-
-                  @if (podeAnexar(prova.status)) {
-                    <button type="button" class="acao-inline" (click)="abrirAnexo(prova)">
-                      <app-icone nome="anexar" />
-                      {{ prova.arquivo_path ? 'Substituir PDF' : 'Anexar PDF' }}
-                    </button>
-                  } @else {
+                  <div class="flex flex-wrap items-center justify-end gap-1">
                     <span
-                      class="text-sm text-texto-fraco"
-                      [title]="motivoBloqueio(prova.status) ?? ''"
-                      >{{ rotuloBloqueio(prova.status) }}</span
+                      class="mr-1 rounded-campo px-2 py-1 text-xs font-medium ring-1"
+                      [class]="corStatus(prova)"
                     >
-                  }
+                      {{ rotuloStatus(prova) }}
+                    </span>
 
-                  <button
-                    type="button"
-                    class="acao-inline text-perigo"
-                    (click)="pedirExclusaoProva(prova)"
-                  >
-                    <app-icone nome="excluir" /> Excluir
-                  </button>
-                </div>
-
-                @if (anexandoEm() === prova.id) {
-                  <div class="mt-4 space-y-3 border-t border-borda pt-4">
-                    <div>
-                      <label [for]="'pdf-' + prova.id" class="rotulo">PDF da prova</label>
-                      <input
-                        [id]="'pdf-' + prova.id"
-                        type="file"
-                        accept="application/pdf"
-                        class="campo mt-1 file:mr-3 file:rounded file:border-0 file:bg-superficie-sutil file:px-3 file:py-1 file:text-texto"
-                        (change)="escolherArquivo($event, 'pdf')"
-                      />
-                    </div>
-
-                    <div>
-                      <label [for]="'gab-' + prova.id" class="rotulo">
-                        Gabarito <span class="text-texto-fraco">(opcional, PDF separado)</span>
-                      </label>
-                      <input
-                        [id]="'gab-' + prova.id"
-                        type="file"
-                        accept="application/pdf"
-                        class="campo mt-1 file:mr-3 file:rounded file:border-0 file:bg-superficie-sutil file:px-3 file:py-1 file:text-texto"
-                        (change)="escolherArquivo($event, 'gabarito')"
-                      />
-                    </div>
-
-                    @if (fase(); as f) {
-                      <p role="status" class="text-sm text-texto-fraco">{{ rotuloFase[f] }}</p>
-                    }
-
-                    @if (erroAnexo(); as msg) {
-                      <p role="alert" class="alerta-erro">{{ msg }}</p>
-                    }
-
-                    <div class="flex gap-2">
+                    @if (prova.arquivo_path) {
                       <button
                         type="button"
-                        class="btn"
-                        [disabled]="!pdfEscolhido() || fase() !== null"
-                        (click)="anexar(prova)"
+                        class="acao-icone dica"
+                        aria-label="Ver PDF"
+                        data-dica="Ver PDF"
+                        (click)="abrirPdf(prova)"
                       >
-                        {{ fase() ? 'Enviando...' : 'Enviar' }}
+                        <app-icone nome="ver" [tamanho]="18" />
                       </button>
+                    }
+
+                    @if (prova.status === 'aguardando_revisao' || prova.status === 'pronta') {
+                      <a
+                        [routerLink]="['/provas', prova.id, 'revisao']"
+                        class="acao-icone dica text-texto"
+                        aria-label="Revisar questões"
+                        data-dica="Revisar questões"
+                      >
+                        <app-icone nome="revisar" [tamanho]="18" />
+                      </a>
+                    }
+
+                    @if (podeProcessar(prova)) {
                       <button
                         type="button"
-                        class="btn-secundario"
-                        [disabled]="fase() !== null"
-                        (click)="fecharAnexo()"
+                        class="acao-icone dica text-texto"
+                        [attr.aria-label]="prova.status === 'erro' ? 'Tentar de novo' : 'Processar'"
+                        [attr.data-dica]="prova.status === 'erro' ? 'Tentar de novo' : 'Processar'"
+                        [disabled]="processandoId() !== null"
+                        (click)="processar(prova)"
                       >
-                        Cancelar
+                        <app-icone
+                          [nome]="prova.status === 'erro' ? 'repetir' : 'processar'"
+                          [tamanho]="18"
+                        />
                       </button>
-                    </div>
+                    }
+
+                    @if (estaTravada(prova)) {
+                      <button
+                        type="button"
+                        class="acao-icone dica text-atencao"
+                        aria-label="Destravar"
+                        data-dica="Destravar — o processamento passou do tempo esperado"
+                        (click)="destravar(prova)"
+                      >
+                        <app-icone nome="destravar" [tamanho]="18" />
+                      </button>
+                    }
+
+                    @if (podeAnexar(prova.status)) {
+                      <button
+                        type="button"
+                        class="acao-icone dica"
+                        [attr.aria-label]="prova.arquivo_path ? 'Substituir PDF' : 'Anexar PDF'"
+                        [attr.data-dica]="prova.arquivo_path ? 'Substituir PDF' : 'Anexar PDF'"
+                        (click)="abrirAnexo(prova)"
+                      >
+                        <app-icone nome="anexar" [tamanho]="18" />
+                      </button>
+                    } @else {
+                      <button
+                        type="button"
+                        class="acao-icone dica cursor-default"
+                        [attr.aria-label]="motivoBloqueio(prova.status)"
+                        [attr.data-dica]="motivoBloqueio(prova.status)"
+                      >
+                        <app-icone nome="bloqueado" [tamanho]="18" />
+                      </button>
+                    }
+
+                    <button
+                      type="button"
+                      class="acao-icone acao-icone-perigo dica"
+                      aria-label="Excluir prova"
+                      data-dica="Excluir prova"
+                      (click)="pedirExclusaoProva(prova)"
+                    >
+                      <app-icone nome="excluir" [tamanho]="18" />
+                    </button>
                   </div>
-                }
+                </div>
               </li>
             }
           </ul>
@@ -264,6 +246,67 @@
       </section>
     }
   }
+}
+
+@if (provaAnexando(); as prova) {
+  <app-modal
+    [titulo]="prova.arquivo_path ? 'Substituir PDF de ' + prova.nome : 'PDF de ' + prova.nome"
+    [bloqueado]="fase() !== null"
+    (fechar)="fecharAnexo()"
+  >
+    <div class="space-y-3">
+      <div>
+        <label [for]="'pdf-' + prova.id" class="rotulo">PDF da prova</label>
+        <input
+          [id]="'pdf-' + prova.id"
+          type="file"
+          accept="application/pdf"
+          class="campo mt-1 file:mr-3 file:rounded file:border-0 file:bg-superficie-sutil file:px-3 file:py-1 file:text-texto"
+          (change)="escolherArquivo($event, 'pdf')"
+        />
+      </div>
+
+      <div>
+        <label [for]="'gab-' + prova.id" class="rotulo">
+          Gabarito <span class="text-texto-fraco">(opcional, PDF separado)</span>
+        </label>
+        <input
+          [id]="'gab-' + prova.id"
+          type="file"
+          accept="application/pdf"
+          class="campo mt-1 file:mr-3 file:rounded file:border-0 file:bg-superficie-sutil file:px-3 file:py-1 file:text-texto"
+          (change)="escolherArquivo($event, 'gabarito')"
+        />
+      </div>
+
+      @if (fase(); as f) {
+        <p role="status" class="text-sm text-texto-fraco">{{ rotuloFase[f] }}</p>
+      }
+
+      @if (erroAnexo(); as msg) {
+        <p role="alert" class="alerta-erro">{{ msg }}</p>
+      }
+
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="btn"
+          [disabled]="!pdfEscolhido() || fase() !== null"
+          (click)="anexar(prova)"
+        >
+          {{ fase() ? 'Enviando...' : 'Enviar' }}
+        </button>
+        <button
+          type="button"
+          class="btn-secundario"
+          [disabled]="fase() !== null"
+          (click)="fecharAnexo()"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </app-modal>
 }
 
 @if (provaAExcluir(); as alvo) {

@@ -14,7 +14,7 @@
       <p role="alert" class="alerta-erro mb-4">{{ msg }}</p>
     }
 
-    <section class="cartao mb-6 space-y-5 p-5">
+    <section class="cartao mb-6 space-y-5 p-4 sm:p-5">
       <div>
         <label for="busca" class="rotulo">Buscar</label>
         <input
@@ -41,7 +41,7 @@
               class="rounded-campo px-3 py-1.5 text-sm ring-1 transition"
               [class]="
                 situacao() === s
-                  ? 'bg-texto text-superficie ring-texto'
+                  ? 'bg-marca text-marca-contraste ring-marca'
                   : 'bg-superficie text-texto ring-borda hover:bg-superficie-sutil'
               "
               (click)="mudarSituacao(s)"
@@ -63,14 +63,16 @@
     } @else {
       <ul class="space-y-3">
         @for (q of questoes(); track q.id) {
-          <li class="cartao p-5" [class.opacity-60]="q.anulada">
+          <li class="cartao p-4 sm:p-5" [class.opacity-60]="q.anulada">
             <div class="flex items-start gap-3">
               <span class="w-8 shrink-0 font-medium text-texto-fraco">{{ q.numero ?? '—' }}</span>
 
               <div class="min-w-0 flex-1">
-                <p class="text-texto" [class.line-clamp-2]="abertaId() !== q.id">
-                  {{ q.enunciado }}
-                </p>
+                @if (abertaId() === q.id) {
+                  <app-enunciado [texto]="q.enunciado" />
+                } @else {
+                  <p class="line-clamp-2 whitespace-pre-line text-texto">{{ q.enunciado }}</p>
+                }
 
                 <p class="mt-1 flex flex-wrap gap-2 text-xs">
                   @if (q.materia) {
@@ -116,9 +118,14 @@
                 </p>
               </div>
 
-              <button type="button" class="acao-inline" (click)="alternarAberta(q.id)">
-                <app-icone [nome]="abertaId() === q.id ? 'fechar' : 'editar'" />
-                {{ abertaId() === q.id ? 'Fechar' : 'Editar' }}
+              <button
+                type="button"
+                class="acao-icone dica"
+                [attr.aria-label]="abertaId() === q.id ? 'Fechar edição' : 'Editar questão'"
+                [attr.data-dica]="abertaId() === q.id ? 'Fechar edição' : 'Editar questão'"
+                (click)="alternarAberta(q.id)"
+              >
+                <app-icone [nome]="abertaId() === q.id ? 'fechar' : 'editar'" [tamanho]="18" />
               </button>
             </div>
 
@@ -163,7 +170,7 @@
             Anterior
           </button>
           <span class="text-sm text-texto-fraco">
-            página {{ pagina() + 1 }} de {{ paginas() }}
+            página <span class="numero">{{ pagina() + 1 }} de {{ paginas() }}</span>
           </span>
           <button
             type="button"

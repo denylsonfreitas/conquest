@@ -10,6 +10,7 @@ import { Router, RouterLink } from '@angular/router';
 
 import { EdicaoQuestao } from '../../shared/edicao-questao';
 import { EditorQuestaoComponent } from '../../shared/ui/editor-questao.component';
+import { IconeComponent } from '../../shared/ui/icone.component';
 import { AcervoService } from '../acervo/acervo.service';
 import { DimensoesService, ItemDimensao } from '../bancas-materias/dimensoes.service';
 import { QuestaoQuiz } from './quiz.service';
@@ -19,7 +20,7 @@ import { SessaoQuizService } from './sessao-quiz.service';
 
 @Component({
   selector: 'app-resultado-quiz',
-  imports: [RouterLink, EditorQuestaoComponent],
+  imports: [RouterLink, EditorQuestaoComponent, IconeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './resultado-quiz.component.html',
 })

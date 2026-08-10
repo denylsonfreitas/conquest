@@ -79,3 +79,10 @@ insert into auth.identities (
   now()
 )
 on conflict (provider_id, provider) do nothing;
+
+-- As policies só liberam quem está em public.dono. Sem esta linha o reset
+-- deixaria o app logando e mostrando tudo vazio, que é o oposto do propósito
+-- deste arquivo. Vale só no local: seed não roda em produção.
+insert into public.dono (id)
+values ('00000000-0000-4000-8000-000000000001')
+on conflict (id) do nothing;

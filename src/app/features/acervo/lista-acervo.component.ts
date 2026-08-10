@@ -12,6 +12,7 @@ import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.com
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
 import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
 import { EditorQuestaoComponent } from '../../shared/ui/editor-questao.component';
+import { EnunciadoComponent } from '../../shared/ui/enunciado.component';
 import { FiltrosAcervoComponent } from '../../shared/ui/filtros-acervo.component';
 import { EdicaoQuestao } from '../../shared/edicao-questao';
 import { FILTROS_VAZIOS, FiltrosAcervo, ItemComNomes } from '../../shared/filtros-acervo';
@@ -33,6 +34,7 @@ type Status = 'carregando' | 'ok' | 'erro';
     EstadoErroComponent,
     EstadoVazioComponent,
     EditorQuestaoComponent,
+    EnunciadoComponent,
     FiltrosAcervoComponent,
     IconeComponent,
   ],

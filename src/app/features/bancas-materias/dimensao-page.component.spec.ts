@@ -95,7 +95,7 @@ describe('DimensaoPageComponent', () => {
 
     const botoesExcluir = () =>
       Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).filter((b) =>
-        b.textContent?.includes('Excluir'),
+        `${b.textContent} ${b.getAttribute('aria-label') ?? ''}`.includes('Excluir'),
       );
 
     botoesExcluir()[0]?.click();

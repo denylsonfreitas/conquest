@@ -1,18 +1,20 @@
 <div class="min-h-dvh bg-superficie-fundo">
   <header class="border-b border-borda bg-superficie">
-    <div class="mx-auto flex max-w-4xl items-center gap-6 px-4 py-3">
-      <span class="text-lg font-semibold text-texto">Conquest</span>
+    <div class="mx-auto flex max-w-4xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+      <span class="shrink-0 text-lg font-semibold text-texto">Conquest</span>
 
-      <nav class="flex gap-1 text-sm">
+      <nav
+        class="order-last -mx-4 flex w-full gap-1 overflow-x-auto px-4 text-sm sm:order-0 sm:mx-0 sm:w-auto sm:flex-1 sm:px-0"
+      >
         @for (item of navegacao; track item.rota) {
           <a
             [routerLink]="item.rota"
             routerLinkActive
             #rla="routerLinkActive"
-            class="rounded-campo px-3 py-1.5 transition"
+            class="shrink-0 rounded-campo px-3 py-1.5 whitespace-nowrap transition"
             [class]="
               rla.isActive
-                ? 'bg-texto text-superficie'
+                ? 'bg-marca text-marca-contraste font-medium'
                 : 'text-texto-fraco hover:bg-superficie-sutil'
             "
             >{{ item.rotulo }}</a
@@ -20,22 +22,23 @@
         }
       </nav>
 
-      <div class="ml-auto flex items-center gap-3">
-        <span class="hidden text-sm text-texto-fraco sm:inline">{{ auth.email() }}</span>
+      <div class="ml-auto flex shrink-0 items-center gap-1">
+        <span class="hidden text-sm text-texto-fraco lg:inline">{{ auth.email() }}</span>
         <button
           type="button"
-          class="btn-secundario"
+          class="acao-icone dica"
           [attr.aria-label]="tema.tema() === 'claro' ? 'Ativar modo escuro' : 'Ativar modo claro'"
+          [attr.data-dica]="tema.tema() === 'claro' ? 'Modo escuro' : 'Modo claro'"
           (click)="tema.alternar()"
         >
           {{ tema.tema() === 'claro' ? '🌙' : '☀️' }}
         </button>
-        <button type="button" class="btn-secundario" (click)="sair()">Sair</button>
+        <button type="button" class="btn-secundario shrink-0" (click)="sair()">Sair</button>
       </div>
     </div>
   </header>
 
-  <main class="mx-auto max-w-4xl px-4 py-8">
+  <main class="mx-auto max-w-4xl px-4 py-6 sm:py-8">
     <router-outlet />
   </main>
 </div>

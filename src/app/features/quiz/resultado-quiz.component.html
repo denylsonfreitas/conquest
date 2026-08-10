@@ -4,12 +4,15 @@
     <p class="mt-1 text-sm text-texto-fraco">{{ ROTULO_MODO[sessao.modo()] }}</p>
   </header>
 
-  <section class="cartao mb-6 p-5">
-    <p class="text-3xl font-semibold text-texto">
+  <section class="cartao mb-6 p-4 sm:p-5">
+    <p class="numero text-3xl font-semibold text-texto">
       {{ placar().acertos }}
       <span class="text-texto-fraco">de {{ placar().respondidas }} respondidas</span>
     </p>
-    <p class="mt-1 text-lg font-medium" [class]="corPercentual(placar().percentualRespondidas)">
+    <p
+      class="numero mt-1 text-lg font-medium"
+      [class]="corPercentual(placar().percentualRespondidas)"
+    >
       {{ placar().percentualRespondidas }}%
     </p>
 
@@ -31,8 +34,8 @@
     @for (linha of porMateria(); track linha.materia) {
       <li class="flex items-center gap-4 px-4 py-3">
         <span class="min-w-0 flex-1 text-texto">{{ linha.materia }}</span>
-        <span class="text-sm text-texto-fraco">{{ linha.acertos }}/{{ linha.total }}</span>
-        <span class="w-12 text-right font-medium" [class]="corPercentual(linha.percentual)">
+        <span class="numero text-sm text-texto-fraco">{{ linha.acertos }}/{{ linha.total }}</span>
+        <span class="numero w-12 text-right font-medium" [class]="corPercentual(linha.percentual)">
           {{ linha.percentual }}%
         </span>
       </li>
@@ -42,7 +45,7 @@
   <h2 class="mb-3 font-semibold text-texto">Revisão</h2>
   <ul class="mb-8 space-y-3">
     @for (item of revisao(); track item.questao.id) {
-      <li class="cartao p-5">
+      <li class="cartao p-4 sm:p-5">
         <div class="flex items-start gap-3">
           <span
             class="mt-0.5 shrink-0 rounded-campo px-2 py-0.5 text-xs font-medium"
@@ -56,7 +59,9 @@
           </span>
 
           <div class="min-w-0 flex-1">
-            <p class="line-clamp-2 text-texto">{{ item.questao.enunciado }}</p>
+            <p class="line-clamp-2 whitespace-pre-line text-texto">
+              {{ item.questao.enunciado }}
+            </p>
 
             <p class="mt-1 text-sm text-texto-fraco">
               Você marcou
@@ -77,8 +82,19 @@
             }
           </div>
 
-          <button type="button" class="acao-inline" (click)="editar(item.questao.id)">
-            {{ editandoId() === item.questao.id ? 'Fechar' : 'Editar' }}
+          <button
+            type="button"
+            class="acao-icone dica"
+            [attr.aria-label]="
+              editandoId() === item.questao.id ? 'Fechar edição' : 'Editar questão'
+            "
+            [attr.data-dica]="editandoId() === item.questao.id ? 'Fechar edição' : 'Editar questão'"
+            (click)="editar(item.questao.id)"
+          >
+            <app-icone
+              [nome]="editandoId() === item.questao.id ? 'fechar' : 'editar'"
+              [tamanho]="18"
+            />
           </button>
         </div>
 

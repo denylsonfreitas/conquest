@@ -16,6 +16,7 @@ import { IconeComponent } from '../../shared/ui/icone.component';
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
 import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
+import { EnunciadoComponent } from '../../shared/ui/enunciado.component';
 import { DimensoesService, ItemDimensao } from '../bancas-materias/dimensoes.service';
 import {
   agruparParaRevisao,
@@ -38,6 +39,7 @@ type Status = 'carregando' | 'ok' | 'erro';
     RouterLink,
     EstadoCarregandoComponent,
     EstadoErroComponent,
+    EnunciadoComponent,
     EstadoVazioComponent,
     EditorQuestaoComponent,
     IconeComponent,
@@ -302,6 +304,12 @@ export class RevisaoQuestoesComponent {
 
   protected readonly precisaAtencao = precisaAtencao;
   protected readonly motivosAtencao = motivosAtencao;
+
+  protected rotuloAprovacao(q: QuestaoRevisao): string {
+    if (q.revisada) return 'Desaprovar';
+    const pendencias = motivosAtencao(q);
+    return pendencias.length > 0 ? `Falta resolver: ${pendencias.join(', ')}` : 'Aprovar';
+  }
   protected readonly podeAprovar = podeAprovar;
   protected readonly LETRAS = ['A', 'B', 'C', 'D', 'E'] as const;
 }

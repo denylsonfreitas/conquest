@@ -1,15 +1,7 @@
 import { garantirSemMarcaDagua } from './marca-dagua.ts';
+import { QuestaoBruta } from './questao-bruta.ts';
 
-export interface QuestaoBruta {
-  numero: number;
-  materia: string | null;
-  enunciado: string;
-  alternativas: { letra: string; texto: string }[];
-  gabarito: string | null;
-  tipo: 'multipla_escolha' | 'certo_errado';
-  tem_imagem: boolean;
-  incerto: boolean;
-}
+export type { QuestaoBruta };
 
 export class LlmError extends Error {
   constructor(mensagem: string) {
@@ -73,6 +65,10 @@ REGRAS INEGOCIÁVEIS
 4. ALTERNATIVAS. Vêm como "(A) texto", "(B) texto"... Preserve a ordem e a
    letra. Se uma questão tiver menos de 2 alternativas, ainda assim devolva o
    que encontrou e marque "incerto": true.
+   - Quando a alternativa é uma FIGURA (aparece só "(A)", "(B)"... sem texto,
+     porque a opção é um desenho, gráfico ou diagrama), devolva a letra com
+     "texto": "" e marque "tem_imagem": true. Nunca descreva a figura nem
+     invente um texto para ela — a revisão anexa a imagem depois.
 
 5. TIPO. "multipla_escolha" quando há opções A–E. "certo_errado" no estilo
    Cebraspe, em que a questão é uma afirmação a julgar; nesse caso as
@@ -90,6 +86,42 @@ REGRAS INEGOCIÁVEIS
 
 8. IGNORE tudo que não é questão: capa, instruções ao candidato, cabeçalho e
    rodapé de página, numeração de página, avisos sobre cartão de respostas.
+
+9. QUEBRAS DE LINHA SÃO CONTEÚDO. Preserve com "\\n" as quebras que carregam
+   sentido: cada linha de um trecho de código, cada item de uma lista, cada
+   verso. Nunca junte tudo num parágrafo só — em código, a quebra é sintaxe.
+
+9b. CÓDIGO VEM CERCADO. Todo trecho de código, comando SQL ou saída de console
+    dentro do enunciado vai entre linhas com três crases, com a linguagem na
+    cerca de abertura quando der para saber:
+
+      A seguir, um fragmento em Java.
+      \`\`\`java
+      public class Main {
+      public static void main(String[] args) {
+      }
+      }
+      \`\`\`
+      O que será exibido?
+
+    A cerca fica sozinha na linha, sem texto ao lado. É ela que faz o app
+    exibir o trecho em fonte monoespaçada, separado da prosa.
+
+    A extração do PDF apaga o recuo à esquerda, então as linhas chegam todas
+    coladas na margem. Deixe assim: NÃO reindente, não adivinhe onde o bloco
+    abria ou fechava. Em Python o recuo é semântica, e um recuo inventado
+    muda o que o código faz — pior que um código sem recuo.
+
+10. TABELAS. Reproduza uma linha por linha da tabela, separando as células com
+    " | ", inclusive a linha de cabeçalho. Célula vazia vira "-". Assim:
+
+      nome | menorIdade | maiorIdade
+      Jovens | - | 19
+      Adultos | 20 | 59
+
+    Sem o separador, "Jovens 19" e "Adultos 20 59" ficam impossíveis de ler.
+    Se a tabela for uma IMAGEM (não há texto algum para transcrever), aí sim
+    marque "tem_imagem": true e siga a regra 6.
 `.trim();
 
 export async function extrairQuestoes(texto: string): Promise<QuestaoBruta[]> {

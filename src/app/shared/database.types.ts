@@ -84,6 +84,21 @@ export type Database = {
           },
         ]
       }
+      dono: {
+        Row: {
+          criado_em: string
+          id: string
+        }
+        Insert: {
+          criado_em?: string
+          id: string
+        }
+        Update: {
+          criado_em?: string
+          id?: string
+        }
+        Relationships: []
+      }
       materias: {
         Row: {
           created_at: string
@@ -338,7 +353,7 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      eh_dono: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

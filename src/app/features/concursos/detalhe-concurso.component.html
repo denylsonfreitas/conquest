@@ -11,19 +11,49 @@
         <a routerLink="/concursos" class="text-texto-fraco hover:underline">← Concursos</a>
       </nav>
 
-      <header class="mb-8">
-        <h1 class="text-2xl font-semibold text-texto">{{ c.nome }}</h1>
-        <p class="mt-1 text-sm text-texto-fraco">
-          @if (c.banca_nome) {
-            <span>{{ c.banca_nome }}</span>
-          } @else {
-            <span class="italic">sem banca</span>
-          }
-          @if (c.orgao) {
-            <span> · {{ c.orgao }}</span>
-          }
-        </p>
+      <header class="mb-8 flex items-start gap-3">
+        <div class="min-w-0 flex-1">
+          <h1 class="text-2xl font-semibold text-texto">{{ c.nome }}</h1>
+          <p class="mt-1 text-sm text-texto-fraco">
+            @if (c.banca_nome) {
+              <span>{{ c.banca_nome }}</span>
+            } @else {
+              <span class="italic">sem banca</span>
+            }
+            @if (c.orgao) {
+              <span> · {{ c.orgao }}</span>
+            }
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="acao-icone dica"
+          aria-label="Editar concurso"
+          data-dica="Editar concurso"
+          (click)="abrirEdicao()"
+        >
+          <app-icone nome="editar" [tamanho]="18" />
+        </button>
       </header>
+
+      @if (edicaoAberta()) {
+        <app-modal
+          titulo="Editar concurso"
+          [bloqueado]="salvandoEdicao()"
+          (fechar)="fecharEdicao()"
+        >
+          <app-form-concurso
+            [bancas]="bancas()"
+            [valorInicial]="{ nome: c.nome, orgao: c.orgao, banca_id: c.banca_id }"
+            [salvando]="salvandoEdicao()"
+            [erro]="erroEdicao()"
+            rotuloSalvar="Salvar"
+            (salvar)="salvarEdicao($event)"
+            (cancelar)="fecharEdicao()"
+          />
+        </app-modal>
+      }
 
       <section>
         <div class="mb-4 flex items-start justify-between gap-4">

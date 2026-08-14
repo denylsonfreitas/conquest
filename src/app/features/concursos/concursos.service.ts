@@ -69,6 +69,26 @@ export class ConcursosService {
     return achatar(data);
   }
 
+  async editar(id: string, concurso: ConcursoNovoForm): Promise<ConcursoComBanca> {
+    const { data, error } = await this.supabase.client
+      .from('concursos')
+      .update({
+        nome: concurso.nome.trim(),
+        orgao: concurso.orgao?.trim() || null,
+        banca_id: concurso.banca_id,
+      })
+      .eq('id', id)
+      .select('id, nome, orgao, banca_id, created_at, bancas(nome)')
+      .maybeSingle();
+
+    if (error) {
+      if (error.code === FK_INVALIDA) throw new Error('A banca escolhida não existe mais.');
+      throw new Error(`Não foi possível salvar o concurso: ${error.message}`);
+    }
+    if (!data) throw new Error('Concurso não encontrado.');
+    return achatar(data);
+  }
+
   async impactoDaExclusao(id: string): Promise<ImpactoExclusao> {
     const { data: provas } = await this.supabase.client
       .from('provas')

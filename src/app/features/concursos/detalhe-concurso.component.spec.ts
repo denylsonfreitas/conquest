@@ -2,9 +2,15 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { DimensoesService, ItemDimensao } from '../bancas-materias/dimensoes.service';
 import { Prova, ProvasService } from '../provas/provas.service';
 import { ConcursoComBanca, ConcursosService } from './concursos.service';
 import { DetalheConcursoComponent } from './detalhe-concurso.component';
+
+const BANCAS: ItemDimensao[] = [
+  { id: 'b1', nome: 'Cebraspe' },
+  { id: 'b2', nome: 'FCC' },
+];
 
 const CONCURSO: ConcursoComBanca = {
   id: 'c1',
@@ -49,6 +55,7 @@ function montar(concursos: Partial<ConcursosService>, provas: Partial<ProvasServ
       provideRouter([]),
       { provide: ConcursosService, useValue: { buscar: async () => CONCURSO, ...concursos } },
       { provide: ProvasService, useValue: provas },
+      { provide: DimensoesService, useValue: { listar: async () => BANCAS } },
     ],
   });
   const fixture = TestBed.createComponent(DetalheConcursoComponent);
@@ -261,6 +268,62 @@ describe('DetalheConcursoComponent', () => {
       ano: null,
       cargo: null,
     });
+  });
+
+  it('abre a edição com os valores atuais do concurso, e salva o que mudou', async () => {
+    const editar = vi.fn(async () => ({
+      ...CONCURSO,
+      nome: 'TRT 15 (novo nome)',
+      orgao: 'TRT15',
+      banca_id: 'b1',
+      banca_nome: 'Cebraspe',
+    }));
+    const fixture = montar({ editar }, { listarPorConcurso: async () => [] });
+    await assentar(fixture, CONCURSO.nome);
+
+    const raiz = fixture.nativeElement as HTMLElement;
+    Array.from(raiz.querySelectorAll('button'))
+      .find((b) => b.getAttribute('aria-label') === 'Editar concurso')
+      ?.click();
+    await assentar(fixture, 'Sem banca definida');
+
+    const nome = raiz.querySelector('#concurso-nome') as HTMLInputElement;
+    expect(nome.value).toBe(CONCURSO.nome);
+    expect((raiz.querySelector('#concurso-banca') as HTMLSelectElement).value).toBe(
+      CONCURSO.banca_id,
+    );
+
+    nome.value = 'TRT 15 (novo nome)';
+    nome.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    raiz.querySelector('form')?.dispatchEvent(new Event('submit'));
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(editar).toHaveBeenCalledWith('c1', {
+      nome: 'TRT 15 (novo nome)',
+      orgao: CONCURSO.orgao,
+      banca_id: CONCURSO.banca_id,
+    });
+    expect(await assentar(fixture, 'TRT 15 (novo nome)')).toContain('Cebraspe');
+  });
+
+  it('avisa que trocar a banca reclassifica as questões, e só quando ela muda', async () => {
+    const fixture = montar({}, { listarPorConcurso: async () => [] });
+    await assentar(fixture, CONCURSO.nome);
+
+    const raiz = fixture.nativeElement as HTMLElement;
+    Array.from(raiz.querySelectorAll('button'))
+      .find((b) => b.getAttribute('aria-label') === 'Editar concurso')
+      ?.click();
+    expect(await assentar(fixture, 'Sem banca definida')).not.toContain('reclassifica');
+
+    const banca = raiz.querySelector('#concurso-banca') as HTMLSelectElement;
+    banca.value = 'b1';
+    banca.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(await assentar(fixture, 'reclassifica')).toContain('reclassifica as questões');
   });
 
   it('só oferece ver o gabarito quando existe um anexado', async () => {

@@ -49,6 +49,32 @@ function clicar(fixture: ComponentFixture<ListaConcursosComponent>, rotulo: stri
   fixture.detectChanges();
 }
 
+// Preenche o formulário pelo DOM, como o usuário faz. Depois que ele saiu para
+// um componente próprio, alcançar o FormGroup por dentro testaria o filho pelo
+// pai — e passaria mesmo se a ligação entre os dois quebrasse.
+function preencher(
+  fixture: ComponentFixture<ListaConcursosComponent>,
+  valores: { nome: string; orgao: string; banca_id: string },
+) {
+  const raiz = fixture.nativeElement as HTMLElement;
+  const escrever = (seletor: string, valor: string) => {
+    const campo = raiz.querySelector(seletor) as HTMLInputElement | HTMLSelectElement;
+    campo.value = valor;
+    campo.dispatchEvent(new Event('change'));
+    campo.dispatchEvent(new Event('input'));
+  };
+
+  escrever('#concurso-nome', valores.nome);
+  escrever('#concurso-orgao', valores.orgao);
+  escrever('#concurso-banca', valores.banca_id);
+  fixture.detectChanges();
+}
+
+function enviarForm(fixture: ComponentFixture<ListaConcursosComponent>) {
+  (fixture.nativeElement as HTMLElement).querySelector('form')?.dispatchEvent(new Event('submit'));
+  fixture.detectChanges();
+}
+
 describe('ListaConcursosComponent', () => {
   beforeEach(() => TestBed.resetTestingModule());
 
@@ -101,12 +127,9 @@ describe('ListaConcursosComponent', () => {
     await assentar(fixture, 'Nenhum concurso');
 
     clicar(fixture, 'Novo concurso');
-    const c = fixture.componentInstance as unknown as {
-      form: { setValue: (v: object) => void };
-      criar: () => Promise<void>;
-    };
-    c.form.setValue({ nome: 'TRT 15ª Região', orgao: 'TRT15', banca_id: 'b2' });
-    await c.criar();
+    preencher(fixture, { nome: 'TRT 15ª Região', orgao: 'TRT15', banca_id: 'b2' });
+    enviarForm(fixture);
+    await new Promise((r) => setTimeout(r, 20));
 
     expect(criar).toHaveBeenCalledWith({
       nome: 'TRT 15ª Região',
@@ -121,13 +144,24 @@ describe('ListaConcursosComponent', () => {
     const fixture = montar({ listar: async () => [], criar });
     await assentar(fixture, 'Nenhum concurso');
 
-    const c = fixture.componentInstance as unknown as {
-      form: { setValue: (v: object) => void };
-      criar: () => Promise<void>;
-    };
-    c.form.setValue({ nome: 'Sem banca', orgao: '', banca_id: '' });
-    await c.criar();
+    clicar(fixture, 'Novo concurso');
+    preencher(fixture, { nome: 'Sem banca', orgao: '', banca_id: '' });
+    enviarForm(fixture);
+    await new Promise((r) => setTimeout(r, 20));
 
     expect(criar).toHaveBeenCalledWith({ nome: 'Sem banca', orgao: null, banca_id: null });
+  });
+
+  it('não cria com o nome vazio, que é o único campo obrigatório', async () => {
+    const criar = vi.fn(async () => CONCURSO);
+    const fixture = montar({ listar: async () => [], criar });
+    await assentar(fixture, 'Nenhum concurso');
+
+    clicar(fixture, 'Novo concurso');
+    preencher(fixture, { nome: '', orgao: 'TRT15', banca_id: 'b2' });
+    enviarForm(fixture);
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(criar).not.toHaveBeenCalled();
   });
 });

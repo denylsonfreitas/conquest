@@ -142,7 +142,8 @@ describe('QuizExecucaoComponent', () => {
 
     clicar(fixture, 'Entregar')?.click();
     const aviso = await assentar(fixture, 'em branco');
-    expect(aviso).toContain('2 questões em branco');
+    expect(aviso).toContain('2 questões ficam em branco');
+    expect(aviso).toContain('Entregar 1 de 3?');
 
     Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
       .filter((b) => b.textContent?.trim() === 'Entregar')
@@ -216,5 +217,56 @@ describe('QuizExecucaoComponent', () => {
 
     clicar(fixture, 'primeira')?.click();
     expect(await assentar(fixture, 'Ver resultado')).toContain('Ver resultado');
+  });
+
+  it('sair do quiz pede confirmação, e desistir dela não encerra a sessão', async () => {
+    const fixture = montar();
+    const sessao = TestBed.inject(SessaoQuizService);
+    sessao.iniciar([questao('q1'), questao('q2')], 'aleatorio', 'estudo');
+    await assentar(fixture, 'Enunciado da q1');
+    const navegar = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    clicar(fixture, 'Sair do quiz')?.click();
+    expect(await assentar(fixture, 'Sair do quiz?')).toContain('Sair do quiz?');
+    expect(navegar).not.toHaveBeenCalled();
+
+    clicar(fixture, 'Continuar')?.click();
+    await respirar(fixture);
+    expect(sessao.ativa()).toBe(true);
+    expect(navegar).not.toHaveBeenCalled();
+  });
+
+  it('avisa que a marcação da prova se perde ao sair, porque ela não foi gravada', async () => {
+    const fixture = montar();
+    TestBed.inject(SessaoQuizService).iniciar([questao('q1'), questao('q2')], 'aleatorio', 'prova');
+    await assentar(fixture, 'Enunciado da q1');
+
+    clicar(fixture, 'primeira')?.click();
+    await respirar(fixture);
+
+    clicar(fixture, 'Sair do quiz')?.click();
+    expect(await assentar(fixture, 'Sair do quiz?')).toContain('descarta essa marcação');
+  });
+
+  it('encerrar no meio pede confirmação antes de ir ao resultado', async () => {
+    const fixture = montar();
+    TestBed.inject(SessaoQuizService).iniciar(
+      [questao('q1'), questao('q2')],
+      'aleatorio',
+      'estudo',
+    );
+    await assentar(fixture, 'Enunciado da q1');
+    const navegar = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    clicar(fixture, 'primeira')?.click();
+    await respirar(fixture);
+
+    clicar(fixture, 'Encerrar com')?.click();
+    expect(await assentar(fixture, 'Encerrar com 1 respondidas?')).toContain('só o que você');
+    expect(navegar).not.toHaveBeenCalled();
+
+    clicar(fixture, 'Ver resultado')?.click();
+    await respirar(fixture);
+    expect(navegar).toHaveBeenCalledWith(['/quiz/resultado']);
   });
 });

@@ -12,8 +12,10 @@ import { RouterLink } from '@angular/router';
 
 import { consequenciasDaExclusao } from '../../shared/consequencias-exclusao';
 import { ConfirmacaoComponent } from '../../shared/ui/confirmacao.component';
+import { FormConcursoComponent, ValoresConcurso } from '../../shared/ui/form-concurso.component';
 import { IconeComponent } from '../../shared/ui/icone.component';
 import { ModalComponent } from '../../shared/ui/modal.component';
+import { DimensoesService, ItemDimensao } from '../bancas-materias/dimensoes.service';
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
 import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
@@ -40,6 +42,7 @@ type Status = 'carregando' | 'ok' | 'erro';
     EstadoErroComponent,
     EstadoVazioComponent,
     ConfirmacaoComponent,
+    FormConcursoComponent,
     IconeComponent,
     ModalComponent,
   ],
@@ -49,6 +52,7 @@ type Status = 'carregando' | 'ok' | 'erro';
 export class DetalheConcursoComponent {
   private readonly concursosService = inject(ConcursosService);
   private readonly provasService = inject(ProvasService);
+  private readonly dimensoes = inject(DimensoesService);
   private readonly fb = inject(FormBuilder);
 
   readonly id = input.required<string>();
@@ -70,11 +74,53 @@ export class DetalheConcursoComponent {
     cargo: [''],
   });
 
+  protected readonly bancas = signal<ItemDimensao[]>([]);
+  protected readonly edicaoAberta = signal(false);
+  protected readonly salvandoEdicao = signal(false);
+  protected readonly erroEdicao = signal<string | null>(null);
+
   constructor() {
     effect(() => {
       const id = this.id();
       void this.carregar(id);
     });
+  }
+
+  protected async abrirEdicao(): Promise<void> {
+    this.erroEdicao.set(null);
+
+    // As bancas carregam ANTES de o modal abrir, não depois: um <select> só
+    // assume um valor quando a <option> correspondente já existe, então abrir
+    // primeiro deixaria a banca atual em branco até alguém mexer nela.
+    if (this.bancas().length === 0) {
+      try {
+        this.bancas.set(await this.dimensoes.listar('bancas'));
+      } catch (e) {
+        this.erroEdicao.set(mensagem(e));
+      }
+    }
+
+    this.edicaoAberta.set(true);
+  }
+
+  protected fecharEdicao(): void {
+    this.edicaoAberta.set(false);
+    this.erroEdicao.set(null);
+  }
+
+  protected async salvarEdicao(valores: ValoresConcurso): Promise<void> {
+    if (this.salvandoEdicao()) return;
+
+    this.salvandoEdicao.set(true);
+    this.erroEdicao.set(null);
+    try {
+      this.concurso.set(await this.concursosService.editar(this.id(), valores));
+      this.fecharEdicao();
+    } catch (e) {
+      this.erroEdicao.set(mensagem(e));
+    } finally {
+      this.salvandoEdicao.set(false);
+    }
   }
 
   protected async carregar(id: string = this.id()): Promise<void> {
@@ -221,11 +267,13 @@ export class DetalheConcursoComponent {
     }
   }
 
-  protected async abrirPdf(prova: Prova): Promise<void> {
-    if (!prova.arquivo_path) return;
+  protected async abrirPdf(prova: Prova, alvo: 'prova' | 'gabarito' = 'prova'): Promise<void> {
+    const caminho = alvo === 'prova' ? prova.arquivo_path : prova.gabarito_path;
+    if (!caminho) return;
+
     this.erroAcao.set(null);
     try {
-      window.open(await this.provasService.urlTemporaria(prova.arquivo_path), '_blank');
+      window.open(await this.provasService.urlTemporaria(caminho), '_blank');
     } catch (e) {
       this.erroAcao.set(mensagem(e));
     }

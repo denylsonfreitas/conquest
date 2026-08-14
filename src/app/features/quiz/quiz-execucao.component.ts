@@ -9,13 +9,15 @@ import {
 import { Router } from '@angular/router';
 
 import { Letra } from '../../shared/models';
+import { ConfirmacaoComponent } from '../../shared/ui/confirmacao.component';
 import { EnunciadoComponent } from '../../shared/ui/enunciado.component';
 import { QuizService } from './quiz.service';
+import { avisoDeSaida } from './regras-quiz';
 import { SessaoQuizService } from './sessao-quiz.service';
 
 @Component({
   selector: 'app-quiz-execucao',
-  imports: [EnunciadoComponent],
+  imports: [EnunciadoComponent, ConfirmacaoComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './quiz-execucao.component.html',
 })
@@ -116,10 +118,38 @@ export class QuizExecucaoComponent {
     await this.router.navigate(['/quiz/resultado']);
   }
 
+  // Encerrar no meio e sair do quiz não são a mesma coisa: o primeiro leva ao
+  // resultado com o que já foi respondido, o segundo joga fora a sessão. Por
+  // isso são duas confirmações, com textos que dizem qual é qual.
+  protected readonly confirmandoEncerramento = signal(false);
+  protected readonly confirmandoSaida = signal(false);
+
+  protected pedirEncerramento(): void {
+    this.confirmandoEncerramento.set(true);
+  }
+
+  protected async confirmarEncerramento(): Promise<void> {
+    this.confirmandoEncerramento.set(false);
+    await this.verResultado();
+  }
+
+  protected pedirSaida(): void {
+    this.confirmandoSaida.set(true);
+  }
+
   protected async abandonar(): Promise<void> {
+    this.confirmandoSaida.set(false);
     this.sessao.encerrar();
     await this.router.navigate(['/quiz']);
   }
+
+  protected readonly avisoDeSaida = computed(() =>
+    avisoDeSaida(
+      this.sessao.ehProva() ? 'prova' : 'estudo',
+      this.sessao.marcadas(),
+      this.sessao.respostas().length,
+    ),
+  );
 }
 
 function mensagem(e: unknown): string {

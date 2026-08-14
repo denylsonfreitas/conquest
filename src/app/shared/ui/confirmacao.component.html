@@ -1,6 +1,10 @@
 <app-modal [titulo]="titulo()" largura="media" [bloqueado]="ocupado()" (fechar)="cancelar.emit()">
+  @if (descricao(); as texto) {
+    <p class="text-sm text-texto">{{ texto }}</p>
+  }
+
   @if (consequencias().length > 0) {
-    <p class="text-sm text-texto">Isso também apaga:</p>
+    <p class="mt-3 text-sm text-texto">Isso também apaga:</p>
     <ul class="mt-1 space-y-0.5 text-sm">
       @for (c of consequencias(); track c) {
         <li class="font-medium text-perigo">{{ c }}</li>
@@ -8,14 +12,21 @@
     </ul>
   }
 
-  <p class="mt-3 text-sm text-texto-fraco">Não dá para desfazer.</p>
+  @if (tom() === 'perigo') {
+    <p class="mt-3 text-sm text-texto-fraco">Não dá para desfazer.</p>
+  }
 
   <div class="mt-5 flex gap-2">
-    <button type="button" class="btn-perigo" [disabled]="ocupado()" (click)="confirmar.emit()">
-      {{ ocupado() ? 'Excluindo…' : rotuloConfirmar() }}
+    <button
+      type="button"
+      [class]="tom() === 'perigo' ? 'btn-perigo' : 'btn'"
+      [disabled]="ocupado()"
+      (click)="confirmar.emit()"
+    >
+      {{ ocupado() ? rotuloOcupado() : rotuloConfirmar() }}
     </button>
     <button type="button" class="btn-secundario" [disabled]="ocupado()" (click)="cancelar.emit()">
-      Cancelar
+      {{ rotuloCancelar() }}
     </button>
   </div>
 </app-modal>

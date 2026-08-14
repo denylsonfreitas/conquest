@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { consequenciasDaExclusao } from '../../shared/consequencias-exclusao';
 import { ConfirmacaoComponent } from '../../shared/ui/confirmacao.component';
 import { IconeComponent } from '../../shared/ui/icone.component';
+import { FormConcursoComponent, ValoresConcurso } from '../../shared/ui/form-concurso.component';
 import { ModalComponent } from '../../shared/ui/modal.component';
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
@@ -17,8 +17,8 @@ type Status = 'carregando' | 'ok' | 'erro';
 @Component({
   selector: 'app-lista-concursos',
   imports: [
+    FormConcursoComponent,
     ModalComponent,
-    ReactiveFormsModule,
     RouterLink,
     EstadoCarregandoComponent,
     EstadoErroComponent,
@@ -32,7 +32,6 @@ type Status = 'carregando' | 'ok' | 'erro';
 export class ListaConcursosComponent {
   private readonly service = inject(ConcursosService);
   private readonly dimensoes = inject(DimensoesService);
-  private readonly fb = inject(FormBuilder);
 
   protected readonly status = signal<Status>('carregando');
   protected readonly concursos = signal<ConcursoComBanca[]>([]);
@@ -44,12 +43,6 @@ export class ListaConcursosComponent {
   protected readonly excluindo = signal(false);
   protected readonly salvando = signal(false);
   protected readonly formAberto = signal(false);
-
-  protected readonly form = this.fb.nonNullable.group({
-    nome: ['', [Validators.required]],
-    orgao: [''],
-    banca_id: [''],
-  });
 
   constructor() {
     void this.carregar();
@@ -80,23 +73,17 @@ export class ListaConcursosComponent {
 
   protected fecharForm(): void {
     this.formAberto.set(false);
-    this.form.reset();
     this.erroAcao.set(null);
   }
 
-  protected async criar(): Promise<void> {
-    if (this.form.invalid || this.salvando()) return;
+  protected async criar(valores: ValoresConcurso): Promise<void> {
+    if (this.salvando()) return;
 
     this.salvando.set(true);
     this.erroAcao.set(null);
-    const { nome, orgao, banca_id } = this.form.getRawValue();
 
     try {
-      const criado = await this.service.criar({
-        nome,
-        orgao: orgao || null,
-        banca_id: banca_id || null,
-      });
+      const criado = await this.service.criar(valores);
       this.concursos.update((atual) => [criado, ...atual]);
       this.fecharForm();
     } catch (e) {

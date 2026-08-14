@@ -37,6 +37,11 @@ const PROVA_COM_PDF: Prova = {
   arquivo_hash: 'a'.repeat(64),
 };
 
+const PROVA_COM_GABARITO: Prova = {
+  ...PROVA_COM_PDF,
+  gabarito_path: 'c1/p1-gabarito.pdf',
+};
+
 function montar(concursos: Partial<ConcursosService>, provas: Partial<ProvasService>) {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
@@ -256,5 +261,33 @@ describe('DetalheConcursoComponent', () => {
       ano: null,
       cargo: null,
     });
+  });
+
+  it('só oferece ver o gabarito quando existe um anexado', async () => {
+    const semGabarito = montar({}, { listarPorConcurso: async () => [PROVA_COM_PDF] });
+    expect(await assentar(semGabarito, 'Ver PDF da prova')).not.toContain('Ver PDF do gabarito');
+
+    const comGabarito = montar({}, { listarPorConcurso: async () => [PROVA_COM_GABARITO] });
+    expect(await assentar(comGabarito, 'Ver PDF do gabarito')).toContain('Ver PDF do gabarito');
+  });
+
+  it('abre o gabarito pelo caminho do gabarito, não pelo da prova', async () => {
+    const urlTemporaria = vi.fn(async (_c: string) => 'https://exemplo/assinada');
+    const abrir = vi.spyOn(window, 'open').mockReturnValue(null);
+
+    const fixture = montar(
+      {},
+      { listarPorConcurso: async () => [PROVA_COM_GABARITO], urlTemporaria },
+    );
+    await assentar(fixture, 'Ver PDF do gabarito');
+
+    const botao = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
+    ).find((b) => b.getAttribute('aria-label') === 'Ver PDF do gabarito');
+    botao?.click();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(urlTemporaria).toHaveBeenCalledWith('c1/p1-gabarito.pdf');
+    abrir.mockRestore();
   });
 });

@@ -221,11 +221,13 @@ export class DetalheConcursoComponent {
     }
   }
 
-  protected async abrirPdf(prova: Prova): Promise<void> {
-    if (!prova.arquivo_path) return;
+  protected async abrirPdf(prova: Prova, alvo: 'prova' | 'gabarito' = 'prova'): Promise<void> {
+    const caminho = alvo === 'prova' ? prova.arquivo_path : prova.gabarito_path;
+    if (!caminho) return;
+
     this.erroAcao.set(null);
     try {
-      window.open(await this.provasService.urlTemporaria(prova.arquivo_path), '_blank');
+      window.open(await this.provasService.urlTemporaria(caminho), '_blank');
     } catch (e) {
       this.erroAcao.set(mensagem(e));
     }

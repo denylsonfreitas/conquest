@@ -15,6 +15,7 @@ export type NomeIcone =
   | 'destravar'
   | 'bloqueado'
   | 'cancelar'
+  | 'gabarito'
   | 'info';
 
 const TRACOS: Record<NomeIcone, string> = {
@@ -32,6 +33,7 @@ const TRACOS: Record<NomeIcone, string> = {
   destravar: 'M8 10V7a4 4 0 017.5-2 M5 10h14v10H5z',
   bloqueado: 'M8 10V7a4 4 0 018 0v3 M5 10h14v10H5z',
   cancelar: 'M18 6L6 18 M6 6l12 12',
+  gabarito: 'M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z M14 3v6h6 M9 15l2 2 4-4',
   info: 'M12 16v-5 M12 8h.01 M21 12a9 9 0 11-18 0 9 9 0 0118 0',
 };
 

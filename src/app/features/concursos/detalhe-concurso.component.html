@@ -120,9 +120,6 @@
                           {{ prova.cargo }}</span
                         >
                       }
-                      @if (prova.gabarito_path) {
-                        <span> · gabarito anexado</span>
-                      }
                       @if (prova.total_questoes) {
                         <span> · {{ prova.total_questoes }} questões</span>
                       }
@@ -160,11 +157,23 @@
                       <button
                         type="button"
                         class="acao-icone dica"
-                        aria-label="Ver PDF"
-                        data-dica="Ver PDF"
-                        (click)="abrirPdf(prova)"
+                        aria-label="Ver PDF da prova"
+                        data-dica="Ver PDF da prova"
+                        (click)="abrirPdf(prova, 'prova')"
                       >
                         <app-icone nome="ver" [tamanho]="18" />
+                      </button>
+                    }
+
+                    @if (prova.gabarito_path) {
+                      <button
+                        type="button"
+                        class="acao-icone dica"
+                        aria-label="Ver PDF do gabarito"
+                        data-dica="Ver PDF do gabarito"
+                        (click)="abrirPdf(prova, 'gabarito')"
+                      >
+                        <app-icone nome="gabarito" [tamanho]="18" />
                       </button>
                     }
 

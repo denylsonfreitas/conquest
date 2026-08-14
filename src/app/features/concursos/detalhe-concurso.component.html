@@ -55,6 +55,46 @@
         </app-modal>
       }
 
+      @if (sugestaoUtil(); as s) {
+        <div role="status" class="mb-6 rounded-cartao bg-marca-sutil p-4 ring-1 ring-borda sm:p-5">
+          <p class="font-medium text-texto">O PDF da prova diz de quem ela é</p>
+          <p class="mt-1 text-sm text-texto">
+            @if (s.banca_nome && s.banca_id !== c.banca_id) {
+              <span
+                >Banca: <span class="font-medium">{{ s.banca_nome }}</span></span
+              >
+            }
+            @if (s.orgao && s.orgao !== c.orgao) {
+              <span>
+                @if (s.banca_nome && s.banca_id !== c.banca_id) {
+                  ·
+                }
+                Órgão: <span class="font-medium">{{ s.orgao }}</span>
+              </span>
+            }
+          </p>
+
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="btn"
+              [disabled]="salvandoEdicao()"
+              (click)="aplicarSugestao()"
+            >
+              {{ salvandoEdicao() ? 'Aplicando…' : 'Aplicar ao concurso' }}
+            </button>
+            <button
+              type="button"
+              class="btn-secundario"
+              [disabled]="salvandoEdicao()"
+              (click)="dispensarSugestao()"
+            >
+              Ignorar
+            </button>
+          </div>
+        </div>
+      }
+
       <section>
         <div class="mb-4 flex items-start justify-between gap-4">
           <div>

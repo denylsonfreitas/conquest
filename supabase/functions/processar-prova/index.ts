@@ -3,6 +3,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { casarGabarito } from './casar-gabarito.ts';
 import { cabecalhosCors } from './cors.ts';
 import { extrairQuestoes } from './extrair-questoes.ts';
+import { BancaConhecida, identificarConcurso, SugestaoConcurso } from './identificar-concurso.ts';
 import { identificarProva, normalizar } from './identificar-prova.ts';
 import { Descarte, montarQuestoes } from './montar-questoes.ts';
 import { prepararTexto } from './preparar-texto.ts';
@@ -71,6 +72,7 @@ interface Resultado {
   motivos_descarte?: Descarte[];
   gabarito_aplicado: boolean;
   motivo_gabarito?: string;
+  sugestao_concurso?: SugestaoConcurso;
 }
 
 interface TextoDoCliente {
@@ -133,6 +135,11 @@ async function processar(
   const materias = await carregarMaterias(admin);
   const { validas, descartadas } = montarQuestoes(brutas, provaId, respostas, materias);
 
+  // O texto da prova nomeia a banca e repete o órgão em toda página. Sai daqui
+  // como sugestão: quem aplica ao concurso é a revisão, porque o órgão é
+  // palpite e errar em silêncio contaminaria filtro e estatística.
+  const sugestaoConcurso = identificarConcurso(textoProva, await carregarBancas(admin));
+
   if (validas.length > 0) {
     const { error: erroInsert } = await admin.from('questoes').insert(validas);
     if (erroInsert) throw new Error(`Falha ao gravar as questões: ${erroInsert.message}`);
@@ -159,7 +166,13 @@ async function processar(
     motivos_descarte: descartadas.length > 0 ? descartadas : undefined,
     gabarito_aplicado: respostas !== null,
     motivo_gabarito: motivoGabarito,
+    sugestao_concurso: sugestaoConcurso,
   };
+}
+
+async function carregarBancas(admin: SupabaseClient): Promise<BancaConhecida[]> {
+  const { data } = await admin.from('bancas').select('id, nome');
+  return (data ?? []) as BancaConhecida[];
 }
 
 async function carregarMaterias(admin: SupabaseClient): Promise<Map<string, string>> {

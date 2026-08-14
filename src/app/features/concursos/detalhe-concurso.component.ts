@@ -19,6 +19,7 @@ import { DimensoesService, ItemDimensao } from '../bancas-materias/dimensoes.ser
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
 import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
+import { SugestaoConcurso } from '../../shared/models';
 import { FaseAnexo, FaseProcessamento, Prova, ProvasService } from '../provas/provas.service';
 import {
   corStatusProva,
@@ -294,8 +295,11 @@ export class DetalheConcursoComponent {
     this.processandoId.set(prova.id);
     this.erroAcao.set(null);
     try {
-      await this.provasService.processar(prova, (f) => this.faseProcessamento.set(f));
+      const sugestao = await this.provasService.processar(prova, (f) =>
+        this.faseProcessamento.set(f),
+      );
       await this.atualizarProva(prova.id);
+      this.sugestao.set(sugestao);
     } catch (e) {
       this.erroAcao.set(mensagem(e));
       await this.atualizarProva(prova.id).catch(() => undefined);
@@ -303,6 +307,37 @@ export class DetalheConcursoComponent {
       this.processandoId.set(null);
       this.faseProcessamento.set(null);
     }
+  }
+
+  protected readonly sugestao = signal<SugestaoConcurso | null>(null);
+
+  // Só vale interromper por aquilo que o concurso ainda não sabe. Repetir o que
+  // já está preenchido transformaria a sugestão em ruído a cada processamento.
+  protected readonly sugestaoUtil = computed(() => {
+    const s = this.sugestao();
+    const c = this.concurso();
+    if (!s || !c) return null;
+
+    const banca = s.banca_id && s.banca_id !== c.banca_id ? s : null;
+    const orgao = s.orgao && s.orgao !== c.orgao ? s : null;
+    return banca || orgao ? s : null;
+  });
+
+  protected dispensarSugestao(): void {
+    this.sugestao.set(null);
+  }
+
+  protected async aplicarSugestao(): Promise<void> {
+    const s = this.sugestao();
+    const c = this.concurso();
+    if (!s || !c) return;
+
+    await this.salvarEdicao({
+      nome: c.nome,
+      orgao: s.orgao ?? c.orgao,
+      banca_id: s.banca_id ?? c.banca_id,
+    });
+    this.dispensarSugestao();
   }
 
   protected async destravar(prova: Prova): Promise<void> {

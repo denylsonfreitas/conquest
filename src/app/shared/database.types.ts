@@ -190,6 +190,8 @@ export type Database = {
           prova_id: string
           revisada: boolean
           tem_imagem: boolean
+          tem_texto_base: boolean
+          texto_base_id: string | null
           tipo: string
           updated_at: string
         }
@@ -209,6 +211,8 @@ export type Database = {
           prova_id: string
           revisada?: boolean
           tem_imagem?: boolean
+          tem_texto_base?: boolean
+          texto_base_id?: string | null
           tipo: string
           updated_at?: string
         }
@@ -228,6 +232,8 @@ export type Database = {
           prova_id?: string
           revisada?: boolean
           tem_imagem?: boolean
+          tem_texto_base?: boolean
+          texto_base_id?: string | null
           tipo?: string
           updated_at?: string
         }
@@ -244,6 +250,13 @@ export type Database = {
             columns: ["prova_id"]
             isOneToOne: false
             referencedRelation: "provas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questoes_texto_base_id_fkey"
+            columns: ["texto_base_id"]
+            isOneToOne: false
+            referencedRelation: "textos_base"
             referencedColumns: ["id"]
           },
         ]
@@ -290,6 +303,44 @@ export type Database = {
           },
         ]
       }
+      textos_base: {
+        Row: {
+          conteudo: string
+          created_at: string
+          fonte: string | null
+          id: string
+          ordem: number | null
+          prova_id: string
+          titulo: string | null
+        }
+        Insert: {
+          conteudo: string
+          created_at?: string
+          fonte?: string | null
+          id?: string
+          ordem?: number | null
+          prova_id: string
+          titulo?: string | null
+        }
+        Update: {
+          conteudo?: string
+          created_at?: string
+          fonte?: string | null
+          id?: string
+          ordem?: number | null
+          prova_id?: string
+          titulo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "textos_base_prova_id_fkey"
+            columns: ["prova_id"]
+            isOneToOne: false
+            referencedRelation: "provas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       questoes_completas: {
@@ -317,6 +368,8 @@ export type Database = {
           prova_nome: string | null
           revisada: boolean | null
           tem_imagem: boolean | null
+          tem_texto_base: boolean | null
+          texto_base_id: string | null
           tipo: string | null
           updated_at: string | null
         }
@@ -347,6 +400,13 @@ export type Database = {
             columns: ["prova_id"]
             isOneToOne: false
             referencedRelation: "provas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "questoes_texto_base_id_fkey"
+            columns: ["texto_base_id"]
+            isOneToOne: false
+            referencedRelation: "textos_base"
             referencedColumns: ["id"]
           },
         ]

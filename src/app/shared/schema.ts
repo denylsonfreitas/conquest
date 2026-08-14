@@ -214,6 +214,17 @@ export const RespostaNovaSchema = RespostaSchema.omit({
   respondido_em: true,
 }).partial({ quiz_sessao_id: true });
 
+// Contrato do que a Edge Function devolve depois de ler a prova. Ela declara a
+// mesma forma do lado dela — não dá para importar daqui, porque este arquivo é
+// o único de shared/ que o Deno consegue resolver, e models.ts importa './schema'
+// sem extensão. Validar na volta é o que impede as duas pontas de divergirem em
+// silêncio.
+export const SugestaoConcursoSchema = z.object({
+  banca_id: uuid.nullable(),
+  banca_nome: textoOpcional,
+  orgao: textoOpcional,
+});
+
 export const TextoBaseSchema = z.object({
   id: uuid,
   prova_id: uuid,

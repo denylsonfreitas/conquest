@@ -23,6 +23,8 @@ const questao = (over: Partial<QuestaoAcervo> = {}): QuestaoAcervo => ({
   imagem_path: null,
   anulada: false,
   incerto: false,
+  tem_texto_base: false,
+  texto_base_id: null,
   revisada: true,
   elegivel: true,
   prova_nome: 'Prova',

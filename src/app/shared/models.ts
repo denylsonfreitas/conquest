@@ -16,6 +16,7 @@ import {
   RespostaNovaSchema,
   RespostaSchema,
   StatusProvaSchema,
+  SugestaoConcursoSchema,
   TipoQuestaoSchema,
 } from './schema';
 
@@ -46,11 +47,4 @@ export type RespostaNova = z.infer<typeof RespostaNovaSchema>;
 
 export type QuestaoNovaValidada = z.output<typeof QuestaoNovaSchema>;
 
-// O que a Edge Function devolve depois de ler a prova: um palpite de banca e
-// órgão para o concurso. Mora aqui porque atravessa a fronteira — o front não
-// pode importar da Edge Function, mas a Edge Function importa daqui.
-export interface SugestaoConcurso {
-  readonly banca_id: string | null;
-  readonly banca_nome: string | null;
-  readonly orgao: string | null;
-}
+export type SugestaoConcurso = z.infer<typeof SugestaoConcursoSchema>;

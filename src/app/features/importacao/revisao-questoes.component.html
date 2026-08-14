@@ -115,6 +115,22 @@
   }
 }
 
+@if (textoEmEdicao(); as alvo) {
+  <app-modal
+    [titulo]="alvo === 'novo' ? 'Novo texto-base' : 'Editar texto-base'"
+    [bloqueado]="salvandoTexto()"
+    (fechar)="fecharTexto()"
+  >
+    <app-form-texto-base
+      [valorInicial]="alvo === 'novo' ? null : alvo"
+      [salvando]="salvandoTexto()"
+      [erro]="erroTexto()"
+      (salvar)="salvarTexto($event)"
+      (cancelar)="fecharTexto()"
+    />
+  </app-modal>
+}
+
 @if (toast(); as texto) {
   <div
     role="status"
@@ -191,12 +207,14 @@
         <app-editor-questao
           [questao]="q"
           [materias]="materias()"
+          [textos]="textos()"
           [urlImagem]="q.imagem_path ? (urlsPorCaminho()[q.imagem_path] ?? null) : null"
           [salvando]="salvando()"
           (rascunhoMudou)="acompanhar(q.id, $event)"
           (salvar)="salvar(q, $event)"
           (anexarImagem)="anexarImagem(q, $event)"
           (removerImagem)="removerImagem(q)"
+          (criarTexto)="abrirNovoTexto()"
         />
 
         @if (avisoNaoSalvo() === q.id) {

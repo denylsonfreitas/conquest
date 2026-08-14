@@ -21,6 +21,8 @@ const limpa = (over: Partial<QuestaoParaRevisao> = {}): QuestaoParaRevisao => ({
   incerto: false,
   anulada: false,
   revisada: false,
+  tem_texto_base: false,
+  texto_base_id: null,
   ...over,
 });
 
@@ -69,6 +71,20 @@ describe('motivosAtencao', () => {
   it('acusa a imagem faltante mesmo com o resto completo', () => {
     expect(motivosAtencao(limpa({ tem_imagem: true }))).toEqual(['precisa de imagem']);
     expect(motivosAtencao(limpa({ tem_imagem: true, imagem_path: 'p/q.png' }))).toEqual([]);
+  });
+
+  it('acusa o texto-base faltante, e some quando o vínculo é feito', () => {
+    expect(motivosAtencao(limpa({ tem_texto_base: true }))).toEqual(['precisa de texto']);
+    expect(motivosAtencao(limpa({ tem_texto_base: true, texto_base_id: 't1' }))).toEqual([]);
+  });
+
+  it('questão sem dependência de texto não vira pendência por ter o campo', () => {
+    expect(motivosAtencao(limpa({ tem_texto_base: false, texto_base_id: null }))).toEqual([]);
+  });
+
+  it('não deixa aprovar enquanto o texto não for escolhido', () => {
+    expect(podeAprovar(limpa({ tem_texto_base: true }))).toBe(false);
+    expect(podeAprovar(limpa({ tem_texto_base: true, texto_base_id: 't1' }))).toBe(true);
   });
 
   it('não acusa nada numa questão anulada', () => {

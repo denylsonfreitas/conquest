@@ -16,6 +16,8 @@ import { IconeComponent } from '../../shared/ui/icone.component';
 import { EstadoCarregandoComponent } from '../../shared/ui/estado-carregando.component';
 import { EstadoErroComponent } from '../../shared/ui/estado-erro.component';
 import { EstadoVazioComponent } from '../../shared/ui/estado-vazio.component';
+import { FormTextoBaseComponent } from '../../shared/ui/form-texto-base.component';
+import { ModalComponent } from '../../shared/ui/modal.component';
 import { EnunciadoComponent } from '../../shared/ui/enunciado.component';
 import { DimensoesService, ItemDimensao } from '../bancas-materias/dimensoes.service';
 import {
@@ -27,7 +29,7 @@ import {
 } from './regras-revisao';
 import { EdicaoQuestao } from '../../shared/edicao-questao';
 import { EditorQuestaoComponent } from '../../shared/ui/editor-questao.component';
-import { QuestaoRevisao, RevisaoService } from './revisao.service';
+import { QuestaoRevisao, RevisaoService, TextoBase, TextoBaseForm } from './revisao.service';
 
 type Status = 'carregando' | 'ok' | 'erro';
 
@@ -42,7 +44,9 @@ type Status = 'carregando' | 'ok' | 'erro';
     EnunciadoComponent,
     EstadoVazioComponent,
     EditorQuestaoComponent,
+    FormTextoBaseComponent,
     IconeComponent,
+    ModalComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './revisao-questoes.component.html',
@@ -114,12 +118,14 @@ export class RevisaoQuestoesComponent {
     this.erroCarga.set(null);
     this.erroAcao.set(null);
     try {
-      const [questoes, materias] = await Promise.all([
+      const [questoes, materias, textos] = await Promise.all([
         this.service.listar(provaId),
         this.dimensoes.listar('materias'),
+        this.service.listarTextos(provaId),
       ]);
       this.questoes.set(questoes);
       this.materias.set(materias);
+      this.textos.set(textos);
       this.status.set('ok');
     } catch (e) {
       this.erroCarga.set(mensagem(e));
@@ -304,6 +310,43 @@ export class RevisaoQuestoesComponent {
 
   protected readonly precisaAtencao = precisaAtencao;
   protected readonly motivosAtencao = motivosAtencao;
+
+  protected readonly textos = signal<TextoBase[]>([]);
+  protected readonly textoEmEdicao = signal<TextoBase | 'novo' | null>(null);
+  protected readonly salvandoTexto = signal(false);
+  protected readonly erroTexto = signal<string | null>(null);
+
+  protected abrirNovoTexto(): void {
+    this.erroTexto.set(null);
+    this.textoEmEdicao.set('novo');
+  }
+
+  protected fecharTexto(): void {
+    this.textoEmEdicao.set(null);
+    this.erroTexto.set(null);
+  }
+
+  protected async salvarTexto(valores: TextoBaseForm): Promise<void> {
+    const alvo = this.textoEmEdicao();
+    if (!alvo || this.salvandoTexto()) return;
+
+    this.salvandoTexto.set(true);
+    this.erroTexto.set(null);
+    try {
+      if (alvo === 'novo') {
+        const criado = await this.service.criarTexto(this.id(), valores);
+        this.textos.update((atual) => [...atual, criado]);
+      } else {
+        const salvo = await this.service.editarTexto(alvo.id, valores);
+        this.textos.update((atual) => atual.map((t) => (t.id === salvo.id ? salvo : t)));
+      }
+      this.fecharTexto();
+    } catch (e) {
+      this.erroTexto.set(mensagem(e));
+    } finally {
+      this.salvandoTexto.set(false);
+    }
+  }
 
   protected rotuloAprovacao(q: QuestaoRevisao): string {
     if (q.revisada) return 'Desaprovar';

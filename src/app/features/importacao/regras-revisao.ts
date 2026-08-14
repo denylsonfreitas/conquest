@@ -9,6 +9,8 @@ export interface QuestaoParaRevisao {
   readonly incerto: boolean;
   readonly anulada: boolean;
   readonly revisada: boolean;
+  readonly tem_texto_base: boolean;
+  readonly texto_base_id: string | null;
 }
 
 export function motivosAtencao(q: QuestaoParaRevisao): string[] {
@@ -18,6 +20,9 @@ export function motivosAtencao(q: QuestaoParaRevisao): string[] {
   if (q.materia_id === null) motivos.push('sem matéria');
   if (q.gabarito === null) motivos.push('sem gabarito');
   if (q.tem_imagem && q.imagem_path === null) motivos.push('precisa de imagem');
+  // A extração marca quando a questão depende de um texto mas não soube dizer
+  // qual. Sem o vínculo ela é insolúvel, então não pode ser aprovada.
+  if (q.tem_texto_base && q.texto_base_id === null) motivos.push('precisa de texto');
   if (q.incerto) motivos.push('extração duvidou');
   return motivos;
 }

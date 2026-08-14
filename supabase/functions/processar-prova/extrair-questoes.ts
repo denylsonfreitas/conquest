@@ -1,7 +1,7 @@
 import { garantirSemMarcaDagua } from './marca-dagua.ts';
-import { QuestaoBruta } from './questao-bruta.ts';
+import { ExtracaoBruta, QuestaoBruta, TextoBaseBruto } from './questao-bruta.ts';
 
-export type { QuestaoBruta };
+export type { ExtracaoBruta, QuestaoBruta, TextoBaseBruto };
 
 export class LlmError extends Error {
   constructor(mensagem: string) {
@@ -12,34 +12,68 @@ export class LlmError extends Error {
 
 const MODELO_PADRAO = 'gemini-flash-latest';
 
+// A resposta deixou de ser um array de questões e virou um objeto com dois:
+// o texto-base sai UMA vez e as questões apontam para ele. Repeti-lo dentro de
+// cada questão custaria alguns milhares de tokens por prova e abriria espaço
+// para o modelo transcrevê-lo diferente a cada repetição.
 const SCHEMA_RESPOSTA = {
-  type: 'ARRAY',
-  items: {
-    type: 'OBJECT',
-    properties: {
-      numero: { type: 'INTEGER' },
-      materia: { type: 'STRING', nullable: true },
-      enunciado: { type: 'STRING' },
-      alternativas: {
-        type: 'ARRAY',
-        items: {
-          type: 'OBJECT',
-          properties: { letra: { type: 'STRING' }, texto: { type: 'STRING' } },
-          required: ['letra', 'texto'],
+  type: 'OBJECT',
+  properties: {
+    textos: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          id_local: { type: 'STRING' },
+          titulo: { type: 'STRING', nullable: true },
+          conteudo: { type: 'STRING' },
+          fonte: { type: 'STRING', nullable: true },
         },
+        required: ['id_local', 'conteudo'],
       },
-      gabarito: { type: 'STRING', nullable: true },
-      tipo: { type: 'STRING', enum: ['multipla_escolha', 'certo_errado'] },
-      tem_imagem: { type: 'BOOLEAN' },
-      incerto: { type: 'BOOLEAN' },
     },
-    required: ['numero', 'enunciado', 'alternativas', 'tipo', 'tem_imagem', 'incerto'],
+    questoes: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          numero: { type: 'INTEGER' },
+          materia: { type: 'STRING', nullable: true },
+          enunciado: { type: 'STRING' },
+          alternativas: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: { letra: { type: 'STRING' }, texto: { type: 'STRING' } },
+              required: ['letra', 'texto'],
+            },
+          },
+          gabarito: { type: 'STRING', nullable: true },
+          tipo: { type: 'STRING', enum: ['multipla_escolha', 'certo_errado'] },
+          tem_imagem: { type: 'BOOLEAN' },
+          incerto: { type: 'BOOLEAN' },
+          tem_texto_base: { type: 'BOOLEAN' },
+          texto_base: { type: 'STRING', nullable: true },
+        },
+        required: [
+          'numero',
+          'enunciado',
+          'alternativas',
+          'tipo',
+          'tem_imagem',
+          'incerto',
+          'tem_texto_base',
+        ],
+      },
+    },
   },
+  required: ['textos', 'questoes'],
 } as const;
 
 const INSTRUCOES = `
 Você extrai questões de provas de concurso público brasileiras a partir do texto
-bruto de um PDF. Devolva SOMENTE o array JSON no schema fornecido.
+bruto de um PDF. Devolva SOMENTE o objeto JSON no schema fornecido, com as duas
+listas: "textos" e "questoes".
 
 REGRAS INEGOCIÁVEIS
 
@@ -87,6 +121,29 @@ REGRAS INEGOCIÁVEIS
 8. IGNORE tudo que não é questão: capa, instruções ao candidato, cabeçalho e
    rodapé de página, numeração de página, avisos sobre cartão de respostas.
 
+8b. TEXTO-BASE. Prova costuma trazer um texto longo que serve a VÁRIAS questões
+    — um em português, outro em inglês, às vezes mais. Coloque cada um em
+    "textos", com um "id_local" que você escolhe ("t1", "t2"...), o título
+    quando houver, o conteúdo transcrito e a fonte (a linha de "Disponível em",
+    "Adaptado", ou a assinatura do autor).
+
+    Nas questões que dependem dele, marque "tem_texto_base": true e ponha o
+    id_local em "texto_base".
+
+    - O texto NÃO vem rotulado. Não espere "TEXTO I" nem "Leia o texto": ele
+      costuma começar por um título e terminar na fonte.
+    - A ORDEM ENGANA. Por causa do layout em colunas, o texto pode aparecer
+      DEPOIS das questões que o usam, e não antes. Decida pelo conteúdo — se a
+      questão fala em "o texto", "o autor", "(parágrafo 2)", ela depende de um.
+    - Se você tem certeza de que a questão depende de um texto mas NÃO consegue
+      dizer qual, marque "tem_texto_base": true e deixe "texto_base": null. É
+      melhor do que apontar para o texto errado: quem revisa corrige o vínculo,
+      mas não descobre um vínculo que você não sinalizou.
+    - Não invente texto que não está no PDF, e não transforme o enunciado de uma
+      questão em texto-base.
+    - Questão que se resolve sozinha NÃO tem texto-base. Não marque por via das
+      dúvidas.
+
 9. QUEBRAS DE LINHA SÃO CONTEÚDO. Preserve com "\\n" as quebras que carregam
    sentido: cada linha de um trecho de código, cada item de uma lista, cada
    verso. Nunca junte tudo num parágrafo só — em código, a quebra é sintaxe.
@@ -124,7 +181,7 @@ REGRAS INEGOCIÁVEIS
     marque "tem_imagem": true e siga a regra 6.
 `.trim();
 
-export async function extrairQuestoes(texto: string): Promise<QuestaoBruta[]> {
+export async function extrairQuestoes(texto: string): Promise<ExtracaoBruta> {
   garantirSemMarcaDagua(texto);
 
   const chave = Deno.env.get('GEMINI_API_KEY');
@@ -169,14 +226,28 @@ export async function extrairQuestoes(texto: string): Promise<QuestaoBruta[]> {
     );
   }
 
-  let questoes: unknown;
+  let corpo: unknown;
   try {
-    questoes = JSON.parse(conteudo);
+    corpo = JSON.parse(conteudo);
   } catch {
     throw new LlmError('A extração não retornou JSON válido.');
   }
 
-  if (!Array.isArray(questoes))
+  return lerExtracao(corpo);
+}
+
+// Aceita o formato antigo (array de questões) além do novo, para que uma
+// resposta sem textos continue valendo — o modelo às vezes devolve só a lista.
+export function lerExtracao(corpo: unknown): ExtracaoBruta {
+  if (Array.isArray(corpo)) return { textos: [], questoes: corpo as QuestaoBruta[] };
+
+  const objeto = corpo as { textos?: unknown; questoes?: unknown } | null;
+  if (!objeto || !Array.isArray(objeto.questoes)) {
     throw new LlmError('A extração não retornou uma lista de questões.');
-  return questoes as QuestaoBruta[];
+  }
+
+  return {
+    textos: Array.isArray(objeto.textos) ? (objeto.textos as TextoBaseBruto[]) : [],
+    questoes: objeto.questoes as QuestaoBruta[],
+  };
 }

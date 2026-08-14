@@ -1,4 +1,3 @@
-import type { SugestaoConcurso } from '../../../src/app/shared/models.ts';
 import { normalizar } from './identificar-prova.ts';
 
 export interface BancaConhecida {
@@ -6,7 +5,16 @@ export interface BancaConhecida {
   readonly nome: string;
 }
 
-export type { SugestaoConcurso };
+// A mesma forma está declarada em src/app/shared/schema.ts, como
+// SugestaoConcursoSchema, e o front valida a resposta contra ela. Não dá para
+// importar de lá: models.ts importa './schema' sem extensão, e o Deno exige
+// extensão explícita — só schema.ts atravessa. A validação na volta é o que
+// impede as duas declarações de divergirem em silêncio.
+export interface SugestaoConcurso {
+  readonly banca_id: string | null;
+  readonly banca_nome: string | null;
+  readonly orgao: string | null;
+}
 
 const SEM_SUGESTAO: SugestaoConcurso = { banca_id: null, banca_nome: null, orgao: null };
 

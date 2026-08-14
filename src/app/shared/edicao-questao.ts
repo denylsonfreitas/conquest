@@ -12,12 +12,22 @@ export interface QuestaoEditavel {
   readonly imagem_path: string | null;
   readonly anulada: boolean;
   readonly incerto: boolean;
+  readonly tem_texto_base: boolean;
+  readonly texto_base_id: string | null;
 }
 
 export type EdicaoQuestao = Partial<
   Pick<
     QuestaoEditavel,
-    'materia_id' | 'gabarito' | 'comentario' | 'tem_imagem' | 'imagem_path' | 'anulada' | 'incerto'
+    | 'materia_id'
+    | 'gabarito'
+    | 'comentario'
+    | 'tem_imagem'
+    | 'imagem_path'
+    | 'anulada'
+    | 'incerto'
+    | 'tem_texto_base'
+    | 'texto_base_id'
   >
 >;
 

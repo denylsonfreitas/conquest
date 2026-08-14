@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 
 import { SupabaseService } from '../../core/supabase.service';
 import { StatusProva, SugestaoConcurso } from '../../shared/models';
+import { SugestaoConcursoSchema } from '../../shared/schema';
 import { extrairTextoPdf } from './extrair-texto-pdf';
 import { calcularSha256 } from './hash-arquivo';
 import { caminhoGabarito, caminhoPdf, motivoBloqueioAnexo } from './regras-prova';
@@ -170,9 +171,15 @@ export class ProvasService {
 
     if (error) throw new Error(`Falha ao processar: ${error.message}`);
 
-    const sugestao = (data as { sugestao_concurso?: SugestaoConcurso } | null)?.sugestao_concurso;
+    // A Edge Function declara essa forma do lado dela; validar aqui é o que
+    // faz uma divergência aparecer em vez de virar undefined na tela.
+    const bruta = (data as { sugestao_concurso?: unknown } | null)?.sugestao_concurso;
+    const lida = SugestaoConcursoSchema.safeParse(bruta);
+    if (!lida.success) return null;
+
     // Sugestão sem banca nem órgão é ruído: não vale interromper a revisão.
-    return sugestao?.banca_id || sugestao?.orgao ? sugestao : null;
+    const sugestao = lida.data;
+    return sugestao.banca_id || sugestao.orgao ? sugestao : null;
   }
 
   async destravar(prova: Prova): Promise<Prova> {

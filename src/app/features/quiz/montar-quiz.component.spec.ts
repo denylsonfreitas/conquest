@@ -25,7 +25,10 @@ const acervoDe = (n: number, over: Partial<ItemComNomes> = {}) =>
 function montar(quiz: Partial<QuizService>) {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
-    providers: [provideRouter([]), { provide: QuizService, useValue: quiz }],
+    providers: [
+      provideRouter([]),
+      { provide: QuizService, useValue: { textosDe: async () => new Map(), ...quiz } },
+    ],
   });
   return TestBed.createComponent(MontarQuizComponent);
 }

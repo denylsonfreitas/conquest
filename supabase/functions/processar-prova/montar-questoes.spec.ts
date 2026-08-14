@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { QuestaoBruta } from './questao-bruta.ts';
-import { montarQuestoes } from './montar-questoes.ts';
+import { QuestaoBruta, TextoBaseBruto } from './questao-bruta.ts';
+import { montarQuestoes, montarTextos } from './montar-questoes.ts';
 
 const PROVA_ID = '11111111-1111-4111-8111-111111111111';
 const MATERIA_TI = '22222222-2222-4222-8222-222222222222';
@@ -101,5 +101,90 @@ describe('montarQuestoes', () => {
     );
 
     expect(validas[0]).toMatchObject({ materia_id: null, assunto: 'Matéria Inexistente' });
+  });
+});
+
+const TEXTO_ID = '33333333-3333-4333-8333-333333333333';
+const MAPA = new Map([['t1', TEXTO_ID]]);
+
+describe('texto-base', () => {
+  it('resolve o id local do modelo para o uuid gravado', () => {
+    const { validas } = montarQuestoes(
+      [bruta({ tem_texto_base: true, texto_base: 't1' })],
+      PROVA_ID,
+      null,
+      MATERIAS,
+      MAPA,
+    );
+
+    expect(validas[0]).toMatchObject({ tem_texto_base: true, texto_base_id: TEXTO_ID });
+  });
+
+  it('marcada sem saber qual: entra pendente em vez de ser descartada', () => {
+    const { validas, descartadas } = montarQuestoes(
+      [bruta({ tem_texto_base: true, texto_base: null })],
+      PROVA_ID,
+      null,
+      MATERIAS,
+      MAPA,
+    );
+
+    expect(descartadas).toEqual([]);
+    expect(validas[0]).toMatchObject({ tem_texto_base: true, texto_base_id: null });
+  });
+
+  it('id local inexistente não vira vínculo quebrado — cai como pendente', () => {
+    const { validas } = montarQuestoes(
+      [bruta({ tem_texto_base: true, texto_base: 't9' })],
+      PROVA_ID,
+      null,
+      MATERIAS,
+      MAPA,
+    );
+
+    expect(validas[0]).toMatchObject({ tem_texto_base: true, texto_base_id: null });
+  });
+
+  it('ter o vínculo implica depender de texto, mesmo sem a marca', () => {
+    const { validas } = montarQuestoes(
+      [bruta({ tem_texto_base: false, texto_base: 't1' })],
+      PROVA_ID,
+      null,
+      MATERIAS,
+      MAPA,
+    );
+
+    expect(validas[0]).toMatchObject({ tem_texto_base: true, texto_base_id: TEXTO_ID });
+  });
+
+  it('questão comum não ganha marca nem vínculo', () => {
+    const { validas } = montarQuestoes([bruta()], PROVA_ID, null, MATERIAS);
+    expect(validas[0]).toMatchObject({ tem_texto_base: false, texto_base_id: null });
+  });
+});
+
+describe('montarTextos', () => {
+  const texto = (over: Partial<TextoBaseBruto> = {}): TextoBaseBruto => ({
+    id_local: 't1',
+    titulo: 'Empreendedorismo social',
+    conteudo: 'Conteúdo do texto.',
+    fonte: 'MENDES, T. Acesso em: 2 set. 2022.',
+    ...over,
+  });
+
+  it('numera pela ordem em que vieram, que é como serão exibidos', () => {
+    const montados = montarTextos([texto(), texto({ id_local: 't2' })], PROVA_ID);
+    expect(montados.map((t) => t.ordem)).toEqual([0, 1]);
+    expect(montados[0].prova_id).toBe(PROVA_ID);
+  });
+
+  it('descarta texto sem conteúdo em vez de gravar linha vazia', () => {
+    expect(montarTextos([texto({ conteudo: '   ' })], PROVA_ID)).toEqual([]);
+  });
+
+  it('título e fonte em branco viram null, não string vazia', () => {
+    const [montado] = montarTextos([texto({ titulo: '  ', fonte: '' })], PROVA_ID);
+    expect(montado.titulo).toBeNull();
+    expect(montado.fonte).toBeNull();
   });
 });

@@ -22,10 +22,29 @@ export interface QuestaoRevisao {
   incerto: boolean;
   anulada: boolean;
   revisada: boolean;
+  tem_texto_base: boolean;
+  texto_base_id: string | null;
 }
 
 const COLUNAS =
-  'id, prova_id, numero, materia_id, assunto, enunciado, alternativas, gabarito, tipo, tem_imagem, imagem_path, comentario, incerto, anulada, revisada';
+  'id, prova_id, numero, materia_id, assunto, enunciado, alternativas, gabarito, tipo, tem_imagem, imagem_path, comentario, incerto, anulada, revisada, tem_texto_base, texto_base_id';
+
+export interface TextoBase {
+  id: string;
+  prova_id: string;
+  titulo: string | null;
+  conteudo: string;
+  fonte: string | null;
+  ordem: number | null;
+}
+
+export interface TextoBaseForm {
+  titulo: string | null;
+  conteudo: string;
+  fonte: string | null;
+}
+
+const COLUNAS_TEXTO = 'id, prova_id, titulo, conteudo, fonte, ordem';
 
 const CHECK_VIOLADO = '23514';
 
@@ -96,6 +115,49 @@ export class RevisaoService {
     const { data, error } = await this.supabase.questaoImagens.createSignedUrl(caminho, segundos);
     if (error || !data) throw new Error(`Não foi possível abrir a imagem: ${error?.message}`);
     return data.signedUrl;
+  }
+
+  async listarTextos(provaId: string): Promise<TextoBase[]> {
+    const { data, error } = await this.supabase.client
+      .from('textos_base')
+      .select(COLUNAS_TEXTO)
+      .eq('prova_id', provaId)
+      .order('ordem', { nullsFirst: false });
+
+    if (error) throw new Error(`Não foi possível carregar os textos: ${error.message}`);
+    return (data ?? []) as TextoBase[];
+  }
+
+  async criarTexto(provaId: string, texto: TextoBaseForm): Promise<TextoBase> {
+    const { data, error } = await this.supabase.client
+      .from('textos_base')
+      .insert({
+        prova_id: provaId,
+        titulo: texto.titulo?.trim() || null,
+        conteudo: texto.conteudo.trim(),
+        fonte: texto.fonte?.trim() || null,
+      })
+      .select(COLUNAS_TEXTO)
+      .single();
+
+    if (error) throw new Error(`Não foi possível criar o texto: ${error.message}`);
+    return data as TextoBase;
+  }
+
+  async editarTexto(id: string, texto: TextoBaseForm): Promise<TextoBase> {
+    const { data, error } = await this.supabase.client
+      .from('textos_base')
+      .update({
+        titulo: texto.titulo?.trim() || null,
+        conteudo: texto.conteudo.trim(),
+        fonte: texto.fonte?.trim() || null,
+      })
+      .eq('id', id)
+      .select(COLUNAS_TEXTO)
+      .single();
+
+    if (error) throw new Error(`Não foi possível salvar o texto: ${error.message}`);
+    return data as TextoBase;
   }
 }
 

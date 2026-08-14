@@ -15,8 +15,15 @@ export interface QuestaoQuiz extends QuestaoEditavel {
   banca_nome: string | null;
 }
 
+export interface TextoDoQuiz {
+  id: string;
+  titulo: string | null;
+  conteudo: string;
+  fonte: string | null;
+}
+
 const COLUNAS_QUESTAO =
-  'id, numero, enunciado, alternativas, gabarito, tipo, materia_id, materia, tem_imagem, imagem_path, comentario, anulada, incerto, prova_nome, prova_ano, concurso_nome, banca_nome';
+  'id, numero, enunciado, alternativas, gabarito, tipo, materia_id, materia, tem_imagem, imagem_path, comentario, anulada, incerto, tem_texto_base, texto_base_id, prova_nome, prova_ano, concurso_nome, banca_nome';
 
 @Injectable({ providedIn: 'root' })
 export class QuizService {
@@ -53,6 +60,21 @@ export class QuizService {
 
     const porId = new Map((data ?? []).map((q) => [q.id, q as QuestaoQuiz]));
     return ids.map((id) => porId.get(id)).filter((q): q is QuestaoQuiz => q !== undefined);
+  }
+
+  // Os textos vêm à parte, e só os distintos: dez questões do mesmo texto
+  // trariam o mesmo conteúdo dez vezes se ele viesse pela view.
+  async textosDe(questoes: readonly QuestaoQuiz[]): Promise<Map<string, TextoDoQuiz>> {
+    const ids = [...new Set(questoes.map((q) => q.texto_base_id).filter((id) => id !== null))];
+    if (ids.length === 0) return new Map();
+
+    const { data, error } = await this.supabase.client
+      .from('textos_base')
+      .select('id, titulo, conteudo, fonte')
+      .in('id', ids);
+
+    if (error) throw new Error(`Não foi possível carregar os textos: ${error.message}`);
+    return new Map((data ?? []).map((t) => [t.id, t as TextoDoQuiz]));
   }
 
   async registrar(respostas: readonly RespostaNova[]): Promise<void> {

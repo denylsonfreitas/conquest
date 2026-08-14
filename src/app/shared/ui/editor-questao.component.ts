@@ -19,6 +19,12 @@ import {
 } from '../edicao-questao';
 import { ItemDimensao } from '../../features/bancas-materias/dimensoes.service';
 
+export interface OpcaoTexto {
+  readonly id: string;
+  readonly titulo: string | null;
+  readonly conteudo: string;
+}
+
 @Component({
   selector: 'app-editor-questao',
   imports: [FormsModule],
@@ -32,10 +38,15 @@ export class EditorQuestaoComponent {
   readonly salvando = input(false);
   readonly respostasAfetadas = input(0);
 
+  // Vazio nas telas que não têm prova em contexto (acervo, resultado): sem os
+  // textos da prova não há o que oferecer, e o seletor some.
+  readonly textos = input<readonly OpcaoTexto[]>([]);
+
   readonly salvar = output<EdicaoQuestao>();
   readonly anexarImagem = output<File>();
   readonly removerImagem = output<void>();
   readonly rascunhoMudou = output<EdicaoQuestao>();
+  readonly criarTexto = output<void>();
 
   protected readonly rascunho = signal<EdicaoQuestao>({});
   protected readonly LETRAS = LETRAS;
@@ -43,6 +54,21 @@ export class EditorQuestaoComponent {
   protected readonly tem = computed(() => temMudanca(this.rascunho()));
 
   protected readonly gabaritoMudou = computed(() => 'gabarito' in this.rascunho());
+
+  // Um rótulo curto para o select: o conteúdo tem milhares de caracteres, e o
+  // título nem sempre existe.
+  protected rotuloTexto(texto: OpcaoTexto): string {
+    if (texto.titulo) return texto.titulo;
+    const inicio = texto.conteudo.trim().slice(0, 60);
+    return texto.conteudo.trim().length > 60 ? `${inicio}…` : inicio;
+  }
+
+  // Marcar o vínculo implica depender de texto; desmarcar mantém a dependência
+  // e devolve a questão para a pendência, que é o estado honesto.
+  protected escolherTexto(id: string): void {
+    this.mudar('texto_base_id', id || null);
+    if (id) this.mudar('tem_texto_base', true);
+  }
 
   constructor() {
     effect(() => {

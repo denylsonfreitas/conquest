@@ -83,6 +83,8 @@ describe('schema canônico', () => {
       anulada: false,
       revisada: false,
       incerto: false,
+      tem_texto_base: false,
+      texto_base_id: null,
       created_at: '2026-08-01T12:00:00+00:00',
       updated_at: '2026-08-01T12:00:00.123456+00:00',
     });

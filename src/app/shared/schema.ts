@@ -104,6 +104,11 @@ const questaoCampos = z.object({
   anulada: z.boolean(),
   revisada: z.boolean(),
   incerto: z.boolean(),
+  // Espelho de tem_imagem / imagem_path: a marca diz que a questão depende de um
+  // texto que não está no enunciado, o id diz qual. Marcada sem id, a questão
+  // fica pendente na revisão em vez de entrar quebrada no quiz.
+  tem_texto_base: z.boolean(),
+  texto_base_id: uuid.nullable(),
 });
 
 type CamposVerificaveis = {
@@ -171,6 +176,8 @@ export const QuestaoNovaSchema = questaoCampos
     anulada: z.boolean().default(false),
     revisada: z.boolean().default(false),
     incerto: z.boolean().default(false),
+    tem_texto_base: z.boolean().default(false),
+    texto_base_id: uuid.nullable().default(null),
   })
   .refine(gabaritoExisteNasAlternativas, {
     error: 'gabarito não corresponde a nenhuma alternativa',
@@ -206,6 +213,22 @@ export const RespostaNovaSchema = RespostaSchema.omit({
   id: true,
   respondido_em: true,
 }).partial({ quiz_sessao_id: true });
+
+export const TextoBaseSchema = z.object({
+  id: uuid,
+  prova_id: uuid,
+  titulo: textoOpcional,
+  conteudo: textoObrigatorio,
+  fonte: textoOpcional,
+  ordem: z.number().int().nullable(),
+  created_at: timestamp,
+});
+
+export const TextoBaseNovoSchema = TextoBaseSchema.omit({ id: true, created_at: true }).partial({
+  titulo: true,
+  fonte: true,
+  ordem: true,
+});
 
 export const QuestaoCompletaSchema = questaoCampos.extend({
   id: uuid,

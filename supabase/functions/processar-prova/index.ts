@@ -5,7 +5,8 @@ import { cabecalhosCors } from './cors.ts';
 import { extrairQuestoes } from './extrair-questoes.ts';
 import { BancaConhecida, identificarConcurso, SugestaoConcurso } from './identificar-concurso.ts';
 import { identificarProva, normalizar } from './identificar-prova.ts';
-import { Descarte, montarQuestoes } from './montar-questoes.ts';
+import { Descarte, montarQuestoes, montarTextos } from './montar-questoes.ts';
+import { TextoBaseBruto } from './questao-bruta.ts';
 import { prepararTexto } from './preparar-texto.ts';
 
 Deno.serve(async (req: Request) => {
@@ -110,7 +111,8 @@ async function processar(
 
   const textoProva = prepararTexto(recebido.texto);
 
-  const brutas = await extrairQuestoes(textoProva);
+  const extracao = await extrairQuestoes(textoProva);
+  const brutas = extracao.questoes;
   if (brutas.length === 0) throw new Error('Nenhuma questão reconhecida no PDF.');
 
   let respostas: ReadonlyMap<number, string> | null = null;
@@ -132,8 +134,18 @@ async function processar(
     motivoGabarito = 'Nenhum PDF de gabarito anexado.';
   }
 
+  // Os textos vão primeiro: a questão referencia o texto, então sem os uuids
+  // gravados não há para onde apontar.
+  const textosPorIdLocal = await gravarTextos(admin, extracao.textos, provaId);
+
   const materias = await carregarMaterias(admin);
-  const { validas, descartadas } = montarQuestoes(brutas, provaId, respostas, materias);
+  const { validas, descartadas } = montarQuestoes(
+    brutas,
+    provaId,
+    respostas,
+    materias,
+    textosPorIdLocal,
+  );
 
   // O texto da prova nomeia a banca e repete o órgão em toda página. Sai daqui
   // como sugestão: quem aplica ao concurso é a revisão, porque o órgão é
@@ -168,6 +180,29 @@ async function processar(
     motivo_gabarito: motivoGabarito,
     sugestao_concurso: sugestaoConcurso,
   };
+}
+
+async function gravarTextos(
+  admin: SupabaseClient,
+  brutos: readonly TextoBaseBruto[],
+  provaId: string,
+): Promise<Map<string, string>> {
+  // Reprocessar apaga os textos da prova junto com as questões: eles saem da
+  // mesma extração e ficariam órfãos.
+  await admin.from('textos_base').delete().eq('prova_id', provaId);
+
+  const paraGravar = montarTextos(brutos, provaId);
+  if (paraGravar.length === 0) return new Map();
+
+  const { data, error } = await admin.from('textos_base').insert(paraGravar).select('id, ordem');
+  if (error) throw new Error(`Falha ao gravar os textos-base: ${error.message}`);
+
+  const porOrdem = new Map((data ?? []).map((t: { id: string; ordem: number }) => [t.ordem, t.id]));
+  const validos = brutos.filter((t) => (t?.conteudo ?? '').trim().length > 0);
+
+  return new Map(
+    validos.map((t, i) => [t.id_local, porOrdem.get(i) ?? '']).filter(([, id]) => id !== ''),
+  );
 }
 
 async function carregarBancas(admin: SupabaseClient): Promise<BancaConhecida[]> {

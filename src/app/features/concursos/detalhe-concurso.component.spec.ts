@@ -270,6 +270,62 @@ describe('DetalheConcursoComponent', () => {
     });
   });
 
+  it('sugere a banca lida do PDF e aplica ao concurso quando eu mando', async () => {
+    const editar = vi.fn(async () => ({ ...CONCURSO, banca_id: 'b1', banca_nome: 'Cebraspe' }));
+    const processar = vi.fn(async () => ({
+      banca_id: 'b1',
+      banca_nome: 'Cebraspe',
+      orgao: 'TRT15',
+    }));
+
+    const fixture = montar(
+      { editar },
+      { listarPorConcurso: async () => [PROVA_COM_PDF], processar, buscar: async () => PROVA },
+    );
+    await assentar(fixture, 'Aguardando processamento');
+
+    const raiz = fixture.nativeElement as HTMLElement;
+    Array.from(raiz.querySelectorAll('button'))
+      .find((b) => b.getAttribute('aria-label') === 'Processar')
+      ?.click();
+
+    const aviso = await assentar(fixture, 'Aplicar ao concurso');
+    expect(aviso).toContain('Cebraspe');
+
+    Array.from(raiz.querySelectorAll('button'))
+      .find((b) => b.textContent?.includes('Aplicar ao concurso'))
+      ?.click();
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(editar).toHaveBeenCalledWith('c1', {
+      nome: CONCURSO.nome,
+      orgao: 'TRT15',
+      banca_id: 'b1',
+    });
+  });
+
+  it('não sugere o que o concurso já sabe — seria ruído a cada processamento', async () => {
+    const processar = vi.fn(async () => ({
+      banca_id: CONCURSO.banca_id,
+      banca_nome: CONCURSO.banca_nome,
+      orgao: CONCURSO.orgao,
+    }));
+
+    const fixture = montar(
+      {},
+      { listarPorConcurso: async () => [PROVA_COM_PDF], processar, buscar: async () => PROVA },
+    );
+    await assentar(fixture, 'Aguardando processamento');
+
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
+      .find((b) => b.getAttribute('aria-label') === 'Processar')
+      ?.click();
+    await new Promise((r) => setTimeout(r, 30));
+    fixture.detectChanges();
+
+    expect(legivel(fixture)).not.toContain('Aplicar ao concurso');
+  });
+
   it('abre a edição com os valores atuais do concurso, e salva o que mudou', async () => {
     const editar = vi.fn(async () => ({
       ...CONCURSO,

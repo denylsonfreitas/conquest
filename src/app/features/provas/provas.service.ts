@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 
 import { SupabaseService } from '../../core/supabase.service';
-import { StatusProva } from '../../shared/models';
+import { StatusProva, SugestaoConcurso } from '../../shared/models';
 import { extrairTextoPdf } from './extrair-texto-pdf';
 import { calcularSha256 } from './hash-arquivo';
 import { caminhoGabarito, caminhoPdf, motivoBloqueioAnexo } from './regras-prova';
@@ -149,7 +149,10 @@ export class ProvasService {
     if (caminhos.length > 0) await this.supabase.provasPdf.remove(caminhos);
   }
 
-  async processar(prova: Prova, aoMudarFase?: (fase: FaseProcessamento) => void): Promise<void> {
+  async processar(
+    prova: Prova,
+    aoMudarFase?: (fase: FaseProcessamento) => void,
+  ): Promise<SugestaoConcurso | null> {
     if (!prova.arquivo_path) throw new Error('A prova não tem PDF anexado.');
 
     aoMudarFase?.('baixando');
@@ -161,11 +164,15 @@ export class ProvasService {
     const textoGabarito = gabarito ? await extrairTextoPdf(gabarito) : undefined;
 
     aoMudarFase?.('processando');
-    const { error } = await this.supabase.client.functions.invoke('processar-prova', {
+    const { data, error } = await this.supabase.client.functions.invoke('processar-prova', {
       body: { prova_id: prova.id, texto, texto_gabarito: textoGabarito },
     });
 
     if (error) throw new Error(`Falha ao processar: ${error.message}`);
+
+    const sugestao = (data as { sugestao_concurso?: SugestaoConcurso } | null)?.sugestao_concurso;
+    // Sugestão sem banca nem órgão é ruído: não vale interromper a revisão.
+    return sugestao?.banca_id || sugestao?.orgao ? sugestao : null;
   }
 
   async destravar(prova: Prova): Promise<Prova> {

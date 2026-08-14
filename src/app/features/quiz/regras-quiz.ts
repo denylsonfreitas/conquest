@@ -206,3 +206,24 @@ export function desempenhoPorMateria(
 function percentual(parte: number, total: number): number {
   return total === 0 ? 0 : Math.round((parte / total) * 100);
 }
+
+// Sair custa coisas diferentes em cada modo: na prova as marcações só existem
+// em memória até a entrega, então saem perdidas; no estudo cada resposta já foi
+// gravada, e o que se perde é só a tela de resultado daquela sessão.
+export function avisoDeSaida(
+  execucao: ModoExecucao,
+  marcadas: number,
+  respondidas: number,
+): string | null {
+  if (execucao === 'prova') {
+    if (marcadas === 0) return null;
+    return marcadas === 1
+      ? 'Você marcou 1 questão e ainda não entregou. Sair descarta essa marcação.'
+      : `Você marcou ${marcadas} questões e ainda não entregou. Sair descarta essas marcações.`;
+  }
+
+  if (respondidas === 0) return null;
+  return respondidas === 1
+    ? 'Sua resposta já está gravada. Sair encerra a sessão sem passar pelo resultado.'
+    : `Suas ${respondidas} respostas já estão gravadas. Sair encerra a sessão sem passar pelo resultado.`;
+}

@@ -10,7 +10,7 @@
       <h1 class="text-lg font-semibold text-texto">{{ q.materia ?? 'Sem matéria' }}</h1>
     </div>
 
-    <button type="button" class="acao-inline" (click)="abandonar()">Sair do quiz</button>
+    <button type="button" class="acao-inline" (click)="pedirSaida()">Sair do quiz</button>
   </header>
 
   <div class="mb-6 flex flex-wrap gap-1.5">
@@ -120,38 +120,54 @@
     } @else if (sessao.terminou()) {
       <button type="button" class="btn" (click)="verResultado()">Ver resultado</button>
     } @else if (sessao.respostas().length > 0) {
-      <button type="button" class="acao-inline ml-auto" (click)="verResultado()">
+      <button type="button" class="acao-inline ml-auto" (click)="pedirEncerramento()">
         Encerrar com {{ sessao.respostas().length }} respondidas
       </button>
     }
   </div>
 
   @if (confirmandoEntrega()) {
-    <div class="cartao mt-6 border-atencao p-4 sm:p-5">
-      <p class="font-medium text-texto">
-        Entregar {{ sessao.marcadas() }} de {{ sessao.total() }}?
-      </p>
+    <app-confirmacao
+      tom="neutro"
+      [titulo]="'Entregar ' + sessao.marcadas() + ' de ' + sessao.total() + '?'"
+      [descricao]="
+        sessao.brancos() > 0
+          ? sessao.brancos() +
+            (sessao.brancos() === 1
+              ? ' questão fica em branco e conta como erro.'
+              : ' questões ficam em branco e contam como erro.')
+          : null
+      "
+      rotuloConfirmar="Entregar"
+      rotuloOcupado="Entregando…"
+      rotuloCancelar="Voltar ao simulado"
+      [ocupado]="ocupado()"
+      (confirmar)="entregar()"
+      (cancelar)="cancelarEntrega()"
+    />
+  }
 
-      @if (sessao.brancos() > 0) {
-        <p class="mt-1 text-sm font-medium text-atencao">
-          {{ sessao.brancos() }}
-          {{ sessao.brancos() === 1 ? 'questão em branco' : 'questões em branco' }}.
-        </p>
-      }
+  @if (confirmandoEncerramento()) {
+    <app-confirmacao
+      tom="neutro"
+      [titulo]="'Encerrar com ' + sessao.respostas().length + ' respondidas?'"
+      descricao="O resultado considera só o que você respondeu. As demais não contam como erro."
+      rotuloConfirmar="Ver resultado"
+      rotuloCancelar="Continuar respondendo"
+      (confirmar)="confirmarEncerramento()"
+      (cancelar)="confirmandoEncerramento.set(false)"
+    />
+  }
 
-      <div class="mt-4 flex gap-2">
-        <button type="button" class="btn" [disabled]="ocupado()" (click)="entregar()">
-          {{ ocupado() ? 'Entregando…' : 'Entregar' }}
-        </button>
-        <button
-          type="button"
-          class="btn-secundario"
-          [disabled]="ocupado()"
-          (click)="cancelarEntrega()"
-        >
-          Voltar ao simulado
-        </button>
-      </div>
-    </div>
+  @if (confirmandoSaida()) {
+    <app-confirmacao
+      tom="neutro"
+      titulo="Sair do quiz?"
+      [descricao]="avisoDeSaida()"
+      rotuloConfirmar="Sair"
+      rotuloCancelar="Continuar"
+      (confirmar)="abandonar()"
+      (cancelar)="confirmandoSaida.set(false)"
+    />
   }
 }

@@ -109,6 +109,11 @@
                       falta imagem
                     </span>
                   }
+                  @if (q.tem_texto_base && !q.texto_base_id) {
+                    <span class="rounded-campo bg-atencao-fundo px-2 py-0.5 text-atencao">
+                      falta texto
+                    </span>
+                  }
                   <span class="text-texto-fraco">
                     {{ q.concurso_nome }}
                     @if (q.banca_nome) {

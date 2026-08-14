@@ -24,6 +24,8 @@ const questao = (over: Partial<QuestaoEditavel> = {}): QuestaoEditavel => ({
   imagem_path: null,
   anulada: false,
   incerto: false,
+  tem_texto_base: false,
+  texto_base_id: null,
   ...over,
 });
 

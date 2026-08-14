@@ -1,0 +1,55 @@
+<form class="space-y-4" (ngSubmit)="enviar()">
+  <div>
+    <label for="texto-titulo" class="rotulo">
+      Título <span class="text-texto-fraco">(opcional)</span>
+    </label>
+    <input
+      id="texto-titulo"
+      class="campo mt-1"
+      placeholder="From Bartering to Bitcoin"
+      [ngModel]="titulo()"
+      (ngModelChange)="titulo.set($event)"
+      name="titulo"
+    />
+  </div>
+
+  <div>
+    <label for="texto-conteudo" class="rotulo">Texto</label>
+    <textarea
+      id="texto-conteudo"
+      rows="12"
+      class="campo mt-1 font-mono text-xs leading-relaxed"
+      placeholder="Cole aqui o texto exatamente como está na prova."
+      [ngModel]="conteudo()"
+      (ngModelChange)="conteudo.set($event)"
+      name="conteudo"
+    ></textarea>
+  </div>
+
+  <div>
+    <label for="texto-fonte" class="rotulo">
+      Fonte <span class="text-texto-fraco">(opcional)</span>
+    </label>
+    <input
+      id="texto-fonte"
+      class="campo mt-1"
+      placeholder="MENDES, T. Disponível em: … Acesso em: 2 set. 2022. Adaptado."
+      [ngModel]="fonte()"
+      (ngModelChange)="fonte.set($event)"
+      name="fonte"
+    />
+  </div>
+
+  @if (erro(); as msg) {
+    <p role="alert" class="alerta-erro">{{ msg }}</p>
+  }
+
+  <div class="flex gap-2">
+    <button type="submit" class="btn" [disabled]="!podeSalvar() || salvando()">
+      {{ salvando() ? 'Salvando...' : 'Salvar texto' }}
+    </button>
+    <button type="button" class="btn-secundario" [disabled]="salvando()" (click)="cancelar.emit()">
+      Cancelar
+    </button>
+  </div>
+</form>

@@ -21,6 +21,8 @@ const questao = (id: string, over: Partial<QuestaoQuiz> = {}): QuestaoQuiz => ({
   tem_imagem: false,
   anulada: false,
   incerto: false,
+  tem_texto_base: false,
+  texto_base_id: null,
   materia: 'Português',
   imagem_path: null,
   comentario: null,
@@ -217,6 +219,44 @@ describe('QuizExecucaoComponent', () => {
 
     clicar(fixture, 'primeira')?.click();
     expect(await assentar(fixture, 'Ver resultado')).toContain('Ver resultado');
+  });
+
+  it('mostra o texto-base recolhido, com o conteúdo já no DOM', async () => {
+    const fixture = montar();
+    const sessao = TestBed.inject(SessaoQuizService);
+    sessao.iniciar(
+      [questao('q1', { texto_base_id: 't1', tem_texto_base: true })],
+      'aleatorio',
+      'estudo',
+      new Map([
+        [
+          't1',
+          {
+            id: 't1',
+            titulo: 'From Bartering to Bitcoin',
+            conteudo: 'What we call money has always been a moving target.',
+            fonte: 'By Rich Beattie',
+          },
+        ],
+      ]),
+    );
+    await assentar(fixture, 'Enunciado da q1');
+
+    const detalhes = (fixture.nativeElement as HTMLElement).querySelector('details');
+    expect(detalhes).not.toBeNull();
+    // Recolhido por escolha: o texto é longo e empurraria a questão para baixo.
+    expect(detalhes?.hasAttribute('open')).toBe(false);
+    expect(detalhes?.textContent).toContain('From Bartering to Bitcoin');
+    expect(detalhes?.textContent).toContain('moving target');
+    expect(detalhes?.textContent).toContain('By Rich Beattie');
+  });
+
+  it('questão sem texto-base não ganha o bloco', async () => {
+    const fixture = montar();
+    TestBed.inject(SessaoQuizService).iniciar([questao('q1')], 'aleatorio', 'estudo');
+    await assentar(fixture, 'Enunciado da q1');
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('details')).toBeNull();
   });
 
   it('sair do quiz pede confirmação, e desistir dela não encerra a sessão', async () => {

@@ -119,7 +119,8 @@ export class MontarQuizComponent {
       );
       const escolhidas = primeiras(fila, this.quantidade());
       const questoes = await this.service.questoes(escolhidas.map((q) => q.id));
-      this.sessao.iniciar(questoes, this.modo(), this.execucao());
+      const textos = await this.service.textosDe(questoes);
+      this.sessao.iniciar(questoes, this.modo(), this.execucao(), textos);
       await this.router.navigate(['/quiz/executar']);
     } catch (e) {
       this.erroAcao.set(mensagem(e));

@@ -10,6 +10,7 @@ const dadosVazios = (): Backup['dados'] => ({
   materias: [],
   concursos: [],
   provas: [],
+  textos_base: [],
   questoes: [],
   respostas: [],
 });

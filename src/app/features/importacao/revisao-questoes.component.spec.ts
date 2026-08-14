@@ -28,6 +28,8 @@ const base = (over: Partial<QuestaoRevisao> = {}): QuestaoRevisao => ({
   imagem_path: null,
   comentario: null,
   incerto: false,
+  tem_texto_base: false,
+  texto_base_id: null,
   anulada: false,
   revisada: false,
   ...over,
@@ -38,7 +40,7 @@ function montar(revisao: Partial<RevisaoService>, dimensoes: Partial<DimensoesSe
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
-      { provide: RevisaoService, useValue: revisao },
+      { provide: RevisaoService, useValue: { listarTextos: async () => [], ...revisao } },
       {
         provide: DimensoesService,
         useValue: { listar: async () => MATERIAS, criar: async () => MATERIAS[0], ...dimensoes },

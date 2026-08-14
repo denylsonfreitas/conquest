@@ -17,6 +17,7 @@ const vazio = (): Backup['dados'] => ({
   materias: [],
   concursos: [],
   provas: [],
+  textos_base: [],
   questoes: [],
   respostas: [],
 });
@@ -26,6 +27,7 @@ const idsVazios = (): Record<TabelaBackup, string[]> => ({
   materias: [],
   concursos: [],
   provas: [],
+  textos_base: [],
   questoes: [],
   respostas: [],
 });
@@ -144,5 +146,16 @@ describe('ORDEM_IMPORTACAO', () => {
     expect(posicao('provas')).toBeLessThan(posicao('questoes'));
     expect(posicao('materias')).toBeLessThan(posicao('questoes'));
     expect(posicao('questoes')).toBeLessThan(posicao('respostas'));
+
+    // A questão referencia o texto: importar na ordem inversa quebraria a
+    // chave estrangeira e deixaria metade das questões de português sem
+    // sentido na volta.
+    expect(posicao('provas')).toBeLessThan(posicao('textos_base'));
+    expect(posicao('textos_base')).toBeLessThan(posicao('questoes'));
+  });
+
+  it('exporta toda tabela declarada no formato, sem deixar nenhuma para trás', () => {
+    const doFormato = Object.keys(BackupSchema.shape.dados.shape) as TabelaBackup[];
+    expect([...ORDEM_IMPORTACAO].sort()).toEqual([...doFormato].sort());
   });
 });

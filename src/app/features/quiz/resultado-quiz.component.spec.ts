@@ -20,6 +20,8 @@ const questao = (id: string, materia: string | null, gabarito: 'A' | 'B'): Quest
   tem_imagem: false,
   anulada: false,
   incerto: false,
+  tem_texto_base: false,
+  texto_base_id: null,
   materia,
   imagem_path: null,
   comentario: null,

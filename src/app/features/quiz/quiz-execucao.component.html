@@ -51,6 +51,26 @@
       }
     </p>
 
+    @if (sessao.textoAtual(); as texto) {
+      <details class="mb-4 rounded-cartao bg-superficie-sutil ring-1 ring-borda">
+        <summary class="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm">
+          <span class="flex-1 font-medium text-texto">
+            {{ texto.titulo ?? 'Texto de apoio' }}
+          </span>
+          <span class="text-texto-fraco transition group-open:rotate-180">
+            <app-icone nome="abrir" />
+          </span>
+        </summary>
+
+        <div class="border-t border-borda px-4 py-3">
+          <app-enunciado [texto]="texto.conteudo" />
+          @if (texto.fonte) {
+            <p class="mt-3 text-xs text-texto-fraco">{{ texto.fonte }}</p>
+          }
+        </div>
+      </details>
+    }
+
     <app-enunciado [texto]="q.enunciado" />
 
     @if (q.imagem_path) {

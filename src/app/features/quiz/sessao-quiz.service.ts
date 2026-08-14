@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { Letra, RespostaNova } from '../../shared/models';
-import { QuestaoQuiz, QuizService } from './quiz.service';
+import { TextoDoQuiz, QuestaoQuiz, QuizService } from './quiz.service';
 import { ModoExecucao, ModoQuiz, RespostaDada } from './regras-quiz';
 
 @Injectable({ providedIn: 'root' })
@@ -47,8 +47,21 @@ export class SessaoQuizService {
     );
   });
 
-  iniciar(questoes: QuestaoQuiz[], modo: ModoQuiz, execucao: ModoExecucao): void {
+  readonly textos = signal<ReadonlyMap<string, TextoDoQuiz>>(new Map());
+
+  readonly textoAtual = computed(() => {
+    const id = this.atual()?.texto_base_id;
+    return id ? (this.textos().get(id) ?? null) : null;
+  });
+
+  iniciar(
+    questoes: QuestaoQuiz[],
+    modo: ModoQuiz,
+    execucao: ModoExecucao,
+    textos: ReadonlyMap<string, TextoDoQuiz> = new Map(),
+  ): void {
     this.questoes.set(questoes);
+    this.textos.set(textos);
     this.respostas.set([]);
     this.marcacoes.set({});
     this.indice.set(0);

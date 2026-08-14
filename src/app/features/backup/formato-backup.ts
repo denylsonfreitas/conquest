@@ -7,6 +7,7 @@ import {
   ProvaSchema,
   QuestaoSchema,
   RespostaSchema,
+  TextoBaseSchema,
 } from '../../shared/schema';
 
 export const VERSAO_BACKUP = 1;
@@ -19,6 +20,9 @@ export const BackupSchema = z.object({
     materias: z.array(MateriaSchema),
     concursos: z.array(ConcursoSchema),
     provas: z.array(ProvaSchema),
+    // Antes de questoes: a questão referencia o texto, e importar na ordem
+    // inversa quebraria a chave estrangeira.
+    textos_base: z.array(TextoBaseSchema),
     questoes: z.array(QuestaoSchema),
     respostas: z.array(RespostaSchema),
   }),
@@ -32,6 +36,7 @@ export const ORDEM_IMPORTACAO: TabelaBackup[] = [
   'materias',
   'concursos',
   'provas',
+  'textos_base',
   'questoes',
   'respostas',
 ];

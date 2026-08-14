@@ -5,12 +5,14 @@ import { EdicaoQuestao, QuestaoEditavel, respostasQueMudam } from '../../shared/
 import { FiltrosAcervo, ItemComNomes } from '../../shared/filtros-acervo';
 import { Letra } from '../../shared/models';
 
-export type Situacao = 'todas' | 'elegivel' | 'falta_imagem' | 'anulada' | 'nao_revisada';
+export type Situacao =
+  'todas' | 'elegivel' | 'falta_imagem' | 'falta_texto' | 'anulada' | 'nao_revisada';
 
 export const ROTULO_SITUACAO: Record<Situacao, string> = {
   todas: 'Todas',
   elegivel: 'Elegíveis',
   falta_imagem: 'Falta imagem',
+  falta_texto: 'Falta texto',
   anulada: 'Anuladas',
   nao_revisada: 'Não revisadas',
 };
@@ -31,7 +33,7 @@ export interface PaginaAcervo {
 }
 
 const COLUNAS =
-  'id, numero, enunciado, alternativas, materia_id, materia, assunto, gabarito, comentario, tem_imagem, imagem_path, anulada, incerto, revisada, elegivel, prova_nome, concurso_nome, banca_nome';
+  'id, numero, enunciado, alternativas, materia_id, materia, assunto, gabarito, comentario, tem_imagem, imagem_path, tem_texto_base, texto_base_id, anulada, incerto, revisada, elegivel, prova_nome, concurso_nome, banca_nome';
 
 export const POR_PAGINA = 20;
 
@@ -67,6 +69,9 @@ export class AcervoService {
     if (situacao === 'nao_revisada') consulta = consulta.eq('revisada', false);
     if (situacao === 'falta_imagem') {
       consulta = consulta.eq('tem_imagem', true).is('imagem_path', null);
+    }
+    if (situacao === 'falta_texto') {
+      consulta = consulta.eq('tem_texto_base', true).is('texto_base_id', null);
     }
 
     const termo = busca.trim();

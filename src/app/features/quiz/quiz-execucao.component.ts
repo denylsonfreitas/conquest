@@ -11,13 +11,14 @@ import { Router } from '@angular/router';
 import { Letra } from '../../shared/models';
 import { ConfirmacaoComponent } from '../../shared/ui/confirmacao.component';
 import { EnunciadoComponent } from '../../shared/ui/enunciado.component';
+import { IconeComponent } from '../../shared/ui/icone.component';
 import { QuizService } from './quiz.service';
 import { avisoDeSaida } from './regras-quiz';
 import { SessaoQuizService } from './sessao-quiz.service';
 
 @Component({
   selector: 'app-quiz-execucao',
-  imports: [EnunciadoComponent, ConfirmacaoComponent],
+  imports: [EnunciadoComponent, ConfirmacaoComponent, IconeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './quiz-execucao.component.html',
 })

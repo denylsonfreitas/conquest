@@ -69,6 +69,7 @@ export class ListaAcervoComponent {
     'todas',
     'elegivel',
     'falta_imagem',
+    'falta_texto',
     'anulada',
     'nao_revisada',
   ];

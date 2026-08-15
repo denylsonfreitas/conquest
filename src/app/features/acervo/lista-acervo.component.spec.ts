@@ -25,6 +25,7 @@ const questao = (over: Partial<QuestaoAcervo> = {}): QuestaoAcervo => ({
   incerto: false,
   tem_texto_base: false,
   texto_base_id: null,
+  prova_id: 'p1',
   revisada: true,
   elegivel: true,
   prova_nome: 'Prova',
@@ -39,6 +40,11 @@ interface Chamada {
   busca: string;
   pagina: number;
 }
+
+const TEXTOS = [
+  { id: 't1', titulo: 'Empreendedorismo social', conteudo: 'A meta é transformar...' },
+  { id: 't2', titulo: 'From Bartering to Bitcoin', conteudo: 'What we call money...' },
+];
 
 function montar(resposta: PaginaAcervo, chamadas: Chamada[] = []) {
   TestBed.resetTestingModule();
@@ -60,6 +66,7 @@ function montar(resposta: PaginaAcervo, chamadas: Chamada[] = []) {
           respostasAfetadas: async () => 0,
           editar: async (_id: string, m: Partial<QuestaoAcervo>) => questao({ ...m }),
           urlImagem: async () => 'https://local/x.png',
+          textosDaProva: async () => TEXTOS,
         },
       },
       { provide: DimensoesService, useValue: { listar: async () => [] } },
@@ -150,6 +157,25 @@ describe('ListaAcervoComponent', () => {
     await controles(fixture).salvar(questao(), { gabarito: 'B' });
     expect(controles(fixture).recontadas()).toBe(3);
     expect(await assentar(fixture, 'recontadas')).toContain('3 respostas passadas recontadas');
+  });
+
+  it('abre a edição com o texto-base da questão já selecionado', async () => {
+    const comTexto = questao({ tem_texto_base: true, texto_base_id: 't2' });
+    const fixture = montar({ questoes: [comTexto], total: 1 });
+    await assentar(fixture, 'Proteção de Dados');
+
+    const raiz = fixture.nativeElement as HTMLElement;
+    Array.from(raiz.querySelectorAll('button'))
+      .find((b) => b.getAttribute('aria-label') === 'Editar questão')
+      ?.click();
+    await assentar(fixture, 'From Bartering to Bitcoin');
+
+    const selects = Array.from(raiz.querySelectorAll('select'));
+    const doTexto = selects.find((s) =>
+      Array.from(s.options).some((o) => o.textContent?.includes('From Bartering')),
+    );
+
+    expect(doTexto?.value).toBe('t2');
   });
 
   it('não conta recontagem quando o gabarito não mudou', async () => {

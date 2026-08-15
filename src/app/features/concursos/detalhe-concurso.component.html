@@ -193,6 +193,16 @@
                       @if (prova.total_questoes) {
                         <span> · {{ prova.total_questoes }} questões</span>
                       }
+
+                      @if (!podeAnexar(prova.status)) {
+                        <span
+                          class="dica ml-1 inline-flex align-[-0.2em] text-texto-fraco"
+                          [attr.aria-label]="motivoBloqueio(prova.status)"
+                          [attr.data-dica]="motivoBloqueio(prova.status)"
+                        >
+                          <app-icone nome="bloqueado" [tamanho]="14" />
+                        </span>
+                      }
                     </p>
 
                     @if (processandoId() === prova.id && faseProcessamento(); as fase) {
@@ -227,30 +237,29 @@
                       <button
                         type="button"
                         class="acao-icone dica"
-                        aria-label="Ver PDF da prova"
-                        data-dica="Ver PDF da prova"
-                        (click)="abrirPdf(prova, 'prova')"
+                        aria-label="Ver PDF"
+                        data-dica="Ver PDF"
+                        (click)="pedirPdf(prova)"
                       >
                         <app-icone nome="ver" [tamanho]="18" />
                       </button>
                     }
 
-                    @if (prova.gabarito_path) {
-                      <button
-                        type="button"
-                        class="acao-icone dica"
-                        aria-label="Ver PDF do gabarito"
-                        data-dica="Ver PDF do gabarito"
-                        (click)="abrirPdf(prova, 'gabarito')"
+                    @if (prova.status === 'processando') {
+                      <span
+                        role="status"
+                        class="acao-icone dica text-info"
+                        aria-label="Processando"
+                        data-dica="Processando"
                       >
-                        <app-icone nome="gabarito" [tamanho]="18" />
-                      </button>
+                        <app-icone nome="processando" [tamanho]="18" [girando]="true" />
+                      </span>
                     }
 
                     @if (prova.status === 'aguardando_revisao' || prova.status === 'pronta') {
                       <a
                         [routerLink]="['/provas', prova.id, 'revisao']"
-                        class="acao-icone dica text-texto"
+                        class="acao-icone dica text-sucesso"
                         aria-label="Revisar questões"
                         data-dica="Revisar questões"
                       >
@@ -325,6 +334,36 @@
       </section>
     }
   }
+}
+
+@if (pdfEscolha(); as prova) {
+  <app-modal titulo="Qual PDF abrir?" largura="media" (fechar)="pdfEscolha.set(null)">
+    <div class="space-y-2">
+      <button
+        type="button"
+        class="flex w-full items-center gap-3 rounded-campo px-3 py-3 text-left ring-1 ring-borda transition hover:bg-superficie-sutil"
+        (click)="escolherPdf(prova, 'prova')"
+      >
+        <app-icone nome="ver" [tamanho]="18" />
+        <span class="min-w-0 flex-1">
+          <span class="block font-medium text-texto">Prova</span>
+          <span class="block text-sm text-texto-fraco">{{ prova.nome }}</span>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="flex w-full items-center gap-3 rounded-campo px-3 py-3 text-left ring-1 ring-borda transition hover:bg-superficie-sutil"
+        (click)="escolherPdf(prova, 'gabarito')"
+      >
+        <app-icone nome="gabarito" [tamanho]="18" />
+        <span class="min-w-0 flex-1">
+          <span class="block font-medium text-texto">Gabarito</span>
+          <span class="block text-sm text-texto-fraco">PDF de respostas anexado à prova</span>
+        </span>
+      </button>
+    </div>
+  </app-modal>
 }
 
 @if (provaAnexando(); as prova) {

@@ -382,15 +382,48 @@ describe('DetalheConcursoComponent', () => {
     expect(await assentar(fixture, 'reclassifica')).toContain('reclassifica as questões');
   });
 
-  it('só oferece ver o gabarito quando existe um anexado', async () => {
-    const semGabarito = montar({}, { listarPorConcurso: async () => [PROVA_COM_PDF] });
-    expect(await assentar(semGabarito, 'Ver PDF da prova')).not.toContain('Ver PDF do gabarito');
+  it('mostra o giro só enquanto processa, e não junto do revisar', async () => {
+    const processando: Prova = { ...PROVA_COM_PDF, status: 'processando' };
+    const emCurso = montar({}, { listarPorConcurso: async () => [processando] });
+    const textoEmCurso = await assentar(emCurso, 'Processando');
+    expect(textoEmCurso).toContain('Processando');
+    expect(textoEmCurso).not.toContain('Revisar questões');
 
-    const comGabarito = montar({}, { listarPorConcurso: async () => [PROVA_COM_GABARITO] });
-    expect(await assentar(comGabarito, 'Ver PDF do gabarito')).toContain('Ver PDF do gabarito');
+    const extraida: Prova = { ...PROVA_COM_PDF, status: 'aguardando_revisao' };
+    const pronta = montar({}, { listarPorConcurso: async () => [extraida] });
+    const textoPronta = await assentar(pronta, 'Revisar questões');
+    expect(textoPronta).not.toContain('Processando');
   });
 
-  it('abre o gabarito pelo caminho do gabarito, não pelo da prova', async () => {
+  it('o cadeado da prova extraída fica na linha de informação, não entre as ações', async () => {
+    const extraida: Prova = { ...PROVA_COM_PDF, status: 'aguardando_revisao', total_questoes: 70 };
+    const fixture = montar({}, { listarPorConcurso: async () => [extraida] });
+    await assentar(fixture, '70 questões');
+
+    const linha = (fixture.nativeElement as HTMLElement).querySelector('li p:nth-of-type(2)');
+    expect(linha?.textContent).toContain('70 questões');
+    expect(linha?.querySelector('[data-dica]')?.getAttribute('data-dica')).toContain(
+      'invalidaria as questões',
+    );
+  });
+
+  it('sem gabarito, ver PDF abre direto — não há escolha a fazer', async () => {
+    const urlTemporaria = vi.fn(async (_c: string) => 'https://exemplo/assinada');
+    const abrir = vi.spyOn(window, 'open').mockReturnValue(null);
+
+    const fixture = montar({}, { listarPorConcurso: async () => [PROVA_COM_PDF], urlTemporaria });
+    await assentar(fixture, 'Ver PDF');
+
+    clicarPorRotulo(fixture, 'Ver PDF');
+    await new Promise((r) => setTimeout(r, 20));
+    fixture.detectChanges();
+
+    expect(legivel(fixture)).not.toContain('Qual PDF abrir?');
+    expect(urlTemporaria).toHaveBeenCalledWith('c1/p1.pdf');
+    abrir.mockRestore();
+  });
+
+  it('com gabarito, oferece a escolha e abre pelo caminho do que foi escolhido', async () => {
     const urlTemporaria = vi.fn(async (_c: string) => 'https://exemplo/assinada');
     const abrir = vi.spyOn(window, 'open').mockReturnValue(null);
 
@@ -398,15 +431,25 @@ describe('DetalheConcursoComponent', () => {
       {},
       { listarPorConcurso: async () => [PROVA_COM_GABARITO], urlTemporaria },
     );
-    await assentar(fixture, 'Ver PDF do gabarito');
+    await assentar(fixture, 'Ver PDF');
 
-    const botao = Array.from(
-      (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
-    ).find((b) => b.getAttribute('aria-label') === 'Ver PDF do gabarito');
-    botao?.click();
+    clicarPorRotulo(fixture, 'Ver PDF');
+    expect(await assentar(fixture, 'Qual PDF abrir?')).toContain('Qual PDF abrir?');
+    expect(urlTemporaria).not.toHaveBeenCalled();
+
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
+      .find((b) => b.textContent?.includes('Gabarito'))
+      ?.click();
     await new Promise((r) => setTimeout(r, 20));
 
     expect(urlTemporaria).toHaveBeenCalledWith('c1/p1-gabarito.pdf');
     abrir.mockRestore();
   });
 });
+
+function clicarPorRotulo(fixture: ComponentFixture<DetalheConcursoComponent>, rotulo: string) {
+  Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
+    .find((b) => b.getAttribute('aria-label') === rotulo)
+    ?.click();
+  fixture.detectChanges();
+}

@@ -268,6 +268,27 @@ export class DetalheConcursoComponent {
     }
   }
 
+  // Uma prova pode ter dois PDFs, e dois ícones lado a lado obrigavam a
+  // decifrar qual era qual. Um só abre a escolha, com os nomes por extenso.
+  protected readonly pdfEscolha = signal<Prova | null>(null);
+
+  protected pedirPdf(prova: Prova): void {
+    if (!prova.arquivo_path) return;
+
+    // Sem gabarito não há escolha a fazer: abre direto o único que existe.
+    if (!prova.gabarito_path) {
+      void this.abrirPdf(prova, 'prova');
+      return;
+    }
+
+    this.pdfEscolha.set(prova);
+  }
+
+  protected async escolherPdf(prova: Prova, alvo: 'prova' | 'gabarito'): Promise<void> {
+    this.pdfEscolha.set(null);
+    await this.abrirPdf(prova, alvo);
+  }
+
   protected async abrirPdf(prova: Prova, alvo: 'prova' | 'gabarito' = 'prova'): Promise<void> {
     const caminho = alvo === 'prova' ? prova.arquivo_path : prova.gabarito_path;
     if (!caminho) return;

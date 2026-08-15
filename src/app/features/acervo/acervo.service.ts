@@ -18,6 +18,7 @@ export const ROTULO_SITUACAO: Record<Situacao, string> = {
 };
 
 export interface QuestaoAcervo extends QuestaoEditavel {
+  readonly prova_id: string;
   readonly revisada: boolean;
   readonly elegivel: boolean;
   readonly assunto: string | null;
@@ -33,7 +34,7 @@ export interface PaginaAcervo {
 }
 
 const COLUNAS =
-  'id, numero, enunciado, alternativas, materia_id, materia, assunto, gabarito, comentario, tem_imagem, imagem_path, tem_texto_base, texto_base_id, anulada, incerto, revisada, elegivel, prova_nome, concurso_nome, banca_nome';
+  'id, prova_id, numero, enunciado, alternativas, materia_id, materia, assunto, gabarito, comentario, tem_imagem, imagem_path, tem_texto_base, texto_base_id, anulada, incerto, revisada, elegivel, prova_nome, concurso_nome, banca_nome';
 
 export const POR_PAGINA = 20;
 
@@ -130,6 +131,25 @@ export class AcervoService {
     if (error || !data) throw new Error(`Não foi possível abrir a imagem: ${error?.message}`);
     return data.signedUrl;
   }
+
+  // O acervo atravessa provas, então os textos oferecidos são os da prova
+  // daquela questão — associar a um texto de outra prova não faria sentido.
+  async textosDaProva(provaId: string): Promise<TextoDaProva[]> {
+    const { data, error } = await this.supabase.client
+      .from('textos_base')
+      .select('id, titulo, conteudo')
+      .eq('prova_id', provaId)
+      .order('ordem', { nullsFirst: false });
+
+    if (error) throw new Error(`Não foi possível carregar os textos: ${error.message}`);
+    return (data ?? []) as TextoDaProva[];
+  }
+}
+
+export interface TextoDaProva {
+  readonly id: string;
+  readonly titulo: string | null;
+  readonly conteudo: string;
 }
 
 const CHECK_VIOLADO = '23514';

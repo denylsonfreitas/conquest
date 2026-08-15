@@ -23,6 +23,7 @@ import {
   QuestaoAcervo,
   ROTULO_SITUACAO,
   Situacao,
+  TextoDaProva,
 } from './acervo.service';
 
 type Status = 'carregando' | 'ok' | 'erro';
@@ -153,10 +154,32 @@ export class ListaAcervoComponent {
     this.busca.set(termo);
   }
 
-  protected alternarAberta(id: string): void {
+  protected readonly textos = signal<TextoDaProva[]>([]);
+
+  protected async alternarAberta(id: string): Promise<void> {
     if (this.pendenteId() !== null) return;
-    this.abertaId.update((atual) => (atual === id ? null : id));
+
+    const fechando = this.abertaId() === id;
     this.respostasAfetadas.set(0);
+
+    if (fechando) {
+      this.abertaId.set(null);
+      return;
+    }
+
+    // O editor abre na hora e os textos chegam depois: o select usa ngModel,
+    // que reaplica o valor quando as <option> aparecem. Com formulário reativo
+    // isso não valeria — foi o que exigiu carregar antes na edição de concurso.
+    const questao = this.questoes().find((q) => q.id === id);
+    this.textos.set([]);
+    this.abertaId.set(id);
+    if (questao) {
+      try {
+        this.textos.set(await this.service.textosDaProva(questao.prova_id));
+      } catch (e) {
+        this.erroAcao.set(mensagem(e));
+      }
+    }
   }
 
   protected async acompanhar(questao: QuestaoAcervo, rascunho: EdicaoQuestao): Promise<void> {

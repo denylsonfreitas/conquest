@@ -12,6 +12,7 @@ export type NomeIcone =
   | 'revisar'
   | 'processar'
   | 'repetir'
+  | 'processando'
   | 'destravar'
   | 'bloqueado'
   | 'cancelar'
@@ -30,6 +31,8 @@ const TRACOS: Record<NomeIcone, string> = {
   revisar: 'M9 11l3 3 8-8 M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11',
   processar: 'M7 4l12 8-12 8z',
   repetir: 'M20 12a8 8 0 11-2.3-5.6 M20 3v5h-5',
+  // Duas setas em círculo, sem começo nem fim visíveis: o giro fica contínuo.
+  processando: 'M21 12a9 9 0 01-9 9 M3 12a9 9 0 019-9 M21 12h-4 M3 12h4',
   destravar: 'M8 10V7a4 4 0 017.5-2 M5 10h14v10H5z',
   bloqueado: 'M8 10V7a4 4 0 018 0v3 M5 10h14v10H5z',
   cancelar: 'M18 6L6 18 M6 6l12 12',
@@ -52,6 +55,7 @@ const TRACOS: Record<NomeIcone, string> = {
       stroke-linejoin="round"
       aria-hidden="true"
       class="inline-block shrink-0 align-[-0.125em]"
+      [class.animate-spin]="girando()"
     >
       <path [attr.d]="traco()" />
     </svg>
@@ -60,6 +64,10 @@ const TRACOS: Record<NomeIcone, string> = {
 export class IconeComponent {
   readonly nome = input.required<NomeIcone>();
   readonly tamanho = input(16);
+
+  // O giro vai no próprio SVG, não no host: <app-icone> é inline, e transform
+  // não se aplica a elemento inline não substituído.
+  readonly girando = input(false);
 
   protected traco(): string {
     return TRACOS[this.nome()];

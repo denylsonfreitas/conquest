@@ -196,7 +196,8 @@
 
                       @if (!podeAnexar(prova.status)) {
                         <span
-                          class="dica ml-1 inline-flex align-[-0.2em] text-texto-fraco"
+                          tabindex="0"
+                          class="dica dica-inicio ml-1 inline-flex align-[-0.2em] text-texto-fraco outline-none focus-visible:text-texto"
                           [attr.aria-label]="motivoBloqueio(prova.status)"
                           [attr.data-dica]="motivoBloqueio(prova.status)"
                         >
@@ -304,15 +305,6 @@
                         (click)="abrirAnexo(prova)"
                       >
                         <app-icone nome="anexar" [tamanho]="18" />
-                      </button>
-                    } @else {
-                      <button
-                        type="button"
-                        class="acao-icone dica cursor-default"
-                        [attr.aria-label]="motivoBloqueio(prova.status)"
-                        [attr.data-dica]="motivoBloqueio(prova.status)"
-                      >
-                        <app-icone nome="bloqueado" [tamanho]="18" />
                       </button>
                     }
 

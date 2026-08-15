@@ -400,11 +400,19 @@ describe('DetalheConcursoComponent', () => {
     const fixture = montar({}, { listarPorConcurso: async () => [extraida] });
     await assentar(fixture, '70 questões');
 
-    const linha = (fixture.nativeElement as HTMLElement).querySelector('li p:nth-of-type(2)');
+    const raiz = fixture.nativeElement as HTMLElement;
+    const linha = raiz.querySelector('li p:nth-of-type(2)');
     expect(linha?.textContent).toContain('70 questões');
     expect(linha?.querySelector('[data-dica]')?.getAttribute('data-dica')).toContain(
       'invalidaria as questões',
     );
+
+    // Ele estava em dois lugares: mudar de lugar é tirar de um e pôr no outro,
+    // não só pôr no outro.
+    const cadeados = Array.from(raiz.querySelectorAll('[data-dica]')).filter((e) =>
+      (e.getAttribute('data-dica') ?? '').includes('invalidaria as questões'),
+    );
+    expect(cadeados).toHaveLength(1);
   });
 
   it('sem gabarito, ver PDF abre direto — não há escolha a fazer', async () => {

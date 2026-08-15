@@ -181,6 +181,16 @@
   transition: opacity 120ms;
 }
 
+/*
+ * A dica ancora pela direita porque o uso comum é ícone na borda direita do
+ * cartão. Perto da borda esquerda essa âncora joga a caixa para fora da tela,
+ * e aí vale inverter.
+ */
+.dica-inicio::after {
+  right: auto;
+  left: 0;
+}
+
 .dica:hover::after,
 .dica:focus::after,
 .dica:focus-within::after {

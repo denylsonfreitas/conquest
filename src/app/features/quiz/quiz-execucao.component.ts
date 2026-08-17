@@ -12,7 +12,7 @@ import { Letra } from '../../shared/models';
 import { ConfirmacaoComponent } from '../../shared/ui/confirmacao.component';
 import { EnunciadoComponent } from '../../shared/ui/enunciado.component';
 import { IconeComponent } from '../../shared/ui/icone.component';
-import { QuizService } from './quiz.service';
+import { QuestaoQuiz, QuizService } from './quiz.service';
 import { avisoDeSaida } from './regras-quiz';
 import { SessaoQuizService } from './sessao-quiz.service';
 
@@ -50,6 +50,33 @@ export class QuizExecucaoComponent {
       this.urlImagem.set(null);
       if (caminho) void this.carregarImagem(caminho);
     });
+
+    effect(() => {
+      const questao = this.sessao.atual();
+      this.urlsAlternativas.set({});
+      if (questao) void this.carregarAlternativas(questao);
+    });
+  }
+
+  // Alternativa que é figura não tem texto: sem a imagem o botão sairia com a
+  // letra e mais nada.
+  protected readonly urlsAlternativas = signal<Record<string, string>>({});
+
+  protected urlAlternativa(letra: string): string | null {
+    return this.urlsAlternativas()[letra] ?? null;
+  }
+
+  private async carregarAlternativas(questao: QuestaoQuiz): Promise<void> {
+    const urls: Record<string, string> = {};
+    for (const alt of questao.alternativas) {
+      if (alt.texto.trim() !== '' || !alt.imagem_path) continue;
+      try {
+        urls[alt.letra] = await this.service.urlImagem(alt.imagem_path);
+      } catch (e) {
+        this.erro.set(mensagem(e));
+      }
+    }
+    this.urlsAlternativas.set(urls);
   }
 
   private async carregarImagem(caminho: string): Promise<void> {

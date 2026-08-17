@@ -47,6 +47,11 @@ export class EditorQuestaoComponent {
   readonly removerImagem = output<void>();
   readonly rascunhoMudou = output<EdicaoQuestao>();
   readonly criarTexto = output<void>();
+  readonly anexarImagemAlternativa = output<{ letra: string; arquivo: File }>();
+  readonly removerImagemAlternativa = output<string>();
+
+  // Letra → URL assinada. Vem de fora porque assinar é trabalho de service.
+  readonly urlsAlternativas = input<Readonly<Record<string, string>>>({});
 
   protected readonly rascunho = signal<EdicaoQuestao>({});
   protected readonly LETRAS = LETRAS;
@@ -97,6 +102,26 @@ export class EditorQuestaoComponent {
 
   limpar(): void {
     this.rascunho.set({});
+  }
+
+  // Alternativa sem texto é figura: o desenho é o enunciado dela.
+  protected emFigura(alt: { texto: string }): boolean {
+    return alt.texto.trim() === '';
+  }
+
+  protected readonly alternativasEmFigura = computed(() =>
+    this.questao().alternativas.filter((a) => this.emFigura(a)),
+  );
+
+  protected urlAlternativa(letra: string): string | null {
+    return this.urlsAlternativas()[letra] ?? null;
+  }
+
+  protected escolherArquivoAlternativa(letra: string, evento: Event): void {
+    const entrada = evento.target as HTMLInputElement;
+    const arquivo = entrada.files?.[0];
+    if (arquivo) this.anexarImagemAlternativa.emit({ letra, arquivo });
+    entrada.value = '';
   }
 
   protected escolherArquivo(evento: Event): void {

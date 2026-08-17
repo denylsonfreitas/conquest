@@ -209,11 +209,14 @@
           [materias]="materias()"
           [textos]="textos()"
           [urlImagem]="q.imagem_path ? (urlsPorCaminho()[q.imagem_path] ?? null) : null"
+          [urlsAlternativas]="urlsAlternativas()"
           [salvando]="salvando()"
           (rascunhoMudou)="acompanhar(q.id, $event)"
           (salvar)="salvar(q, $event)"
           (anexarImagem)="anexarImagem(q, $event)"
           (removerImagem)="removerImagem(q)"
+          (anexarImagemAlternativa)="anexarImagemAlternativa(q, $event)"
+          (removerImagemAlternativa)="removerImagemAlternativa(q, $event)"
           (criarTexto)="abrirNovoTexto()"
         />
 

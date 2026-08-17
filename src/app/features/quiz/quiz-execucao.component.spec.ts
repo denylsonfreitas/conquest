@@ -221,6 +221,45 @@ describe('QuizExecucaoComponent', () => {
     expect(await assentar(fixture, 'Ver resultado')).toContain('Ver resultado');
   });
 
+  it('alternativa em figura mostra a imagem, não um botão vazio', async () => {
+    const urlImagem = vi.fn(async (c: string) => `https://local/${c}`);
+    const fixture = montar({ urlImagem });
+    TestBed.inject(SessaoQuizService).iniciar(
+      [
+        questao('q1', {
+          tem_imagem: true,
+          alternativas: [
+            { letra: 'A', texto: '', imagem_path: 'p/q1-A.png' },
+            { letra: 'B', texto: '', imagem_path: 'p/q1-B.png' },
+          ],
+        }),
+      ],
+      'aleatorio',
+      'estudo',
+    );
+    await assentar(fixture, 'Enunciado da q1');
+    await respirar(fixture);
+
+    const imagens = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('button img'),
+    );
+    expect(imagens).toHaveLength(2);
+    expect(imagens[0].getAttribute('alt')).toBe('Alternativa A');
+    expect(urlImagem).toHaveBeenCalledWith('p/q1-A.png');
+    expect(urlImagem).toHaveBeenCalledWith('p/q1-B.png');
+  });
+
+  it('alternativa com texto não vira imagem — e não pede URL assinada', async () => {
+    const urlImagem = vi.fn(async (c: string) => `https://local/${c}`);
+    const fixture = montar({ urlImagem });
+    TestBed.inject(SessaoQuizService).iniciar([questao('q1')], 'aleatorio', 'estudo');
+    await assentar(fixture, 'Enunciado da q1');
+    await respirar(fixture);
+
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('button img')).toHaveLength(0);
+    expect(urlImagem).not.toHaveBeenCalled();
+  });
+
   it('mostra o texto-base recolhido, com o conteúdo já no DOM', async () => {
     const fixture = montar();
     const sessao = TestBed.inject(SessaoQuizService);

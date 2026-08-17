@@ -23,8 +23,14 @@ const limpa = (over: Partial<QuestaoParaRevisao> = {}): QuestaoParaRevisao => ({
   revisada: false,
   tem_texto_base: false,
   texto_base_id: null,
+  alternativas: [
+    { letra: 'A', texto: 'primeira' },
+    { letra: 'B', texto: 'segunda' },
+  ],
   ...over,
 });
+
+const EM_FIGURA = ['A', 'B', 'C', 'D', 'E'].map((letra) => ({ letra, texto: '' }));
 
 describe('precisaAtencao', () => {
   it('não acusa questão completa', () => {
@@ -85,6 +91,33 @@ describe('motivosAtencao', () => {
   it('não deixa aprovar enquanto o texto não for escolhido', () => {
     expect(podeAprovar(limpa({ tem_texto_base: true }))).toBe(false);
     expect(podeAprovar(limpa({ tem_texto_base: true, texto_base_id: 't1' }))).toBe(true);
+  });
+
+  it('cobra imagem de cada alternativa em figura, dizendo quais faltam', () => {
+    expect(motivosAtencao(limpa({ alternativas: EM_FIGURA }))).toEqual([
+      'alternativas sem imagem: A, B, C, D, E',
+    ]);
+
+    const metade = EM_FIGURA.map((a, i) =>
+      i < 3 ? { ...a, imagem_path: `p/q-${a.letra}.png` } : a,
+    );
+    expect(motivosAtencao(limpa({ alternativas: metade }))).toEqual([
+      'alternativas sem imagem: D, E',
+    ]);
+  });
+
+  it('some quando todas as figuras chegam, e aí dá para aprovar', () => {
+    const completas = EM_FIGURA.map((a) => ({ ...a, imagem_path: `p/q-${a.letra}.png` }));
+    expect(motivosAtencao(limpa({ alternativas: completas }))).toEqual([]);
+    expect(podeAprovar(limpa({ alternativas: completas }))).toBe(true);
+  });
+
+  it('alternativa com texto não cobra imagem — só a que veio vazia', () => {
+    const mista = [
+      { letra: 'A', texto: 'tem texto' },
+      { letra: 'B', texto: '' },
+    ];
+    expect(motivosAtencao(limpa({ alternativas: mista }))).toEqual(['alternativas sem imagem: B']);
   });
 
   it('não acusa nada numa questão anulada', () => {

@@ -93,7 +93,18 @@
             [disabled]="ocupado() || (!sessao.ehProva() && sessao.respostaAtual() !== null)"
             (click)="marcar(alt.letra)"
           >
-            <span class="font-medium">{{ alt.letra }})</span> {{ alt.texto }}
+            @if (alt.texto.trim()) {
+              <span class="font-medium">{{ alt.letra }})</span> {{ alt.texto }}
+            } @else {
+              <span class="font-medium">{{ alt.letra }})</span>
+              @if (urlAlternativa(alt.letra); as url) {
+                <img
+                  [src]="url"
+                  [alt]="'Alternativa ' + alt.letra"
+                  class="mt-2 max-h-56 rounded-campo bg-superficie"
+                />
+              }
+            }
           </button>
         </li>
       }

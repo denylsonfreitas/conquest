@@ -86,6 +86,10 @@ export const ProvaNovaSchema = ProvaSchema.omit({ id: true, created_at: true })
 export const AlternativaSchema = z.object({
   letra: LetraSchema,
   texto: z.string().trim(),
+  // Alternativa que é figura — árvore binária, gráfico, diagrama — não tem
+  // texto para transcrever. A imagem entra por alternativa, não pela questão:
+  // uma imagem só para as cinco deixaria os botões do quiz vazios.
+  imagem_path: textoOpcional.optional(),
 });
 
 const questaoCampos = z.object({

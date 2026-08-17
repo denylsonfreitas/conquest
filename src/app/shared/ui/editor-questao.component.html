@@ -1,11 +1,66 @@
 <div class="space-y-4">
   <ul class="space-y-1 text-sm">
     @for (alt of questao().alternativas; track alt.letra) {
-      <li class="whitespace-pre-line" [class.font-medium]="alt.letra === valor('gabarito')">
-        ({{ alt.letra }}) {{ alt.texto }}
+      <li
+        class="whitespace-pre-line"
+        [class.font-medium]="alt.letra === valor('gabarito')"
+        [class.text-atencao]="emFigura(alt) && !alt.imagem_path"
+      >
+        @if (emFigura(alt)) {
+          @if (alt.imagem_path) {
+            ({{ alt.letra }}) <span class="text-texto-fraco">figura anexada</span>
+          } @else {
+            ({{ alt.letra }}) <span>figura sem imagem</span>
+          }
+        } @else {
+          ({{ alt.letra }}) {{ alt.texto }}
+        }
       </li>
     }
   </ul>
+
+  @if (alternativasEmFigura().length > 0) {
+    <div>
+      <label class="rotulo">Figuras das alternativas</label>
+      <p class="mt-0.5 text-sm text-texto-fraco">
+        As alternativas desta questão são desenhos. Recorte cada uma do PDF e envie separadamente.
+      </p>
+
+      <ul class="mt-2 space-y-3">
+        @for (alt of alternativasEmFigura(); track alt.letra) {
+          <li class="flex flex-wrap items-start gap-3">
+            <span class="w-6 shrink-0 pt-2 font-medium text-texto">{{ alt.letra }})</span>
+
+            <div class="min-w-0 flex-1">
+              @if (urlAlternativa(alt.letra); as url) {
+                <div class="mb-2 flex items-start gap-3">
+                  <img
+                    [src]="url"
+                    [alt]="'Alternativa ' + alt.letra"
+                    class="max-h-32 rounded-campo border border-borda"
+                  />
+                  <button
+                    type="button"
+                    class="acao-inline text-perigo"
+                    (click)="removerImagemAlternativa.emit(alt.letra)"
+                  >
+                    Remover
+                  </button>
+                </div>
+              }
+
+              <input
+                type="file"
+                accept="image/*"
+                class="campo"
+                (change)="escolherArquivoAlternativa(alt.letra, $event)"
+              />
+            </div>
+          </li>
+        }
+      </ul>
+    </div>
+  }
 
   <div class="grid gap-3 sm:grid-cols-2">
     <div>

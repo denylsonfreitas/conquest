@@ -101,6 +101,12 @@ export class RevisaoQuestoesComponent {
       if (caminho && !this.urlsPorCaminho()[caminho]) void this.assinarImagem(caminho);
     });
 
+    effect(() => {
+      const id = this.expandidaId();
+      this.urlsAlternativas.set({});
+      if (id) void this.assinarAlternativas(id);
+    });
+
     inject(DestroyRef).onDestroy(() => clearTimeout(this.temporizadorToast));
   }
 
@@ -310,6 +316,53 @@ export class RevisaoQuestoesComponent {
 
   protected readonly precisaAtencao = precisaAtencao;
   protected readonly motivosAtencao = motivosAtencao;
+
+  // Letra → URL assinada, da questão que está aberta. Não vale guardar por
+  // questão: só uma fica aberta por vez, e a assinatura expira.
+  protected readonly urlsAlternativas = signal<Record<string, string>>({});
+
+  protected async anexarImagemAlternativa(
+    q: QuestaoRevisao,
+    evento: { letra: string; arquivo: File },
+  ): Promise<void> {
+    this.erroAcao.set(null);
+    try {
+      this.substituir(await this.service.anexarImagemAlternativa(q, evento.letra, evento.arquivo));
+      await this.assinarAlternativas(q.id);
+    } catch (e) {
+      this.erroAcao.set(mensagem(e));
+    }
+  }
+
+  protected async removerImagemAlternativa(q: QuestaoRevisao, letra: string): Promise<void> {
+    this.erroAcao.set(null);
+    try {
+      this.substituir(await this.service.removerImagemAlternativa(q, letra));
+      this.urlsAlternativas.update((atual) => {
+        const proximo = { ...atual };
+        delete proximo[letra];
+        return proximo;
+      });
+    } catch (e) {
+      this.erroAcao.set(mensagem(e));
+    }
+  }
+
+  private async assinarAlternativas(questaoId: string): Promise<void> {
+    const questao = this.questoes().find((q) => q.id === questaoId);
+    if (!questao) return;
+
+    const urls: Record<string, string> = {};
+    for (const alt of questao.alternativas) {
+      if (!alt.imagem_path) continue;
+      try {
+        urls[alt.letra] = await this.service.urlImagem(alt.imagem_path);
+      } catch (e) {
+        this.erroAcao.set(mensagem(e));
+      }
+    }
+    this.urlsAlternativas.set(urls);
+  }
 
   protected readonly textos = signal<TextoBase[]>([]);
   protected readonly textoEmEdicao = signal<TextoBase | 'novo' | null>(null);

@@ -11,6 +11,19 @@ export interface QuestaoParaRevisao {
   readonly revisada: boolean;
   readonly tem_texto_base: boolean;
   readonly texto_base_id: string | null;
+  readonly alternativas: readonly AlternativaParaRevisao[];
+}
+
+export interface AlternativaParaRevisao {
+  readonly letra: string;
+  readonly texto: string;
+  readonly imagem_path?: string | null;
+}
+
+// Alternativa em figura chega sem texto. Enquanto não tiver imagem, o botão do
+// quiz seria só a letra — clicável e ilegível.
+export function alternativasSemImagem(q: QuestaoParaRevisao): string[] {
+  return q.alternativas.filter((a) => a.texto.trim() === '' && !a.imagem_path).map((a) => a.letra);
 }
 
 export function motivosAtencao(q: QuestaoParaRevisao): string[] {
@@ -23,6 +36,10 @@ export function motivosAtencao(q: QuestaoParaRevisao): string[] {
   // A extração marca quando a questão depende de um texto mas não soube dizer
   // qual. Sem o vínculo ela é insolúvel, então não pode ser aprovada.
   if (q.tem_texto_base && q.texto_base_id === null) motivos.push('precisa de texto');
+
+  const semImagem = alternativasSemImagem(q);
+  if (semImagem.length > 0) motivos.push(`alternativas sem imagem: ${semImagem.join(', ')}`);
+
   if (q.incerto) motivos.push('extração duvidou');
   return motivos;
 }

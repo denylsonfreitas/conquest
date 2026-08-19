@@ -382,6 +382,46 @@ describe('DetalheConcursoComponent', () => {
     expect(await assentar(fixture, 'reclassifica')).toContain('reclassifica as questões');
   });
 
+  it('mostra o processamento no ato do clique, sem esperar a resposta', async () => {
+    // A promessa fica pendurada de propósito: é o intervalo entre o clique e a
+    // resposta que precisa mostrar "Processando".
+    let liberar: () => void = () => undefined;
+    const pendente = new Promise<null>((r) => {
+      liberar = () => r(null);
+    });
+    const processar = vi.fn(() => pendente);
+
+    const fixture = montar(
+      {},
+      { listarPorConcurso: async () => [PROVA_COM_PDF], processar, buscar: async () => PROVA },
+    );
+    await assentar(fixture, 'Aguardando processamento');
+
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'))
+      .find((b) => b.getAttribute('aria-label') === 'Processar')
+      ?.click();
+
+    // O estado real só volta do banco quando a função termina; até lá o cartão
+    // precisa dizer que está trabalhando.
+    const texto = await assentar(fixture, 'Processando');
+    expect(texto).toContain('Processando');
+    expect(texto).not.toContain('Aguardando processamento');
+
+    liberar();
+  });
+
+  it('não repete o cadeado enquanto processa — o selo já diz isso', async () => {
+    const processando: Prova = { ...PROVA_COM_PDF, status: 'processando' };
+    const fixture = montar({}, { listarPorConcurso: async () => [processando] });
+    await assentar(fixture, 'Processando');
+
+    const dicas = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('[data-dica]'),
+    ).map((e) => e.getAttribute('data-dica') ?? '');
+
+    expect(dicas.some((d) => d.includes('trocar o PDF'))).toBe(false);
+  });
+
   it('mostra o giro só enquanto processa, e não junto do revisar', async () => {
     const processando: Prova = { ...PROVA_COM_PDF, status: 'processando' };
     const emCurso = montar({}, { listarPorConcurso: async () => [processando] });

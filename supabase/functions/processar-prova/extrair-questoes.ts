@@ -1,4 +1,5 @@
 import { garantirSemMarcaDagua } from './marca-dagua.ts';
+import { motivoDaFalha } from './motivo-da-falha.ts';
 import { ExtracaoBruta, QuestaoBruta, TextoBaseBruto } from './questao-bruta.ts';
 
 export type { ExtracaoBruta, QuestaoBruta, TextoBaseBruto };
@@ -206,8 +207,7 @@ export async function extrairQuestoes(texto: string): Promise<ExtracaoBruta> {
   });
 
   if (!resposta.ok) {
-    const corpo = await resposta.text();
-    throw new LlmError(`Gemini respondeu ${resposta.status}: ${corpo.slice(0, 300)}`);
+    throw new LlmError(motivoDaFalha(resposta.status, await resposta.text()));
   }
 
   const json = await resposta.json();

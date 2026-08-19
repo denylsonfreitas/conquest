@@ -1,5 +1,6 @@
 import { garantirSemMarcaDagua } from './marca-dagua.ts';
 import { motivoDaFalha } from './motivo-da-falha.ts';
+import { cabeOutraTentativa, modelosConfigurados, valeTentarOutroModelo } from './modelos.ts';
 import { ExtracaoBruta, QuestaoBruta, TextoBaseBruto } from './questao-bruta.ts';
 
 export type { ExtracaoBruta, QuestaoBruta, TextoBaseBruto };
@@ -11,7 +12,10 @@ export class LlmError extends Error {
   }
 }
 
-const MODELO_PADRAO = 'gemini-flash-latest';
+// Teto conservador: a Edge Function tem limite de tempo e a extração de uma
+// prova inteira já come boa parte dele. Uma segunda tentativa só começa se
+// couber — senão troca um erro explicável por um estouro de tempo.
+const ORCAMENTO_MS = 110_000;
 
 // A resposta deixou de ser um array de questões e virou um objeto com dois:
 // o texto-base sai UMA vez e as questões apontam para ele. Repeti-lo dentro de
@@ -182,16 +186,37 @@ REGRAS INEGOCIÁVEIS
     marque "tem_imagem": true e siga a regra 6.
 `.trim();
 
-export async function extrairQuestoes(texto: string): Promise<ExtracaoBruta> {
-  garantirSemMarcaDagua(texto);
+// Uma sobrecarga é do MODELO, não da conta: o próprio Gemini responde "this
+// model is currently experiencing high demand". A saída mais barata é o modelo
+// seguinte da cadeia — mesma chave, mesma API, mesmo responseSchema.
+async function chamarComCadeiaDeModelos(chave: string, texto: string): Promise<Response> {
+  const modelos = modelosConfigurados(
+    Deno.env.get('GEMINI_MODELOS') ?? Deno.env.get('GEMINI_MODELO'),
+  );
+  const comecou = Date.now();
+  let ultimaFalha: { status: number; corpo: string } | null = null;
 
-  const chave = Deno.env.get('GEMINI_API_KEY');
-  if (!chave) throw new LlmError('GEMINI_API_KEY não configurada na Edge Function.');
+  for (let i = 0; i < modelos.length; i++) {
+    const inicioDaTentativa = Date.now();
+    const resposta = await chamarModelo(modelos[i], chave, texto);
+    if (resposta.ok) return resposta;
 
-  const modelo = Deno.env.get('GEMINI_MODELO') ?? MODELO_PADRAO;
+    const duracao = Date.now() - inicioDaTentativa;
+    ultimaFalha = { status: resposta.status, corpo: await resposta.text() };
+
+    if (i === modelos.length - 1) break;
+    if (!valeTentarOutroModelo(resposta.status)) break;
+    if (!cabeOutraTentativa(Date.now() - comecou, ORCAMENTO_MS, duracao)) break;
+  }
+
+  const falha = ultimaFalha as { status: number; corpo: string };
+  throw new LlmError(motivoDaFalha(falha.status, falha.corpo));
+}
+
+function chamarModelo(modelo: string, chave: string, texto: string): Promise<Response> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
 
-  const resposta = await fetch(url, {
+  return fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-goog-api-key': chave },
     body: JSON.stringify({
@@ -205,10 +230,15 @@ export async function extrairQuestoes(texto: string): Promise<ExtracaoBruta> {
       },
     }),
   });
+}
 
-  if (!resposta.ok) {
-    throw new LlmError(motivoDaFalha(resposta.status, await resposta.text()));
-  }
+export async function extrairQuestoes(texto: string): Promise<ExtracaoBruta> {
+  garantirSemMarcaDagua(texto);
+
+  const chave = Deno.env.get('GEMINI_API_KEY');
+  if (!chave) throw new LlmError('GEMINI_API_KEY não configurada na Edge Function.');
+
+  const resposta = await chamarComCadeiaDeModelos(chave, texto);
 
   const json = await resposta.json();
   const candidato = json?.candidates?.[0];

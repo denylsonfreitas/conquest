@@ -176,6 +176,12 @@ export class DetalheConcursoComponent {
     }
   }
 
+  // Enquanto processa, o que vale é o estado novo — não o erro da tentativa
+  // anterior, que o banco já apagou mas ainda pode estar na cópia local.
+  protected ehTransitorio(prova: Prova): boolean {
+    return prova.status === 'processando' || this.processandoId() === prova.id;
+  }
+
   // Sem ano, cargo, contagem nem cadeado, o parágrafo de metadados vira uma
   // faixa vazia entre o nome da prova e o resto — e o cadeado sozinho nela
   // parece solto. Melhor a linha não existir.
@@ -331,6 +337,7 @@ export class DetalheConcursoComponent {
     this.marcarLocal(prova.id, {
       status: 'processando',
       processando_desde: new Date().toISOString(),
+      erro_msg: null,
     });
 
     try {

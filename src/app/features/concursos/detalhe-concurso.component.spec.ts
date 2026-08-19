@@ -422,6 +422,42 @@ describe('DetalheConcursoComponent', () => {
     expect(dicas.some((d) => d.includes('trocar o PDF'))).toBe(false);
   });
 
+  it('o erro da tentativa anterior some assim que a prova volta a processar', async () => {
+    // Ao reprocessar, o banco zera o erro_msg — mas a cópia que a tela já tem
+    // em mãos ainda carrega o texto antigo. Mostrar os dois é o card dizendo
+    // "processando" e "falhou" ao mesmo tempo.
+    const reprocessando: Prova = {
+      ...PROVA_COM_PDF,
+      status: 'processando',
+      processando_desde: new Date().toISOString(),
+      erro_msg: 'O modelo "gemini-2.5-flash" não existe. (HTTP 404)',
+    };
+    const fixture = montar({}, { listarPorConcurso: async () => [reprocessando] });
+    const texto = await assentar(fixture, 'Processando');
+
+    expect(texto).not.toContain('HTTP 404');
+    expect(texto).not.toContain('não existe');
+  });
+
+  it('em processamento fala de processamento — uma linha de estado, não duas', async () => {
+    // Recarregar a página perde a fase local e sobra só o que veio do banco.
+    // Se cada origem usasse vocabulário próprio, o card trocaria de assunto
+    // sozinho: "extraindo questões" antes do F5, "em processamento" depois.
+    const processando: Prova = {
+      ...PROVA_COM_PDF,
+      status: 'processando',
+      processando_desde: new Date(Date.now() - 3 * 60_000).toISOString(),
+    };
+    const fixture = montar({}, { listarPorConcurso: async () => [processando] });
+    await assentar(fixture, 'Processando');
+
+    const linhas = Array.from(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('li p[role="status"]'),
+    );
+    expect(linhas).toHaveLength(1);
+    expect(linhas[0].textContent).toContain('Em processamento há 3 min');
+  });
+
   it('mostra o giro só enquanto processa, e não junto do revisar', async () => {
     const processando: Prova = { ...PROVA_COM_PDF, status: 'processando' };
     const emCurso = montar({}, { listarPorConcurso: async () => [processando] });

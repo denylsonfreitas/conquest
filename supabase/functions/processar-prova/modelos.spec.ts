@@ -17,12 +17,22 @@ describe('modelosConfigurados', () => {
     expect(modelosConfigurados('  ')).toEqual(MODELOS_PADRAO);
   });
 
+  it('o padrão não fixa versão de modelo — versão fixa apodrece e volta 404', () => {
+    for (const modelo of MODELOS_PADRAO) {
+      expect(modelo).toMatch(/-latest$/);
+    }
+  });
+
   it('um modelo só continua valendo — quem quer fixar, fixa', () => {
     expect(modelosConfigurados('gemini-2.5-pro')).toEqual(['gemini-2.5-pro']);
   });
 });
 
 describe('valeTentarOutroModelo', () => {
+  it('troca quando o modelo não existe — é justo o caso em que o seguinte salva', () => {
+    expect(valeTentarOutroModelo(404)).toBe(true);
+  });
+
   it('troca quando a culpa é da carga do outro lado', () => {
     expect(valeTentarOutroModelo(503)).toBe(true);
     expect(valeTentarOutroModelo(502)).toBe(true);

@@ -178,33 +178,35 @@
                 <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
                   <div class="min-w-0 flex-1 basis-56">
                     <p class="font-medium text-texto">{{ prova.nome }}</p>
-                    <p class="mt-0.5 text-sm text-texto-fraco">
-                      @if (prova.ano) {
-                        <span>{{ prova.ano }}</span>
-                      }
-                      @if (prova.cargo) {
-                        <span>
-                          @if (prova.ano) {
-                            ·
-                          }
-                          {{ prova.cargo }}</span
-                        >
-                      }
-                      @if (prova.total_questoes) {
-                        <span> · {{ prova.total_questoes }} questões</span>
-                      }
+                    @if (temMetadados(prova)) {
+                      <p class="mt-0.5 text-sm text-texto-fraco">
+                        @if (prova.ano) {
+                          <span>{{ prova.ano }}</span>
+                        }
+                        @if (prova.cargo) {
+                          <span>
+                            @if (prova.ano) {
+                              ·
+                            }
+                            {{ prova.cargo }}</span
+                          >
+                        }
+                        @if (prova.total_questoes) {
+                          <span> · {{ prova.total_questoes }} questões</span>
+                        }
 
-                      @if (!podeAnexar(prova.status)) {
-                        <span
-                          tabindex="0"
-                          class="dica dica-inicio ml-1 inline-flex align-[-0.2em] text-texto-fraco outline-none focus-visible:text-texto"
-                          [attr.aria-label]="motivoBloqueio(prova.status)"
-                          [attr.data-dica]="motivoBloqueio(prova.status)"
-                        >
-                          <app-icone nome="bloqueado" [tamanho]="14" />
-                        </span>
-                      }
-                    </p>
+                        @if (!podeAnexar(prova.status) && prova.status !== 'processando') {
+                          <span
+                            tabindex="0"
+                            class="dica dica-inicio ml-1 inline-flex align-[-0.2em] text-texto-fraco outline-none focus-visible:text-texto"
+                            [attr.aria-label]="motivoBloqueio(prova.status)"
+                            [attr.data-dica]="motivoBloqueio(prova.status)"
+                          >
+                            <app-icone nome="bloqueado" [tamanho]="14" />
+                          </span>
+                        }
+                      </p>
+                    }
 
                     @if (processandoId() === prova.id && faseProcessamento(); as fase) {
                       <p role="status" class="mt-1 text-sm text-info">

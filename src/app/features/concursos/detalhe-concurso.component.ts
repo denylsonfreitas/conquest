@@ -176,6 +176,14 @@ export class DetalheConcursoComponent {
     }
   }
 
+  // Sem ano, cargo, contagem nem cadeado, o parágrafo de metadados vira uma
+  // faixa vazia entre o nome da prova e o resto — e o cadeado sozinho nela
+  // parece solto. Melhor a linha não existir.
+  protected temMetadados(prova: Prova): boolean {
+    const cadeado = !podeAnexarPdf(prova.status) && prova.status !== 'processando';
+    return prova.ano !== null || prova.cargo !== null || prova.total_questoes !== null || cadeado;
+  }
+
   protected async pedirExclusaoProva(prova: Prova): Promise<void> {
     this.erroAcao.set(null);
     this.provaAExcluir.set(prova);
@@ -315,6 +323,16 @@ export class DetalheConcursoComponent {
 
     this.processandoId.set(prova.id);
     this.erroAcao.set(null);
+
+    // O estado real só volta do banco quando a função termina, e até lá o
+    // cartão continuaria dizendo "aguardando processamento" — parecia que o
+    // clique não pegou. A prova entra em processando na hora, e o que volta
+    // do banco depois corrige.
+    this.marcarLocal(prova.id, {
+      status: 'processando',
+      processando_desde: new Date().toISOString(),
+    });
+
     try {
       const sugestao = await this.provasService.processar(prova, (f) =>
         this.faseProcessamento.set(f),
@@ -359,6 +377,10 @@ export class DetalheConcursoComponent {
       banca_id: s.banca_id ?? c.banca_id,
     });
     this.dispensarSugestao();
+  }
+
+  private marcarLocal(id: string, campos: Partial<Prova>): void {
+    this.provas.update((atual) => atual.map((p) => (p.id === id ? { ...p, ...campos } : p)));
   }
 
   protected async destravar(prova: Prova): Promise<void> {

@@ -169,7 +169,7 @@ export class ProvasService {
       body: { prova_id: prova.id, texto, texto_gabarito: textoGabarito },
     });
 
-    if (error) throw new Error(`Falha ao processar: ${error.message}`);
+    if (error) throw new Error(await motivoDaFuncao(error));
 
     // A Edge Function declara essa forma do lado dela; validar aqui é o que
     // faz uma divergência aparecer em vez de virar undefined na tela.
@@ -252,3 +252,22 @@ export class ProvasService {
 }
 
 const MSG_DUPLICADO = 'Este PDF já foi importado em outra prova deste concurso.';
+
+// O supabase-js resume qualquer resposta de erro como "Edge Function returned
+// a non-2xx status code" e joga o corpo fora — justamente onde está a razão.
+// Ler a resposta é o que faz a tela dizer "o Gemini está sobrecarregado" em
+// vez de falar de código HTTP.
+async function motivoDaFuncao(erro: { message: string; context?: unknown }): Promise<string> {
+  const resposta = erro.context as Response | undefined;
+
+  if (resposta && typeof resposta.json === 'function') {
+    try {
+      const corpo = (await resposta.clone().json()) as { erro?: unknown };
+      if (typeof corpo?.erro === 'string' && corpo.erro.trim() !== '') return corpo.erro;
+    } catch {
+      // Corpo ilegível: sobra a mensagem genérica, melhor que quebrar aqui.
+    }
+  }
+
+  return `Falha ao processar: ${erro.message}`;
+}

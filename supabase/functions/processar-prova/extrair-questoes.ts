@@ -155,8 +155,8 @@ REGRAS INEGOCIÁVEIS
       A seguir, um fragmento em Java.
       \`\`\`java
       public class Main {
-      public static void main(String[] args) {
-      }
+            public static void main(String[] args) {
+            }
       }
       \`\`\`
       O que será exibido?
@@ -164,10 +164,10 @@ REGRAS INEGOCIÁVEIS
     A cerca fica sozinha na linha, sem texto ao lado. É ela que faz o app
     exibir o trecho em fonte monoespaçada, separado da prosa.
 
-    A extração do PDF apaga o recuo à esquerda, então as linhas chegam todas
-    coladas na margem. Deixe assim: NÃO reindente, não adivinhe onde o bloco
-    abria ou fechava. Em Python o recuo é semântica, e um recuo inventado
-    muda o que o código faz — pior que um código sem recuo.
+    O recuo que chegar no texto é o do PDF, reconstruído das coordenadas do
+    arquivo. COPIE-O como está, espaço por espaço. Não reindente, não alinhe e
+    não normalize: em Python o recuo é semântica, e mexer nele muda o que o
+    código faz. Linha que chegar sem recuo não tinha recuo.
 
 10. TABELAS. Reproduza uma linha por linha da tabela, separando as células com
     " | ", inclusive a linha de cabeçalho. Célula vazia vira "-". Assim:

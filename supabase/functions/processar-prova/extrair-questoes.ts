@@ -194,7 +194,7 @@ async function chamarComCadeiaDeModelos(chave: string, texto: string): Promise<R
     Deno.env.get('GEMINI_MODELOS') ?? Deno.env.get('GEMINI_MODELO'),
   );
   const comecou = Date.now();
-  let ultimaFalha: { status: number; corpo: string } | null = null;
+  let ultimaFalha: { status: number; corpo: string; modelo: string } | null = null;
 
   for (let i = 0; i < modelos.length; i++) {
     const inicioDaTentativa = Date.now();
@@ -202,15 +202,15 @@ async function chamarComCadeiaDeModelos(chave: string, texto: string): Promise<R
     if (resposta.ok) return resposta;
 
     const duracao = Date.now() - inicioDaTentativa;
-    ultimaFalha = { status: resposta.status, corpo: await resposta.text() };
+    ultimaFalha = { status: resposta.status, corpo: await resposta.text(), modelo: modelos[i] };
 
     if (i === modelos.length - 1) break;
     if (!valeTentarOutroModelo(resposta.status)) break;
     if (!cabeOutraTentativa(Date.now() - comecou, ORCAMENTO_MS, duracao)) break;
   }
 
-  const falha = ultimaFalha as { status: number; corpo: string };
-  throw new LlmError(motivoDaFalha(falha.status, falha.corpo));
+  const falha = ultimaFalha as { status: number; corpo: string; modelo: string };
+  throw new LlmError(motivoDaFalha(falha.status, falha.corpo, falha.modelo));
 }
 
 function chamarModelo(modelo: string, chave: string, texto: string): Promise<Response> {

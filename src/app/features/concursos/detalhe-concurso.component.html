@@ -208,22 +208,20 @@
                       </p>
                     }
 
-                    @if (processandoId() === prova.id && faseProcessamento(); as fase) {
+                    @if (prova.status === 'processando') {
                       <p role="status" class="mt-1 text-sm text-info">
-                        {{ rotuloFaseProcessamento[fase] }}
-                      </p>
-                    }
-
-                    @if (prova.status === 'processando' && processandoId() !== prova.id) {
-                      <p class="mt-1 text-sm text-texto-fraco">
-                        Em processamento há {{ minutosProcessando(prova) }} min.
-                        @if (estaTravada(prova)) {
-                          <span class="text-atencao">Parece travada.</span>
+                        @if (processandoId() === prova.id && faseProcessamento(); as fase) {
+                          {{ rotuloFaseProcessamento[fase] }}
+                        } @else {
+                          Em processamento há {{ minutosProcessando(prova) }} min.
+                          @if (estaTravada(prova)) {
+                            <span class="text-atencao">Parece travada.</span>
+                          }
                         }
                       </p>
                     }
 
-                    @if (prova.erro_msg) {
+                    @if (prova.erro_msg && !ehTransitorio(prova)) {
                       <p class="mt-1 text-sm text-perigo">{{ prova.erro_msg }}</p>
                     }
                   </div>

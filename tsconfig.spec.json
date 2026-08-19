@@ -15,5 +15,5 @@
   // As funções puras da Edge Function (Deno) são TypeScript agnóstico de
   // runtime, então rodam no mesmo vitest do app. `allowImportingTsExtensions`
   // aceita o `./x.ts` que o Deno exige nos imports.
-  "include": ["src/**/*.d.ts", "src/**/*.spec.ts", "supabase/functions/**/*.spec.ts"]
+  "include": ["src/**/*.d.ts", "supabase/functions/**/*.d.ts", "src/**/*.spec.ts", "supabase/functions/**/*.spec.ts"]
 }

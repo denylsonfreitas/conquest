@@ -324,7 +324,30 @@ describe('elo que não responde', () => {
     });
     dublarFetch({ flash: [naoResponde] });
 
-    // Legível e do nosso vocabulário: é isso que chega ao cartão da prova.
-    await expect(extrairQuestoes('texto')).rejects.toThrow(/sobrecarregado/);
+    // Precisa dizer que NÃO HOUVE resposta, e não que o serviço recusou por
+    // carga: chamar timeout de "sobrecarregado" manda procurar o problema no
+    // provedor quando ele está no tamanho do pedido.
+    await expect(extrairQuestoes('texto')).rejects.toThrow(/não respondeu dentro do tempo/);
+    await expect(extrairQuestoes('texto')).rejects.not.toThrow(/sobrecarregado/);
+  });
+
+  it('bug nosso sobe como bug, em vez de virar indisponibilidade do provedor', async () => {
+    // Um catch cego reportava qualquer exceção como falha do elo — inclusive
+    // erro de programação, que assim ficaria invisível para sempre.
+    vi.stubGlobal('Deno', {
+      env: {
+        get: (nome: string) => ({ GEMINI_API_KEY: 'k', EXTRACAO_CADEIA: 'gemini:flash' })[nome],
+      },
+    });
+    dublarFetch({
+      flash: [
+        () => {
+          throw new TypeError('AbortSignal.timeout is not a function');
+        },
+      ],
+    });
+
+    await expect(extrairQuestoes('texto')).rejects.toThrow(/Falha inesperada/);
+    await expect(extrairQuestoes('texto')).rejects.toThrow(/AbortSignal/);
   });
 });

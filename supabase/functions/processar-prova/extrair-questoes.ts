@@ -38,7 +38,10 @@ const ORCAMENTO_MS = 110_000;
 // resposta toda, e o que não é gerado não é cobrado.
 const MAX_TOKENS_SAIDA = 65_536;
 
-const SEM_RESPOSTA = 'O provedor não respondeu dentro do tempo da função.';
+// Código próprio, fora da faixa que os provedores usam: "não houve resposta"
+// é diagnóstico diferente de "o serviço recusou". Antes isto virava 504 e a
+// mensagem acusava sobrecarga — mandando procurar um problema que não existe.
+const STATUS_SEM_RESPOSTA = 599;
 
 // A resposta deixou de ser um array de questões e virou um objeto com dois:
 // o texto-base sai UMA vez e as questões apontam para ele. Repeti-lo dentro de
@@ -269,12 +272,16 @@ async function chamarComCadeia(texto: string): Promise<{ provedor: Provedor; jso
         if (resposta.ok) return { provedor, json: await resposta.json() };
         status = resposta.status;
         corpo = await resposta.text();
-      } catch {
-        // Prazo estourado ou rede caída: o elo não respondeu. Vira 504 para
-        // seguir o mesmo caminho de uma indisponibilidade qualquer, em vez de
-        // derrubar a função e perder o registro do erro.
-        status = 504;
-        corpo = SEM_RESPOSTA;
+      } catch (e) {
+        // Só prazo e rede viram falha do elo. Qualquer outra exceção é bug
+        // NOSSO, e disfarçá-la de indisponibilidade esconderia a causa: o
+        // erro sobe com o que realmente aconteceu.
+        if (!ehFalhaDeRede(e)) {
+          const causa = e instanceof Error ? e.message : String(e);
+          throw new LlmError(`Falha inesperada ao chamar ${provedor.nome}: ${causa}`);
+        }
+        status = STATUS_SEM_RESPOSTA;
+        corpo = e instanceof Error ? e.name : '';
       }
 
       duracaoDaUltima = Date.now() - inicioDaTentativa;
@@ -317,6 +324,14 @@ async function chamarComCadeia(texto: string): Promise<{ provedor: Provedor; jso
 
 // setTimeout e não um laço ocupado: a Edge Function cobra CPU, e esperar
 // congestão passar não deve consumir nada.
+// Prazo estourado (TimeoutError), aborto e queda de conexão. É a fronteira
+// entre "o outro lado não respondeu" e "o nosso código quebrou".
+function ehFalhaDeRede(e: unknown): boolean {
+  if (!(e instanceof Error)) return false;
+  if (e.name === 'TimeoutError' || e.name === 'AbortError') return true;
+  return e.name === 'TypeError' && /fetch|network|conn/i.test(e.message);
+}
+
 function dormir(ms: number): Promise<void> {
   return new Promise((resolver) => setTimeout(resolver, ms));
 }

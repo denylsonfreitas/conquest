@@ -42,6 +42,10 @@ export const MAX_TENTATIVAS_POR_MODELO = 3;
  * depois. Trocar de modelo na primeira negativa desperdiça o preferido — e,
  * com um único modelo configurado, significa desistir sem tentar nada.
  *
+ * Prazo estourado (599) também fica de fora: se o elo não respondeu no tempo,
+ * repetir consome o pouco de orçamento que sobrou e falha igual. Nesse caso o
+ * caminho é o elo seguinte, não a insistência.
+ *
  * O 404 fica de fora de propósito: modelo que não existe não passa a existir
  * porque esperamos. Esse é caso de trocar de modelo, não de repetir.
  */

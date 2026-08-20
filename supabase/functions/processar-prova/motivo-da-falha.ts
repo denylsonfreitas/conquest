@@ -22,6 +22,12 @@ export function motivoDaFalha(status: number, corpo: string, provedor?: string):
   const quem = provedor ? `O provedor ${provedor}` : 'O provedor de extração';
   const qual = provedor ? ` "${provedor}"` : '';
 
+  // 599 é código nosso: não houve resposta dentro do tempo. Diagnóstico bem
+  // diferente de "o serviço recusou por carga" — aqui o pedido provavelmente é
+  // grande demais para caber numa chamada só.
+  if (status === 599) {
+    return `${quem} não respondeu dentro do tempo da função. Costuma ser prova grande demais para uma chamada só. ${detalhe}`;
+  }
   if (status === 502 || status === 503 || status === 500 || status === 504) {
     return `${quem} está sobrecarregado agora. Tente processar de novo em alguns minutos. ${detalhe}`;
   }

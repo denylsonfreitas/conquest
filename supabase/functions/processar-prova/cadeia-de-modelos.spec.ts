@@ -18,7 +18,13 @@ const ok = () => new Response(JSON.stringify(CORPO_OK), { status: 200 });
 const erro = (status: number) => () =>
   new Response(JSON.stringify({ error: { code: status } }), { status });
 
-const modeloDe = (url: string) => url.match(/models\/([^:]+):/)?.[1] ?? '';
+// O Gemini traz o modelo no caminho; o compatível, no corpo. Para o teste
+// basta saber QUEM foi chamado, e o host resolve os dois casos.
+const modeloDe = (url: string) => {
+  const noCaminho = url.split('/models/')[1];
+  if (noCaminho) return noCaminho.split(':')[0];
+  return new URL(url).hostname.split('.').at(-2) ?? '';
+};
 
 let chamados: string[] = [];
 let esperas: number[] = [];
@@ -139,5 +145,67 @@ describe('falhas que não valem insistir', () => {
     await extrairQuestoes('texto');
     expect(chamados).toEqual(['primeiro']);
     expect(esperas).toEqual([]);
+  });
+});
+
+describe('troca de provedor', () => {
+  it('Gemini fora do ar cai para o compatível, e a prova entra', async () => {
+    // É o desbloqueio inteiro em um teste: sobrecarga persistente de um
+    // fornecedor deixa de ser motivo para não conseguir processar nada.
+    vi.stubGlobal('Deno', {
+      env: {
+        get: (nome: string) =>
+          ({
+            GEMINI_API_KEY: 'chave-gemini',
+            MISTRAL_API_KEY: 'chave-mistral',
+            EXTRACAO_CADEIA: 'gemini:flash,mistral:large',
+          })[nome],
+      },
+    });
+
+    const respostaMistral = () =>
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: { content: JSON.stringify({ textos: [], questoes: [{ numero: 1 }] }) },
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+
+    dublarFetch({ flash: [erro(503)], mistral: [respostaMistral] });
+
+    const extracao = await extrairQuestoes('texto da prova');
+
+    expect(chamados).toEqual(['flash', 'flash', 'flash', 'mistral']);
+    expect(extracao.questoes).toHaveLength(1);
+  });
+
+  it('elo sem chave é pulado em vez de derrubar a extração', async () => {
+    vi.stubGlobal('Deno', {
+      env: {
+        get: (nome: string) =>
+          ({
+            GEMINI_API_KEY: 'chave-gemini',
+            EXTRACAO_CADEIA: 'mistral:large,gemini:flash',
+          })[nome],
+      },
+    });
+
+    dublarFetch({ flash: [ok] });
+
+    await extrairQuestoes('texto');
+
+    expect(chamados).toEqual(['flash']);
+  });
+
+  it('sem nenhuma chave, o recado diz o que falta em vez de estourar', async () => {
+    vi.stubGlobal('Deno', { env: { get: () => undefined } });
+    dublarFetch({});
+
+    await expect(extrairQuestoes('texto')).rejects.toThrow(/Nenhum provedor/);
+    expect(chamados).toEqual([]);
   });
 });

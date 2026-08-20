@@ -71,11 +71,11 @@ subindo" (ver `01-banco-de-dados.md`).
 
 **Estados da prova nesta etapa:**
 
-| `arquivo_hash` | `arquivo_path` | significa |
-|---|---|---|
-| ∅ | ∅ | só metadados |
-| ✓ | ∅ | reservado, upload em voo (transitório) |
-| ✓ | ✓ | PDF anexado, aguardando processamento |
+| `arquivo_hash` | `arquivo_path` | significa                              |
+| -------------- | -------------- | -------------------------------------- |
+| ∅              | ∅              | só metadados                           |
+| ✓              | ∅              | reservado, upload em voo (transitório) |
+| ✓              | ✓              | PDF anexado, aguardando processamento  |
 
 O `status` permanece `pendente` durante todo o anexo. Ele só muda quando a Edge
 Function assume (etapa 3).
@@ -166,9 +166,10 @@ canônico. Pontos críticos do prompt:
   > Aprendido na prova real: a flag cobre uma categoria **mais ampla** que
   > figuras. Uma das duas questões marcadas dizia "foi implementado o seguinte
   > código em Java:" — o bloco de código se perdeu na extração de texto. Ou
-  > seja: `tem_imagem` significa na prática *"depende de conteúdo que o texto
-  > extraído não captura"*. Um grep por "figura|gráfico|imagem" não teria
+  > seja: `tem_imagem` significa na prática _"depende de conteúdo que o texto
+  > extraído não captura"_. Um grep por "figura|gráfico|imagem" não teria
   > encontrado esse caso; o LLM encontrou.
+
 - Não incluir o gabarito ainda se ele está em texto separado — casa no passo
   seguinte.
 
@@ -253,3 +254,49 @@ chamada do LLM atrás de uma função `extrairQuestoes(texto): QuestaoRaw[]`. Se
 dia quiser trocar (ex.: Claude Haiku, que é pago mas muito forte em seguir
 schema), troca-se a implementação sem tocar no resto. A chave da API do Gemini
 vive **apenas** como segredo da Edge Function, nunca no front.
+
+### Cadeia de provedores (implementado)
+
+A promessa acima virou código: `provedores.ts` isola o fornecedor, e a extração
+percorre uma **cadeia** configurada por segredo da Edge Function.
+
+```
+EXTRACAO_CADEIA = "gemini:gemini-flash-latest,mistral:mistral-large-latest"
+```
+
+Cada elo é `provedor:modelo`, na ordem de preferência. Provedores conhecidos e a
+chave que cada um espera:
+
+| Provedor     | Segredo              | Dialeto |
+| ------------ | -------------------- | ------- |
+| `gemini`     | `GEMINI_API_KEY`     | Gemini  |
+| `mistral`    | `MISTRAL_API_KEY`    | OpenAI  |
+| `groq`       | `GROQ_API_KEY`       | OpenAI  |
+| `openrouter` | `OPENROUTER_API_KEY` | OpenAI  |
+| `deepseek`   | `DEEPSEEK_API_KEY`   | OpenAI  |
+| `cerebras`   | `CEREBRAS_API_KEY`   | OpenAI  |
+
+Só o Gemini tem API própria; os demais falam `/chat/completions` da OpenAI, então
+**um adaptador cobre todos** — acrescentar provedor é configurar um segredo, não
+escrever código. A URL de cada um pode ser sobrescrita com `<PROVEDOR>_URL` sem
+precisar de deploy.
+
+Regras que a cadeia segue:
+
+- **Elo sem chave é pulado em silêncio.** Ter dois configurados e só uma chave é
+  o caso normal de quem está experimentando o segundo — não deve virar erro.
+- **Repetir antes de trocar.** Sobrecarga (500/502/503/504) é transitória: até 3
+  tentativas no mesmo elo, com recuo de 2s e 5s, e só então o elo seguinte.
+- **404 troca sem repetir.** Modelo que não existe não passa a existir por
+  esperarmos.
+- **Chave recusada, pedido inválido e cota estourada não insistem** — o próximo
+  elo diria o mesmo, e insistir só atrasa o erro que a pessoa precisa ler.
+- Nada disso pode passar do orçamento de ~110s da função; a espera entra na conta.
+
+O formato JSON é garantido de dois jeitos diferentes: `responseSchema` estrito no
+Gemini, `response_format: json_object` nos compatíveis (schema estrito ainda não é
+universal). A garantia mais fraca é coberta por `lerExtracao` + Zod, que validam
+o que volta em qualquer caso.
+
+**Compatibilidade:** `GEMINI_MODELOS` continua sendo lido, e entrada sem prefixo
+segue valendo como Gemini.

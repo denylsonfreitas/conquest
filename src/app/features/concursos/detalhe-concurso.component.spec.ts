@@ -458,6 +458,50 @@ describe('DetalheConcursoComponent', () => {
     expect(linhas[0].textContent).toContain('Em processamento há 3 min');
   });
 
+  it('o cartão sai de processando sozinho quando a função falha sem responder', async () => {
+    // O bug: a Edge Function podia terminar DEPOIS de o cliente desistir. O
+    // catch reconsultava o banco naquele instante, ainda encontrava
+    // "processando", e o cartão congelava — só um F5 revelava o erro.
+    const emCurso: Prova = {
+      ...PROVA_COM_PDF,
+      status: 'processando',
+      processando_desde: new Date().toISOString(),
+    };
+    // O banco só conta a verdade na consulta seguinte.
+    let doBanco: Prova = emCurso;
+    const fixture = montar(
+      {},
+      { listarPorConcurso: async () => [emCurso], buscar: async () => doBanco },
+    );
+
+    expect(await assentar(fixture, 'Processando')).not.toContain('sobrecarregado');
+
+    const c = fixture.componentInstance as unknown as {
+      timerReconsulta: unknown;
+      reconsultar: () => Promise<void>;
+    };
+    // Encontrar uma prova processando precisa AGENDAR o acompanhamento; sem
+    // isto o resto do teste passaria mesmo com o cartão congelado de novo.
+    expect(c.timerReconsulta).not.toBeNull();
+
+    doBanco = {
+      ...emCurso,
+      status: 'erro',
+      processando_desde: null,
+      erro_msg: 'O Gemini está sobrecarregado agora. (HTTP 503)',
+    };
+    await c.reconsultar();
+
+    const texto = await assentar(fixture, 'sobrecarregado');
+    expect(texto).toContain('sobrecarregado');
+    expect(texto).not.toContain('Processando');
+
+    // Chegou ao desfecho: nada mais a acompanhar, e o intervalo não fica solto.
+    expect(c.timerReconsulta).toBeNull();
+
+    fixture.destroy();
+  });
+
   it('mostra o giro só enquanto processa, e não junto do revisar', async () => {
     const processando: Prova = { ...PROVA_COM_PDF, status: 'processando' };
     const emCurso = montar({}, { listarPorConcurso: async () => [processando] });

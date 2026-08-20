@@ -4,10 +4,19 @@ import {
   cabeOutraTentativa,
   esperaAntesDeRepetir,
   MAX_TENTATIVAS_POR_MODELO,
-  modelosConfigurados,
   valeRepetirMesmoModelo,
   valeTentarOutroModelo,
 } from './modelos.ts';
+import {
+  cabecalhos,
+  cadeiaUtilizavel,
+  corpoDaChamada,
+  lerCadeia,
+  lerResposta,
+  presetDe,
+  Provedor,
+  urlDe,
+} from './provedores.ts';
 import { ExtracaoBruta, QuestaoBruta, TextoBaseBruto } from './questao-bruta.ts';
 
 export type { ExtracaoBruta, QuestaoBruta, TextoBaseBruto };
@@ -23,6 +32,11 @@ export class LlmError extends Error {
 // prova inteira já come boa parte dele. Uma segunda tentativa só começa se
 // couber — senão troca um erro explicável por um estouro de tempo.
 const ORCAMENTO_MS = 110_000;
+
+// Uma prova de 70 questões devolve ~20k tokens: o JSON reescreve enunciado e
+// alternativas inteiros. O teto fica bem acima disso porque estourá-lo perde a
+// resposta toda, e o que não é gerado não é cobrado.
+const MAX_TOKENS_SAIDA = 65_536;
 
 // A resposta deixou de ser um array de questões e virou um objeto com dois:
 // o texto-base sai UMA vez e as questões apontam para ele. Repeti-lo dentro de
@@ -196,26 +210,52 @@ REGRAS INEGOCIÁVEIS
 // Uma sobrecarga é do MODELO, não da conta: o próprio Gemini responde "this
 // model is currently experiencing high demand". A saída mais barata é o modelo
 // seguinte da cadeia — mesma chave, mesma API, mesmo responseSchema.
-async function chamarComCadeiaDeModelos(chave: string, texto: string): Promise<Response> {
-  const modelos = modelosConfigurados(
-    Deno.env.get('GEMINI_MODELOS') ?? Deno.env.get('GEMINI_MODELO'),
+const lerEnv = (nome: string): string | undefined => Deno.env.get(nome);
+
+function chamarProvedor(provedor: Provedor, texto: string): Promise<Response> {
+  const chave = lerEnv(presetDe(provedor)!.chaveEnv)!;
+
+  return fetch(urlDe(provedor, lerEnv), {
+    method: 'POST',
+    headers: cabecalhos(provedor, chave),
+    body: corpoDaChamada(provedor, INSTRUCOES, texto, SCHEMA_RESPOSTA, MAX_TOKENS_SAIDA),
+  });
+}
+
+interface Falha {
+  status: number;
+  corpo: string;
+  provedor: Provedor;
+}
+
+async function chamarComCadeia(texto: string): Promise<{ provedor: Provedor; json: unknown }> {
+  const configurada = lerCadeia(
+    lerEnv('EXTRACAO_CADEIA') ?? lerEnv('GEMINI_MODELOS') ?? lerEnv('GEMINI_MODELO'),
   );
+  const cadeia = cadeiaUtilizavel(configurada, lerEnv);
+
+  if (cadeia.length === 0) {
+    throw new LlmError(
+      'Nenhum provedor de extração configurado: falta a chave de API na Edge Function.',
+    );
+  }
+
   const comecou = Date.now();
-  let ultimaFalha: { status: number; corpo: string; modelo: string } | null = null;
+  let ultimaFalha: Falha | null = null;
   let duracaoDaUltima = 0;
 
-  for (let i = 0; i < modelos.length; i++) {
-    const modelo = modelos[i];
+  for (let i = 0; i < cadeia.length; i++) {
+    const provedor = cadeia[i];
 
-    // Insistir no mesmo modelo vem ANTES de trocar: o 503 passa em segundos, e
-    // com um único modelo configurado esta é a única saída que existe.
+    // Insistir no mesmo provedor vem ANTES de trocar: o 503 passa em segundos,
+    // e com um único elo configurado esta é a única saída que existe.
     for (let tentativa = 1; tentativa <= MAX_TENTATIVAS_POR_MODELO; tentativa++) {
       const inicioDaTentativa = Date.now();
-      const resposta = await chamarModelo(modelo, chave, texto);
-      if (resposta.ok) return resposta;
+      const resposta = await chamarProvedor(provedor, texto);
+      if (resposta.ok) return { provedor, json: await resposta.json() };
 
       duracaoDaUltima = Date.now() - inicioDaTentativa;
-      ultimaFalha = { status: resposta.status, corpo: await resposta.text(), modelo };
+      ultimaFalha = { status: resposta.status, corpo: await resposta.text(), provedor };
 
       if (tentativa === MAX_TENTATIVAS_POR_MODELO) break;
       if (!valeRepetirMesmoModelo(resposta.status)) break;
@@ -223,19 +263,21 @@ async function chamarComCadeiaDeModelos(chave: string, texto: string): Promise<R
       // A espera entra na conta do orçamento: dormir 10s e só depois descobrir
       // que não havia tempo para a chamada desperdiça o que restava.
       const espera = esperaAntesDeRepetir(tentativa);
-      const custo = espera + duracaoDaUltima;
-      if (!cabeOutraTentativa(Date.now() - comecou, ORCAMENTO_MS, custo)) break;
+      if (!cabeOutraTentativa(Date.now() - comecou, ORCAMENTO_MS, espera + duracaoDaUltima)) {
+        break;
+      }
 
       await dormir(espera);
     }
 
-    if (i === modelos.length - 1) break;
+    if (i === cadeia.length - 1) break;
     if (!valeTentarOutroModelo(ultimaFalha!.status)) break;
     if (!cabeOutraTentativa(Date.now() - comecou, ORCAMENTO_MS, duracaoDaUltima)) break;
   }
 
-  const falha = ultimaFalha as { status: number; corpo: string; modelo: string };
-  throw new LlmError(motivoDaFalha(falha.status, falha.corpo, falha.modelo));
+  const falha = ultimaFalha as Falha;
+  const qual = `${falha.provedor.nome}:${falha.provedor.modelo}`;
+  throw new LlmError(motivoDaFalha(falha.status, falha.corpo, qual));
 }
 
 // setTimeout e não um laço ocupado: a Edge Function cobra CPU, e esperar
@@ -244,52 +286,25 @@ function dormir(ms: number): Promise<void> {
   return new Promise((resolver) => setTimeout(resolver, ms));
 }
 
-function chamarModelo(modelo: string, chave: string, texto: string): Promise<Response> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
-
-  return fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-goog-api-key': chave },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: INSTRUCOES }] },
-      contents: [{ role: 'user', parts: [{ text: texto }] }],
-      generationConfig: {
-        temperature: 0,
-        responseMimeType: 'application/json',
-        responseSchema: SCHEMA_RESPOSTA,
-        maxOutputTokens: 65536,
-      },
-    }),
-  });
-}
-
 export async function extrairQuestoes(texto: string): Promise<ExtracaoBruta> {
   garantirSemMarcaDagua(texto);
 
-  const chave = Deno.env.get('GEMINI_API_KEY');
-  if (!chave) throw new LlmError('GEMINI_API_KEY não configurada na Edge Function.');
+  const { provedor, json } = await chamarComCadeia(texto);
+  const resposta = lerResposta(provedor, json);
 
-  const resposta = await chamarComCadeiaDeModelos(chave, texto);
-
-  const json = await resposta.json();
-  const candidato = json?.candidates?.[0];
-
-  if (candidato?.finishReason === 'MAX_TOKENS') {
+  if (resposta.truncou) {
     throw new LlmError(
       'A resposta do modelo foi truncada por limite de tokens. A prova pode precisar ser processada em partes.',
     );
   }
 
-  const conteudo = candidato?.content?.parts?.[0]?.text;
-  if (!conteudo) {
-    throw new LlmError(
-      `O modelo não retornou conteúdo (finishReason: ${candidato?.finishReason}).`,
-    );
+  if (!resposta.conteudo) {
+    throw new LlmError(`O modelo não retornou conteúdo (parada: ${resposta.motivoDaParada}).`);
   }
 
   let corpo: unknown;
   try {
-    corpo = JSON.parse(conteudo);
+    corpo = JSON.parse(resposta.conteudo);
   } catch {
     throw new LlmError('A extração não retornou JSON válido.');
   }

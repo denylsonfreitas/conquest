@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   input,
@@ -29,10 +30,15 @@ import {
   podeAnexarPdf,
   podeProcessar,
   rotuloStatusProva,
+  valeReconsultar,
 } from '../provas/regras-prova';
 import { ConcursoComBanca, ConcursosService } from './concursos.service';
 
 type Status = 'carregando' | 'ok' | 'erro';
+
+// Cinco segundos: a extração leva dezenas de segundos, então consultar mais
+// rápido só gera tráfego sem antecipar nada de útil.
+const INTERVALO_RECONSULTA_MS = 5_000;
 
 @Component({
   selector: 'app-detalhe-concurso',
@@ -55,6 +61,7 @@ export class DetalheConcursoComponent {
   private readonly provasService = inject(ProvasService);
   private readonly dimensoes = inject(DimensoesService);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly id = input.required<string>();
 
@@ -85,6 +92,43 @@ export class DetalheConcursoComponent {
       const id = this.id();
       void this.carregar(id);
     });
+
+    this.destroyRef.onDestroy(() => this.pararDeReconsultar());
+  }
+
+  private timerReconsulta: ReturnType<typeof setInterval> | null = null;
+
+  /**
+   * A resposta da Edge Function não é a única fonte do desfecho — e às vezes
+   * nem chega. Enquanto houver prova processando, o banco é reconsultado; é o
+   * que faz o cartão sair de "processando" sozinho, sem depender de F5.
+   */
+  private acompanharProcessamento(): void {
+    if (!valeReconsultar(this.provas())) {
+      this.pararDeReconsultar();
+      return;
+    }
+    if (this.timerReconsulta !== null) return;
+
+    this.timerReconsulta = setInterval(() => void this.reconsultar(), INTERVALO_RECONSULTA_MS);
+  }
+
+  private pararDeReconsultar(): void {
+    if (this.timerReconsulta === null) return;
+    clearInterval(this.timerReconsulta);
+    this.timerReconsulta = null;
+  }
+
+  private async reconsultar(): Promise<void> {
+    const emCurso = this.provas().filter((p) => p.status === 'processando');
+
+    for (const prova of emCurso) {
+      // Falha de rede aqui é ruído passageiro: a próxima volta tenta de novo,
+      // e derrubar a tela por isso seria pior que o atraso.
+      await this.atualizarProva(prova.id).catch(() => undefined);
+    }
+
+    this.acompanharProcessamento();
   }
 
   protected async abrirEdicao(): Promise<void> {
@@ -136,6 +180,7 @@ export class DetalheConcursoComponent {
       this.concurso.set(concurso);
       this.provas.set(provas);
       this.status.set('ok');
+      this.acompanharProcessamento();
     } catch (e) {
       this.erroCarga.set(mensagem(e));
       this.status.set('erro');
@@ -352,6 +397,7 @@ export class DetalheConcursoComponent {
     } finally {
       this.processandoId.set(null);
       this.faseProcessamento.set(null);
+      this.acompanharProcessamento();
     }
   }
 

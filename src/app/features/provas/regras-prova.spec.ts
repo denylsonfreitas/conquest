@@ -5,6 +5,8 @@ import {
   caminhoPdf,
   corStatusProva,
   estaTravada,
+  ProvaEmProcessamento,
+  valeReconsultar,
   MINUTOS_ATE_TRAVADA,
   minutosProcessando,
   motivoBloqueioAnexo,
@@ -118,5 +120,38 @@ describe('caminhos no bucket', () => {
 
   it('não colidem entre prova e gabarito', () => {
     expect(caminhoPdf('c1', 'p1')).not.toBe(caminhoGabarito('c1', 'p1'));
+  });
+});
+
+describe('valeReconsultar', () => {
+  const agora = new Date('2026-08-01T12:00:00Z');
+  const haMinutos = (m: number) => new Date(agora.getTime() - m * 60_000).toISOString();
+
+  it('acompanha enquanto há prova processando', () => {
+    const provas: ProvaEmProcessamento[] = [
+      { status: 'pronta', processando_desde: null },
+      { status: 'processando', processando_desde: haMinutos(1) },
+    ];
+    expect(valeReconsultar(provas, agora)).toBe(true);
+  });
+
+  it('para quando nada mais está processando', () => {
+    const provas: ProvaEmProcessamento[] = [
+      { status: 'pronta', processando_desde: null },
+      { status: 'erro', processando_desde: null },
+    ];
+    expect(valeReconsultar(provas, agora)).toBe(false);
+  });
+
+  it('desiste da prova travada — a tela já oferece Destravar', () => {
+    // Sem isto, uma prova cujo worker morreu seria consultada para sempre.
+    const travada: ProvaEmProcessamento[] = [
+      { status: 'processando', processando_desde: haMinutos(MINUTOS_ATE_TRAVADA) },
+    ];
+    expect(valeReconsultar(travada, agora)).toBe(false);
+  });
+
+  it('lista vazia não gera consulta', () => {
+    expect(valeReconsultar([], agora)).toBe(false);
   });
 });

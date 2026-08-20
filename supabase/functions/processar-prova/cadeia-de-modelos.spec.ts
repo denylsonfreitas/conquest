@@ -120,7 +120,7 @@ describe('falhas que não valem insistir', () => {
   it('chave recusada não vira segunda chamada — o outro modelo diria o mesmo', async () => {
     dublarFetch({ primeiro: [erro(401)] });
 
-    await expect(extrairQuestoes('texto')).rejects.toThrow(/GEMINI_API_KEY/);
+    await expect(extrairQuestoes('texto')).rejects.toThrow(/chave/);
     expect(chamados).toEqual(['primeiro']);
   });
 

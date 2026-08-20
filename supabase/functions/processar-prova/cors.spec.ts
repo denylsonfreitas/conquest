@@ -16,9 +16,17 @@ describe('cabecalhosCors', () => {
     expect(origem(SITE, SITE)).toBe(SITE);
   });
 
-  it('sem configuração libera geral, que é o estado local', () => {
-    expect(origem(undefined, SITE)).toBe('*');
-    expect(origem('', SITE)).toBe('*');
+  it('sem configuração, libera só a máquina local', () => {
+    expect(origem(undefined, 'http://localhost:4200')).toBe('http://localhost:4200');
+    expect(origem(undefined, 'http://127.0.0.1:54321')).toBe('http://127.0.0.1:54321');
+  });
+
+  it('sem configuração, um site na internet NÃO é liberado', () => {
+    // Antes isto devolvia "*": perder ORIGEM_PERMITIDA num restore desligava a
+    // proteção sem nenhum sinal. A falta de configuração precisa falhar fechada.
+    expect(origem(undefined, SITE)).toBe('null');
+    expect(origem(undefined, 'https://site-do-atacante.com')).toBe('null');
+    expect(origem('', SITE)).toBe('null');
   });
 
   it('origem estranha NÃO é devolvida — devolver seria liberar qualquer site', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { motivoDaFalha } from './motivo-da-falha.ts';
+import { motivoDaFalha, omitirCredenciais } from './motivo-da-falha.ts';
 
 const CORPO_503 = JSON.stringify({
   error: {
@@ -34,7 +34,7 @@ describe('motivoDaFalha', () => {
 
   it('distingue as falhas que pedem ações diferentes', () => {
     expect(motivoDaFalha(429, '')).toContain('cota');
-    expect(motivoDaFalha(401, '')).toContain('GEMINI_API_KEY');
+    expect(motivoDaFalha(401, '')).toContain('chave');
     expect(motivoDaFalha(400, '')).toContain('longa demais');
   });
 
@@ -60,18 +60,36 @@ describe('motivoDaFalha', () => {
     expect(motivo).not.toContain('{');
     expect(motivo).not.toContain('NOT_FOUND');
     expect(motivo).toContain('gemini-2.5-flash');
-    expect(motivo).toContain('GEMINI_MODELOS');
+    expect(motivo).toContain('EXTRACAO_CADEIA');
   });
 
   it('sem saber o modelo, o 404 ainda diz o que fazer', () => {
     const motivo = motivoDaFalha(404, CORPO_404);
 
     expect(motivo).not.toContain('{');
-    expect(motivo).toContain('GEMINI_MODELOS');
+    expect(motivo).toContain('EXTRACAO_CADEIA');
   });
 
   it('500 e 504 são carga como 502/503, e não caem no ramo genérico', () => {
     expect(motivoDaFalha(500, '')).toContain('sobrecarregado');
     expect(motivoDaFalha(504, '')).toContain('sobrecarregado');
+  });
+});
+
+describe('omitirCredenciais', () => {
+  it('não deixa credencial de terceiro chegar a erro_msg — que vai no backup', () => {
+    // provas.erro_msg é exportado no backup em JSON, que sai do computador.
+    // O corpo de erro é texto que a gente não controla, então nada com cara
+    // de chave pode atravessar.
+    const corpo = 'erro na chave AIzaSyD-1234567890abcdefghijklmnopqrstuv usada';
+
+    const motivo = motivoDaFalha(418, corpo);
+
+    expect(motivo).not.toContain('AIzaSyD-1234567890abcdefghijklmnopqrstuv');
+    expect(motivo).toContain('[omitido]');
+  });
+
+  it('preserva o texto útil em volta, senão a mensagem não ajuda ninguém', () => {
+    expect(omitirCredenciais('falhou porque a cota acabou')).toBe('falhou porque a cota acabou');
   });
 });

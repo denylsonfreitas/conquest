@@ -209,3 +209,71 @@ describe('troca de provedor', () => {
     expect(chamados).toEqual([]);
   });
 });
+
+describe('cota esgotada', () => {
+  const comMistral = () =>
+    vi.stubGlobal('Deno', {
+      env: {
+        get: (nome: string) =>
+          ({
+            GEMINI_API_KEY: 'chave-gemini',
+            MISTRAL_API_KEY: 'chave-mistral',
+            EXTRACAO_CADEIA: 'gemini:flash,mistral:large',
+          })[nome],
+      },
+    });
+
+  const respostaMistral = () =>
+    new Response(
+      JSON.stringify({
+        choices: [
+          { message: { content: JSON.stringify({ textos: [], questoes: [{ numero: 1 }] }) } },
+        ],
+      }),
+      { status: 200 },
+    );
+
+  it('cota do Gemini no fim passa para o Mistral, que tem outra chave', async () => {
+    // O caso relatado: a cadeia parava no 429 sem sequer tentar o segundo elo,
+    // porque a regra vinha de quando a cadeia era só modelos de um fornecedor.
+    comMistral();
+    dublarFetch({ flash: [erro(429)], mistral: [respostaMistral] });
+
+    const extracao = await extrairQuestoes('texto da prova');
+
+    expect(chamados).toEqual(['flash', 'mistral']);
+    expect(extracao.questoes).toHaveLength(1);
+  });
+
+  it('não repete o 429 no mesmo elo: cota não volta em segundos', async () => {
+    comMistral();
+    dublarFetch({ flash: [erro(429)], mistral: [respostaMistral] });
+
+    await extrairQuestoes('texto');
+
+    expect(chamados.filter((c) => c === 'flash')).toHaveLength(1);
+    expect(esperas).toEqual([]);
+  });
+
+  it('cota estourada em TODOS os elos ainda explica a cadeia usada', async () => {
+    comMistral();
+    dublarFetch({ flash: [erro(429)], mistral: [erro(429)] });
+
+    await expect(extrairQuestoes('texto')).rejects.toThrow(/gemini:flash, mistral:large/);
+    expect(chamados).toEqual(['flash', 'mistral']);
+  });
+
+  it('com um elo só, o recado deixa isso explícito', async () => {
+    // É o que revela "configurei a chave do Mistral mas não pus na cadeia":
+    // sem isto, a mensagem falaria de cota sem deixar ver que a alternativa
+    // nunca chegou a ser tentada.
+    vi.stubGlobal('Deno', {
+      env: {
+        get: (nome: string) => ({ GEMINI_API_KEY: 'k', EXTRACAO_CADEIA: 'gemini:flash' })[nome],
+      },
+    });
+    dublarFetch({ flash: [erro(429)] });
+
+    await expect(extrairQuestoes('texto')).rejects.toThrow(/Único elo configurado: gemini:flash/);
+  });
+});

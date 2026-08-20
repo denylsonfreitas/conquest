@@ -5,7 +5,7 @@ import {
   esperaAntesDeRepetir,
   MAX_TENTATIVAS_POR_MODELO,
   valeRepetirMesmoModelo,
-  valeTentarOutroModelo,
+  valeTentarOutroElo,
 } from './modelos.ts';
 import {
   cabecalhos,
@@ -271,13 +271,25 @@ async function chamarComCadeia(texto: string): Promise<{ provedor: Provedor; jso
     }
 
     if (i === cadeia.length - 1) break;
-    if (!valeTentarOutroModelo(ultimaFalha!.status)) break;
+
+    // Quem é o próximo importa: cota e chave recusada são do provedor, então
+    // só valem parada quando o elo seguinte usaria a MESMA chave.
+    const proximoEhOutroProvedor = cadeia[i + 1].nome !== provedor.nome;
+    if (!valeTentarOutroElo(ultimaFalha!.status, proximoEhOutroProvedor)) break;
     if (!cabeOutraTentativa(Date.now() - comecou, ORCAMENTO_MS, duracaoDaUltima)) break;
   }
 
   const falha = ultimaFalha as Falha;
   const qual = `${falha.provedor.nome}:${falha.provedor.modelo}`;
-  throw new LlmError(motivoDaFalha(falha.status, falha.corpo, qual));
+
+  // A cadeia efetiva vai no recado. Chave configurada sem o elo correspondente
+  // em EXTRACAO_CADEIA falharia calada — a mensagem diria "cota esgotada" sem
+  // deixar ver que a alternativa nunca chegou a ser tentada.
+  const tentados = cadeia.map((p) => `${p.nome}:${p.modelo}`).join(', ');
+  const cadeiaUsada =
+    cadeia.length > 1 ? ` Cadeia em uso: ${tentados}.` : ` Único elo configurado: ${tentados}.`;
+
+  throw new LlmError(motivoDaFalha(falha.status, falha.corpo, qual) + cadeiaUsada);
 }
 
 // setTimeout e não um laço ocupado: a Edge Function cobra CPU, e esperar

@@ -1,15 +1,23 @@
+// Falhas que são da CHAVE, não do modelo: continuam iguais em qualquer modelo
+// que use a mesma chave.
+const CULPA_DA_CHAVE = [401, 403, 429];
+
 /**
- * Só vale trocar de modelo quando a culpa é da carga do outro lado.
+ * Vale tentar o próximo elo da cadeia?
  *
- * Vale por carga (500, 502, 503, 504) e por modelo inexistente (404): um modelo
- * aposentado é justamente o caso em que o seguinte da cadeia salva.
+ * Depende de quem é o próximo. Enquanto a cadeia era só modelos do mesmo
+ * fornecedor, cota estourada e chave recusada encerravam o assunto: todos
+ * dividiam a mesma chave, então insistir só atrasaria o erro. Com elos de
+ * provedores diferentes isso deixou de valer — a cota do Gemini não diz nada
+ * sobre a do Mistral, que tem outra chave e outro limite. Era exatamente esse
+ * o caso em que a alternativa existe para servir.
  *
- * Chave recusada, pedido malformado ou cota estourada seguem iguais no próximo
- * modelo — insistir só gasta tempo do orçamento da função e atrasa o erro que a
- * pessoa precisa ler.
+ * Qualquer outra falha (carga, modelo inexistente, pedido recusado) vale tentar
+ * no seguinte, seja ele quem for. O orçamento da função é que limita.
  */
-export function valeTentarOutroModelo(status: number): boolean {
-  return status === 404 || status === 500 || status === 502 || status === 503 || status === 504;
+export function valeTentarOutroElo(status: number, proximoEhOutroProvedor: boolean): boolean {
+  if (CULPA_DA_CHAVE.includes(status)) return proximoEhOutroProvedor;
+  return true;
 }
 
 /**

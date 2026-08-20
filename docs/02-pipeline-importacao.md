@@ -289,14 +289,21 @@ Regras que a cadeia segue:
   tentativas no mesmo elo, com recuo de 2s e 5s, e só então o elo seguinte.
 - **404 troca sem repetir.** Modelo que não existe não passa a existir por
   esperarmos.
-- **Chave recusada, pedido inválido e cota estourada não insistem** — o próximo
-  elo diria o mesmo, e insistir só atrasa o erro que a pessoa precisa ler.
+- **Cota e chave recusada dependem de QUEM é o próximo.** São falhas do
+  provedor, não do modelo: só encerram a cadeia quando o elo seguinte usaria a
+  mesma chave. A cota do Gemini não diz nada sobre a do Mistral — era
+  justamente esse o caso em que a alternativa existe para servir.
 - Nada disso pode passar do orçamento de ~110s da função; a espera entra na conta.
 
 O formato JSON é garantido de dois jeitos diferentes: `responseSchema` estrito no
 Gemini, `response_format: json_object` nos compatíveis (schema estrito ainda não é
 universal). A garantia mais fraca é coberta por `lerExtracao` + Zod, que validam
 o que volta em qualquer caso.
+
+Quando a cadeia se esgota, a mensagem de erro **nomeia os elos que existiam**.
+Configurar `MISTRAL_API_KEY` sem acrescentar o elo em `EXTRACAO_CADEIA` não faz
+nada — e sem isso no recado a falha seria calada: diria "cota esgotada" sem
+deixar ver que a alternativa nunca chegou a ser tentada.
 
 **Compatibilidade:** `GEMINI_MODELOS` continua sendo lido, e entrada sem prefixo
 segue valendo como Gemini.

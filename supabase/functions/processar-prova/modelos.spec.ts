@@ -5,28 +5,31 @@ import {
   esperaAntesDeRepetir,
   MAX_TENTATIVAS_POR_MODELO,
   valeRepetirMesmoModelo,
-  valeTentarOutroModelo,
+  valeTentarOutroElo,
 } from './modelos.ts';
 
-describe('valeTentarOutroModelo', () => {
-  it('troca quando o modelo não existe — é justo o caso em que o seguinte salva', () => {
-    expect(valeTentarOutroModelo(404)).toBe(true);
+describe('valeTentarOutroElo', () => {
+  it('cota estourada PASSA para outro provedor — chave diferente, cota diferente', () => {
+    // O caso real: cota do Gemini no fim, Mistral configurado, e a cadeia
+    // parava sem sequer tentar. A cota de um não diz nada sobre a do outro.
+    expect(valeTentarOutroElo(429, true)).toBe(true);
+    expect(valeTentarOutroElo(401, true)).toBe(true);
+    expect(valeTentarOutroElo(403, true)).toBe(true);
   });
 
-  it('troca quando a culpa é da carga do outro lado', () => {
-    expect(valeTentarOutroModelo(503)).toBe(true);
-    expect(valeTentarOutroModelo(502)).toBe(true);
-    expect(valeTentarOutroModelo(504)).toBe(true);
+  it('mas NÃO insiste em outro modelo do mesmo provedor: a chave é a mesma', () => {
+    expect(valeTentarOutroElo(429, false)).toBe(false);
+    expect(valeTentarOutroElo(401, false)).toBe(false);
+    expect(valeTentarOutroElo(403, false)).toBe(false);
   });
 
-  it('NÃO troca quando o próximo modelo daria o mesmo erro', () => {
-    expect(valeTentarOutroModelo(400)).toBe(false); // pedido malformado
-    expect(valeTentarOutroModelo(401)).toBe(false); // chave recusada
-    expect(valeTentarOutroModelo(403)).toBe(false);
-    expect(valeTentarOutroModelo(429)).toBe(false); // cota é da chave, não do modelo
+  it('carga e modelo inexistente valem o seguinte, seja ele quem for', () => {
+    for (const status of [500, 502, 503, 504, 404]) {
+      expect(valeTentarOutroElo(status, false)).toBe(true);
+      expect(valeTentarOutroElo(status, true)).toBe(true);
+    }
   });
 });
-
 describe('cabeOutraTentativa', () => {
   it('deixa tentar quando o 503 veio rápido — que é o caso comum', () => {
     expect(cabeOutraTentativa(1_000, 120_000, 1_000)).toBe(true);
@@ -52,7 +55,7 @@ describe('valeRepetirMesmoModelo', () => {
   it('NÃO insiste no 404 — esperar não faz o modelo voltar a existir', () => {
     expect(valeRepetirMesmoModelo(404)).toBe(false);
     // ...mas ainda vale trocar de modelo, que é outra decisão.
-    expect(valeTentarOutroModelo(404)).toBe(true);
+    expect(valeTentarOutroElo(404, false)).toBe(true);
   });
 
   it('não insiste em erro que a repetição não conserta', () => {

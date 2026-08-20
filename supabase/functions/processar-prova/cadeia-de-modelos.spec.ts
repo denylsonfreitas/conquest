@@ -258,15 +258,19 @@ describe('cota esgotada', () => {
     expect(esperas).toEqual([]);
   });
 
-  it('cota estourada em TODOS os elos ainda explica a cadeia usada', async () => {
+  it('o recado conta o desfecho de CADA elo, não só o do último', async () => {
+    // "o segundo não respondeu" sozinho não deixa ver se o primeiro falhou por
+    // cota ou nem chegou a ser tentado — e é essa diferença que diz onde mexer.
     comMistral();
-    dublarFetch({ flash: [erro(429)], mistral: [erro(429)] });
+    dublarFetch({ flash: [erro(429)], mistral: [erro(503)] });
 
-    await expect(extrairQuestoes('texto')).rejects.toThrow(/gemini:flash, mistral:large/);
-    expect(chamados).toEqual(['flash', 'mistral']);
+    const erroFinal = await extrairQuestoes('texto').catch((e: Error) => e.message);
+
+    expect(erroFinal).toContain('gemini:flash → HTTP 429');
+    expect(erroFinal).toContain('mistral:large → HTTP 503');
   });
 
-  it('com um elo só, o recado deixa isso explícito', async () => {
+  it('com um elo só, o recado mostra que só havia um', async () => {
     // É o que revela "configurei a chave do Mistral mas não pus na cadeia":
     // sem isto, a mensagem falaria de cota sem deixar ver que a alternativa
     // nunca chegou a ser tentada.
@@ -277,7 +281,7 @@ describe('cota esgotada', () => {
     });
     dublarFetch({ flash: [erro(429)] });
 
-    await expect(extrairQuestoes('texto')).rejects.toThrow(/Único elo configurado: gemini:flash/);
+    await expect(extrairQuestoes('texto')).rejects.toThrow(/Tentativas: gemini:flash → HTTP 429/);
   });
 });
 

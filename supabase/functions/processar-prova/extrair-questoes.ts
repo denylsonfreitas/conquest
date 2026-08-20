@@ -1,4 +1,4 @@
-import { fatiarProva, Lote } from './fatiar-prova.ts';
+import { fatiarProva, Lote, tetoDeSaida } from './fatiar-prova.ts';
 import { juntarLotes } from './juntar-lotes.ts';
 import { FalhaDeLote, resumirFalhas } from './resumir-falhas.ts';
 import { garantirSemMarcaDagua } from './marca-dagua.ts';
@@ -226,13 +226,18 @@ REGRAS INEGOCIÁVEIS
 // seguinte da cadeia — mesma chave, mesma API, mesmo responseSchema.
 const lerEnv = (nome: string): string | undefined => Deno.env.get(nome);
 
-function chamarProvedor(provedor: Provedor, texto: string, prazoMs: number): Promise<Response> {
+function chamarProvedor(
+  provedor: Provedor,
+  texto: string,
+  prazoMs: number,
+  maxTokens: number,
+): Promise<Response> {
   const chave = lerEnv(presetDe(provedor)!.chaveEnv)!;
 
   return fetch(urlDe(provedor, lerEnv), {
     method: 'POST',
     headers: cabecalhos(provedor, chave),
-    body: corpoDaChamada(provedor, INSTRUCOES, texto, SCHEMA_RESPOSTA, MAX_TOKENS_SAIDA),
+    body: corpoDaChamada(provedor, INSTRUCOES, texto, SCHEMA_RESPOSTA, maxTokens),
     // Sem prazo, um provedor que aceita a conexão e trava consome a função
     // inteira até a plataforma matá-la — e aí o catch que grava o erro nunca
     // roda, deixando a prova presa em "processando" para sempre. O prazo é o
@@ -247,7 +252,7 @@ interface Falha {
   provedor: Provedor;
 }
 
-async function chamarComCadeia(texto: string): Promise<ExtracaoBruta> {
+async function chamarComCadeia(texto: string, maxTokens: number): Promise<ExtracaoBruta> {
   const configurada = lerCadeia(
     lerEnv('EXTRACAO_CADEIA') ?? lerEnv('GEMINI_MODELOS') ?? lerEnv('GEMINI_MODELO'),
   );
@@ -261,6 +266,9 @@ async function chamarComCadeia(texto: string): Promise<ExtracaoBruta> {
 
   const comecou = Date.now();
   let ultimaFalha: Falha | null = null;
+  // Um registro por elo: sem isto o recado conta só o que o ÚLTIMO fez, e
+  // "o segundo não respondeu" não deixa ver se o primeiro nem foi tentado.
+  const desfechos: string[] = [];
   let duracaoDaUltima = 0;
 
   for (let i = 0; i < cadeia.length; i++) {
@@ -277,7 +285,7 @@ async function chamarComCadeia(texto: string): Promise<ExtracaoBruta> {
       let corpo: string;
 
       try {
-        const resposta = await chamarProvedor(provedor, texto, restante);
+        const resposta = await chamarProvedor(provedor, texto, restante, maxTokens);
 
         if (resposta.ok) {
           const util = lerExtracaoUtilizavel(provedor, await resposta.json());
@@ -318,6 +326,8 @@ async function chamarComCadeia(texto: string): Promise<ExtracaoBruta> {
       await dormir(espera);
     }
 
+    desfechos.push(`${provedor.nome}:${provedor.modelo} → HTTP ${ultimaFalha!.status}`);
+
     if (i === cadeia.length - 1) break;
 
     // Quem é o próximo importa: cota e chave recusada são do provedor, então
@@ -330,14 +340,13 @@ async function chamarComCadeia(texto: string): Promise<ExtracaoBruta> {
   const falha = ultimaFalha as Falha;
   const qual = `${falha.provedor.nome}:${falha.provedor.modelo}`;
 
-  // A cadeia efetiva vai no recado. Chave configurada sem o elo correspondente
-  // em EXTRACAO_CADEIA falharia calada — a mensagem diria "cota esgotada" sem
-  // deixar ver que a alternativa nunca chegou a ser tentada.
-  const tentados = cadeia.map((p) => `${p.nome}:${p.modelo}`).join(', ');
-  const cadeiaUsada =
-    cadeia.length > 1 ? ` Cadeia em uso: ${tentados}.` : ` Único elo configurado: ${tentados}.`;
+  // O que CADA elo fez, não só o último. "O segundo não respondeu" sozinho não
+  // deixa ver se o primeiro falhou por cota ou nem chegou a ser tentado — e é
+  // essa diferença que diz onde mexer.
+  if (desfechos.length === 0) desfechos.push(`${qual} → HTTP ${falha.status}`);
+  const trilha = ` Tentativas: ${desfechos.join('; ')}.`;
 
-  throw new LlmError(motivoDaFalha(falha.status, falha.corpo, qual) + cadeiaUsada);
+  throw new LlmError(motivoDaFalha(falha.status, falha.corpo, qual) + trilha);
 }
 
 // setTimeout e não um laço ocupado: a Edge Function cobra CPU, e esperar
@@ -398,10 +407,10 @@ export async function extrairQuestoes(texto: string): Promise<ExtracaoBruta> {
   garantirSemMarcaDagua(texto);
 
   const lotes = fatiarProva(texto, QUESTOES_POR_LOTE);
-  if (lotes.length === 0) return chamarComCadeia(texto);
+  if (lotes.length === 0) return chamarComCadeia(texto, MAX_TOKENS_SAIDA);
 
   const resultados = await Promise.allSettled(
-    lotes.map((lote) => chamarComCadeia(textoDoLote(lote))),
+    lotes.map((lote) => chamarComCadeia(textoDoLote(lote), tetoDeSaida(QUESTOES_POR_LOTE))),
   );
 
   const extraidos: ExtracaoBruta[] = [];

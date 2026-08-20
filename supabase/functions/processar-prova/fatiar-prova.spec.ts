@@ -3,7 +3,12 @@ import { readFile } from 'node:fs/promises';
 import { extractText, getDocumentProxy } from 'unpdf';
 import { describe, expect, it } from 'vitest';
 
-import { fatiarProva, numerosDeQuestao, pareceNumeracaoDeProva } from './fatiar-prova.ts';
+import {
+  fatiarProva,
+  numerosDeQuestao,
+  pareceNumeracaoDeProva,
+  tetoDeSaida,
+} from './fatiar-prova.ts';
 import { prepararTexto } from './preparar-texto.ts';
 
 const linhasDe = (t: string) => t.split('\n');
@@ -168,4 +173,23 @@ describe('auditoria do fatiamento nos PDFs reais', () => {
       }
     });
   }
+});
+
+describe('tetoDeSaida', () => {
+  it('acompanha o tamanho do lote em vez de liberar o teto da prova inteira', () => {
+    // Modelo sem JSON estrito enche o espaço que recebe: 65k liberados a 69
+    // tokens/s são quinze minutos de divagação, e o prazo estoura antes.
+    expect(tetoDeSaida(20)).toBeLessThan(30_000);
+    expect(tetoDeSaida(20)).toBeGreaterThan(tetoDeSaida(10));
+  });
+
+  it('dá folga suficiente para o lote que precisa dela', () => {
+    // Um lote de 20 questões devolve ~5k tokens; o teto precisa passar disso com
+    // margem, senão cortamos a resposta que pedimos.
+    expect(tetoDeSaida(20)).toBeGreaterThan(15_000);
+  });
+
+  it('lote pequeno ainda recebe espaço utilizável', () => {
+    expect(tetoDeSaida(1)).toBeGreaterThanOrEqual(4_000);
+  });
 });

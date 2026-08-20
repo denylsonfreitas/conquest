@@ -142,3 +142,18 @@ export function fatiarProva(texto: string, porLote: number): Lote[] {
 
   return lotes;
 }
+
+/**
+ * Teto de tokens de saída para um pedido de `questoes` questões.
+ *
+ * O teto existia dimensionado para a prova inteira e continuou o mesmo depois do
+ * fatiamento — treze vezes maior que o necessário. Modelo sem JSON estrito
+ * enche o espaço que recebe: com 65k liberados e 69 tokens/s, divagar até o fim
+ * levaria quinze minutos, e o prazo estoura muito antes.
+ *
+ * ~400 tokens por questão em JSON (enunciado, cinco alternativas, metadados),
+ * com três vezes de folga para questão longa com bloco de código.
+ */
+export function tetoDeSaida(questoes: number): number {
+  return Math.max(4_000, questoes * 1_200);
+}

@@ -84,6 +84,36 @@ describe('extração em lotes', () => {
     );
   });
 
+  it('o lote pede um teto de saída do tamanho dele, não o da prova inteira', async () => {
+    // Com 65k liberados, modelo sem JSON estrito enche o espaço que recebe: a
+    // 69 tokens/s isso é quinze minutos, e o prazo estoura muito antes.
+    vi.stubGlobal('fetch', (_url: string, init: { body: string }) => {
+      corpos.push(init.body);
+      const [de, ate] = faixaPedida(init.body);
+      const numeros: number[] = [];
+      for (let n = de; n <= ate; n++) numeros.push(n);
+      return Promise.resolve(respostaCom(numeros)());
+    });
+
+    await extrairQuestoes(provaFalsa(70));
+
+    const teto = JSON.parse(corpos[0]).generationConfig.maxOutputTokens as number;
+    expect(teto).toBeLessThan(30_000);
+  });
+
+  it('prova inteira, sem fatiar, mantém o teto grande', async () => {
+    // Aí a resposta É a prova toda: cortar o teto cortaria a resposta.
+    vi.stubGlobal('fetch', (_url: string, init: { body: string }) => {
+      corpos.push(init.body);
+      return Promise.resolve(respostaCom([1, 2, 3])());
+    });
+
+    await extrairQuestoes(provaFalsa(3));
+
+    const teto = JSON.parse(corpos[0]).generationConfig.maxOutputTokens as number;
+    expect(teto).toBeGreaterThan(30_000);
+  });
+
   it('prova pequena continua indo numa chamada só', async () => {
     // Fatiar o que já cabe só multiplicaria chamadas sem ganho nenhum.
     vi.stubGlobal('fetch', (_url: string, init: { body: string }) => {

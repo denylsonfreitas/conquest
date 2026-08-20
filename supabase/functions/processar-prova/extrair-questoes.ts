@@ -1,6 +1,13 @@
 import { garantirSemMarcaDagua } from './marca-dagua.ts';
 import { motivoDaFalha } from './motivo-da-falha.ts';
-import { cabeOutraTentativa, modelosConfigurados, valeTentarOutroModelo } from './modelos.ts';
+import {
+  cabeOutraTentativa,
+  esperaAntesDeRepetir,
+  MAX_TENTATIVAS_POR_MODELO,
+  modelosConfigurados,
+  valeRepetirMesmoModelo,
+  valeTentarOutroModelo,
+} from './modelos.ts';
 import { ExtracaoBruta, QuestaoBruta, TextoBaseBruto } from './questao-bruta.ts';
 
 export type { ExtracaoBruta, QuestaoBruta, TextoBaseBruto };
@@ -195,22 +202,46 @@ async function chamarComCadeiaDeModelos(chave: string, texto: string): Promise<R
   );
   const comecou = Date.now();
   let ultimaFalha: { status: number; corpo: string; modelo: string } | null = null;
+  let duracaoDaUltima = 0;
 
   for (let i = 0; i < modelos.length; i++) {
-    const inicioDaTentativa = Date.now();
-    const resposta = await chamarModelo(modelos[i], chave, texto);
-    if (resposta.ok) return resposta;
+    const modelo = modelos[i];
 
-    const duracao = Date.now() - inicioDaTentativa;
-    ultimaFalha = { status: resposta.status, corpo: await resposta.text(), modelo: modelos[i] };
+    // Insistir no mesmo modelo vem ANTES de trocar: o 503 passa em segundos, e
+    // com um único modelo configurado esta é a única saída que existe.
+    for (let tentativa = 1; tentativa <= MAX_TENTATIVAS_POR_MODELO; tentativa++) {
+      const inicioDaTentativa = Date.now();
+      const resposta = await chamarModelo(modelo, chave, texto);
+      if (resposta.ok) return resposta;
+
+      duracaoDaUltima = Date.now() - inicioDaTentativa;
+      ultimaFalha = { status: resposta.status, corpo: await resposta.text(), modelo };
+
+      if (tentativa === MAX_TENTATIVAS_POR_MODELO) break;
+      if (!valeRepetirMesmoModelo(resposta.status)) break;
+
+      // A espera entra na conta do orçamento: dormir 10s e só depois descobrir
+      // que não havia tempo para a chamada desperdiça o que restava.
+      const espera = esperaAntesDeRepetir(tentativa);
+      const custo = espera + duracaoDaUltima;
+      if (!cabeOutraTentativa(Date.now() - comecou, ORCAMENTO_MS, custo)) break;
+
+      await dormir(espera);
+    }
 
     if (i === modelos.length - 1) break;
-    if (!valeTentarOutroModelo(resposta.status)) break;
-    if (!cabeOutraTentativa(Date.now() - comecou, ORCAMENTO_MS, duracao)) break;
+    if (!valeTentarOutroModelo(ultimaFalha!.status)) break;
+    if (!cabeOutraTentativa(Date.now() - comecou, ORCAMENTO_MS, duracaoDaUltima)) break;
   }
 
   const falha = ultimaFalha as { status: number; corpo: string; modelo: string };
   throw new LlmError(motivoDaFalha(falha.status, falha.corpo, falha.modelo));
+}
+
+// setTimeout e não um laço ocupado: a Edge Function cobra CPU, e esperar
+// congestão passar não deve consumir nada.
+function dormir(ms: number): Promise<void> {
+  return new Promise((resolver) => setTimeout(resolver, ms));
 }
 
 function chamarModelo(modelo: string, chave: string, texto: string): Promise<Response> {

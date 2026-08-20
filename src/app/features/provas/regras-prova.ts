@@ -80,3 +80,20 @@ export function caminhoPdf(concursoId: string, provaId: string): string {
 export function caminhoGabarito(concursoId: string, provaId: string): string {
   return `${concursoId}/${provaId}-gabarito.pdf`;
 }
+
+/**
+ * Enquanto a extração roda na Edge Function, o estado real só existe no banco:
+ * a aba pode ter perdido a resposta, o cliente pode ter desistido antes, e a
+ * função continua até gravar o desfecho. Sem reconsultar, o cartão congela no
+ * "processando" e só um F5 revela que já havia falhado.
+ *
+ * Para de valer quando a prova passa do limite de travada: aí a tela já oferece
+ * Destravar, e insistir seria consultar para sempre uma prova que ninguém vai
+ * terminar.
+ */
+export function valeReconsultar(
+  provas: readonly ProvaEmProcessamento[],
+  agora: Date = new Date(),
+): boolean {
+  return provas.some((p) => p.status === 'processando' && !estaTravada(p, agora));
+}

@@ -1,3 +1,5 @@
+import { fatiarProva, Lote } from './fatiar-prova.ts';
+import { juntarLotes } from './juntar-lotes.ts';
 import { garantirSemMarcaDagua } from './marca-dagua.ts';
 import { motivoDaFalha } from './motivo-da-falha.ts';
 import {
@@ -376,9 +378,76 @@ function lerExtracaoUtilizavel(provedor: Provedor, json: unknown): Utilizavel {
   }
 }
 
+// Vinte questões devolvem ~4k tokens de resposta. Nas velocidades medidas dos
+// modelos gratuitos (38 a 133 tokens/s), isso cabe nos ~110s de orçamento; a
+// prova inteira, que pede ~20k, não cabe em nenhum deles.
+const QUESTOES_POR_LOTE = 20;
+
+// Linha em branco entre as partes: o cabeçalho do lote precisa se ler como
+// instrução separada, não como parte do texto da prova.
+const SEPARADOR = '\n\n';
+
+/**
+ * Cada lote é uma extração independente, e elas vão em PARALELO.
+ *
+ * Em série a soma estouraria o orçamento da função; em paralelo o relógio é o
+ * do lote mais lento. É isso que faz a prova caber — não o fatiamento sozinho.
+ */
 export async function extrairQuestoes(texto: string): Promise<ExtracaoBruta> {
   garantirSemMarcaDagua(texto);
-  return chamarComCadeia(texto);
+
+  const lotes = fatiarProva(texto, QUESTOES_POR_LOTE);
+  if (lotes.length === 0) return chamarComCadeia(texto);
+
+  const resultados = await Promise.allSettled(
+    lotes.map((lote) => chamarComCadeia(textoDoLote(lote))),
+  );
+
+  const extraidos: ExtracaoBruta[] = [];
+  const avisos: string[] = [];
+
+  resultados.forEach((r, i) => {
+    if (r.status === 'fulfilled') {
+      extraidos.push(r.value);
+      return;
+    }
+    const motivo = r.reason instanceof Error ? r.reason.message : String(r.reason);
+    avisos.push(
+      `Questões ${lotes[i].primeira} a ${lotes[i].ultima} não foram extraídas: ${motivo}`,
+    );
+  });
+
+  // Todos falharam: não há prova nenhuma para salvar, então o erro sobe.
+  if (extraidos.length === 0) throw new LlmError(avisos.join(' '));
+
+  // Alguns falharam: o resto vale. Perder 50 questões porque 20 não vieram
+  // seria jogar fora trabalho bom — mas o que faltou vai dito no aviso.
+  const junta = juntarLotes(extraidos);
+  return avisos.length > 0 ? { ...junta, avisos } : junta;
+}
+
+/**
+ * O lote não sabe que é um lote. Este cabeçalho é o que evita dois estragos:
+ * o modelo transcrever questões vizinhas que outro lote também vai transcrever,
+ * e a matéria sumir porque o cabeçalho de seção ficou no lote anterior.
+ *
+ * As seções vão como CANDIDATAS, nunca como resposta: a lista mistura
+ * "LÍNGUA PORTUGUESA" com "BANCO DO BRASIL" e "RASCUNHO", e escolher por conta
+ * própria plantaria matéria errada em silêncio.
+ */
+function textoDoLote(lote: Lote): string {
+  const partes = [
+    `Esta é uma PARTE de uma prova maior. Extraia SOMENTE as questões de número ${lote.primeira} a ${lote.ultima}. Ignore questões fora dessa faixa, mesmo que apareçam no texto.`,
+  ];
+
+  if (lote.secoesAnteriores.length > 0) {
+    partes.push(
+      `Se nenhuma questão desta parte for precedida por um cabeçalho de seção, a matéria pode ser um destes, que apareceram antes desta parte: ${lote.secoesAnteriores.join(' | ')}. Vários deles NÃO são matérias (nome do banco, "RASCUNHO", título do cargo) — use só o que for disciplina, e na dúvida marque "incerto": true.`,
+    );
+  }
+
+  const cabecalho = partes.join(SEPARADOR);
+  return [cabecalho, '---', lote.texto].join(SEPARADOR);
 }
 
 // Aceita o formato antigo (array de questões) além do novo, para que uma

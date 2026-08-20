@@ -25,4 +25,8 @@ export interface TextoBaseBruto {
 export interface ExtracaoBruta {
   textos: TextoBaseBruto[];
   questoes: QuestaoBruta[];
+  // Preenchido quando a prova foi extraída em lotes e algum deles falhou:
+  // as demais questões valem, e o que faltou precisa estar dito em algum
+  // lugar — senão a prova entra incompleta sem ninguém notar.
+  avisos?: string[];
 }

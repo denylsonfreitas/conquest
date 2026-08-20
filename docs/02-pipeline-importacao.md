@@ -343,3 +343,42 @@ O que eles **não** resolvem é tempo: a chamada única de uma prova inteira ped
 ~20k tokens de saída, e modelo gratuito costuma ser mais lento, não mais rápido.
 Enquanto a prova for uma requisição só, o limite continua sendo o orçamento de
 ~110s da função — é o fatiamento que muda isso.
+
+### Fatiamento (implementado)
+
+A prova deixou de ir numa chamada só. `fatiar-prova.ts` corta em lotes de 20
+questões e cada lote é uma extração independente — **em paralelo**, porque em
+série a soma estouraria o orçamento; em paralelo o relógio é o do lote mais
+lento. É a combinação das duas coisas que faz caber, não o corte sozinho.
+
+**Onde cortar.** A maior subsequência crescente entre as linhas que são só um
+número. Numeração de página também aparece sozinha e também começa em 1, então
+formato não separa — o que separa é comprimento. Medido nos PDFs reais: 70/70
+numa prova, 68/70 na outra. As que faltam não somem: ficam no lote da anterior.
+
+**Quando não cortar.** Sequência curta, esburacada ou que não começa perto de 1
+reprova, e a prova vai inteira como antes. Falhar no corte não pode impedir o
+processamento.
+
+**O que a junção resolve** — três problemas que só existem porque cortamos:
+
+- Todo lote numera seus textos do zero. Sem prefixar por lote, o "t1" do lote 2
+  sobrescreve o do lote 1 e as questões apontam para o texto errado — pior que
+  não apontar, porque ninguém percebe.
+- O mesmo texto-base aparece em dois lotes quando o corte cai no meio do grupo
+  que o compartilha. Deduplicado por conteúdo normalizado.
+- Questão repetida entre lotes entra uma vez só.
+
+**Matéria.** O lote 2 não vê o cabeçalho de seção que ficou no lote 1. Os
+cabeçalhos anteriores vão no pedido como **candidatos**, nunca como resposta: a
+lista mistura "LÍNGUA PORTUGUESA" com "BANCO DO BRASIL" e "RASCUNHO", e escolher
+por conta própria plantaria matéria errada em silêncio. Quem decide é o modelo,
+com instrução de marcar `incerto` na dúvida.
+
+**Lote que falha custa só ele.** As demais questões entram e o que faltou vira
+aviso em `erro_msg` ("Questões 21 a 40 não foram extraídas: ..."). Perder 50
+questões porque 20 não vieram seria jogar fora trabalho bom. Se todos falharem,
+aí sim o erro sobe.
+
+O invariante central é auditado contra os PDFs de verdade, sem gastar cota:
+juntar os lotes reproduz o texto byte a byte.

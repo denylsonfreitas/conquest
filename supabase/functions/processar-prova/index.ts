@@ -158,6 +158,9 @@ async function processar(
   }
 
   const avisos = [
+    // Lote que falhou vem primeiro: é a informação mais grave da lista, porque
+    // significa prova incompleta, não questão problemática.
+    ...(extracao.avisos ?? []),
     ...descartadas.map((d) => `Questão ${d.numero} não entrou — ${d.motivo}`),
     motivoGabarito ? `Gabarito não aplicado — ${motivoGabarito}` : null,
   ].filter(Boolean);

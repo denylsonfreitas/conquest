@@ -277,3 +277,54 @@ describe('cota esgotada', () => {
     await expect(extrairQuestoes('texto')).rejects.toThrow(/Único elo configurado: gemini:flash/);
   });
 });
+
+describe('elo que não responde', () => {
+  // Fábrica que rejeita, como faz um fetch abortado por prazo ou uma rede que
+  // cai no meio. Antes isso subia como exceção e derrubava a função: o catch
+  // que grava o erro não rodava, e a prova ficava presa em "processando".
+  const naoResponde = () => {
+    throw new DOMException('The operation was aborted.', 'TimeoutError');
+  };
+
+  it('prazo estourado num elo passa para o seguinte em vez de estourar', async () => {
+    vi.stubGlobal('Deno', {
+      env: {
+        get: (nome: string) =>
+          ({
+            GEMINI_API_KEY: 'k1',
+            MISTRAL_API_KEY: 'k2',
+            EXTRACAO_CADEIA: 'gemini:flash,mistral:large',
+          })[nome],
+      },
+    });
+
+    const respostaMistral = () =>
+      new Response(
+        JSON.stringify({
+          choices: [
+            { message: { content: JSON.stringify({ textos: [], questoes: [{ numero: 1 }] }) } },
+          ],
+        }),
+        { status: 200 },
+      );
+
+    dublarFetch({ flash: [naoResponde], mistral: [respostaMistral] });
+
+    const extracao = await extrairQuestoes('texto');
+
+    expect(extracao.questoes).toHaveLength(1);
+    expect(chamados.at(-1)).toBe('mistral');
+  });
+
+  it('nenhum elo respondendo vira erro legível, não exceção crua', async () => {
+    vi.stubGlobal('Deno', {
+      env: {
+        get: (nome: string) => ({ GEMINI_API_KEY: 'k', EXTRACAO_CADEIA: 'gemini:flash' })[nome],
+      },
+    });
+    dublarFetch({ flash: [naoResponde] });
+
+    // Legível e do nosso vocabulário: é isso que chega ao cartão da prova.
+    await expect(extrairQuestoes('texto')).rejects.toThrow(/sobrecarregado/);
+  });
+});

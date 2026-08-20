@@ -155,3 +155,15 @@ describe('valeReconsultar', () => {
     expect(valeReconsultar([], agora)).toBe(false);
   });
 });
+
+describe('MINUTOS_ATE_TRAVADA', () => {
+  it('não passa do que a Edge Function consegue viver', () => {
+    // O orçamento da função é de ~110s. Um limite maior que isso com folga só
+    // faz a pessoa esperar por um desfecho que já não pode chegar.
+    expect(MINUTOS_ATE_TRAVADA).toBeLessThanOrEqual(3);
+  });
+
+  it('mas dá folga suficiente para não acusar processamento saudável', () => {
+    expect(MINUTOS_ATE_TRAVADA).toBeGreaterThanOrEqual(2);
+  });
+});

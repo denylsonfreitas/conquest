@@ -5,7 +5,11 @@ export interface ProvaParaRegra {
   readonly arquivo_path: string | null;
 }
 
-export const MINUTOS_ATE_TRAVADA = 10;
+// Três minutos não é chute: a Edge Function trabalha com orçamento de ~110s e
+// a plataforma a encerra pouco depois disso. Passados três minutos, ela não
+// está lenta — está morta, e ninguém mais vai gravar o desfecho. Dez minutos
+// só faziam a pessoa esperar por algo que não vinha.
+export const MINUTOS_ATE_TRAVADA = 3;
 
 export interface ProvaEmProcessamento {
   readonly status: StatusProva;

@@ -38,6 +38,8 @@ const ORCAMENTO_MS = 110_000;
 // resposta toda, e o que não é gerado não é cobrado.
 const MAX_TOKENS_SAIDA = 65_536;
 
+const SEM_RESPOSTA = 'O provedor não respondeu dentro do tempo da função.';
+
 // A resposta deixou de ser um array de questões e virou um objeto com dois:
 // o texto-base sai UMA vez e as questões apontam para ele. Repeti-lo dentro de
 // cada questão custaria alguns milhares de tokens por prova e abriria espaço
@@ -212,13 +214,18 @@ REGRAS INEGOCIÁVEIS
 // seguinte da cadeia — mesma chave, mesma API, mesmo responseSchema.
 const lerEnv = (nome: string): string | undefined => Deno.env.get(nome);
 
-function chamarProvedor(provedor: Provedor, texto: string): Promise<Response> {
+function chamarProvedor(provedor: Provedor, texto: string, prazoMs: number): Promise<Response> {
   const chave = lerEnv(presetDe(provedor)!.chaveEnv)!;
 
   return fetch(urlDe(provedor, lerEnv), {
     method: 'POST',
     headers: cabecalhos(provedor, chave),
     body: corpoDaChamada(provedor, INSTRUCOES, texto, SCHEMA_RESPOSTA, MAX_TOKENS_SAIDA),
+    // Sem prazo, um provedor que aceita a conexão e trava consome a função
+    // inteira até a plataforma matá-la — e aí o catch que grava o erro nunca
+    // roda, deixando a prova presa em "processando" para sempre. O prazo é o
+    // que resta do orçamento: assim o fim é sempre nosso, com erro gravado.
+    signal: AbortSignal.timeout(prazoMs),
   });
 }
 
@@ -250,15 +257,31 @@ async function chamarComCadeia(texto: string): Promise<{ provedor: Provedor; jso
     // Insistir no mesmo provedor vem ANTES de trocar: o 503 passa em segundos,
     // e com um único elo configurado esta é a única saída que existe.
     for (let tentativa = 1; tentativa <= MAX_TENTATIVAS_POR_MODELO; tentativa++) {
+      const restante = ORCAMENTO_MS - (Date.now() - comecou);
+      if (restante <= 0) break;
+
       const inicioDaTentativa = Date.now();
-      const resposta = await chamarProvedor(provedor, texto);
-      if (resposta.ok) return { provedor, json: await resposta.json() };
+      let status: number;
+      let corpo: string;
+
+      try {
+        const resposta = await chamarProvedor(provedor, texto, restante);
+        if (resposta.ok) return { provedor, json: await resposta.json() };
+        status = resposta.status;
+        corpo = await resposta.text();
+      } catch {
+        // Prazo estourado ou rede caída: o elo não respondeu. Vira 504 para
+        // seguir o mesmo caminho de uma indisponibilidade qualquer, em vez de
+        // derrubar a função e perder o registro do erro.
+        status = 504;
+        corpo = SEM_RESPOSTA;
+      }
 
       duracaoDaUltima = Date.now() - inicioDaTentativa;
-      ultimaFalha = { status: resposta.status, corpo: await resposta.text(), provedor };
+      ultimaFalha = { status, corpo, provedor };
 
       if (tentativa === MAX_TENTATIVAS_POR_MODELO) break;
-      if (!valeRepetirMesmoModelo(resposta.status)) break;
+      if (!valeRepetirMesmoModelo(status)) break;
 
       // A espera entra na conta do orçamento: dormir 10s e só depois descobrir
       // que não havia tempo para a chamada desperdiça o que restava.

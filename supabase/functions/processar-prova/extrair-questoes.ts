@@ -1,5 +1,6 @@
 import { fatiarProva, Lote } from './fatiar-prova.ts';
 import { juntarLotes } from './juntar-lotes.ts';
+import { FalhaDeLote, resumirFalhas } from './resumir-falhas.ts';
 import { garantirSemMarcaDagua } from './marca-dagua.ts';
 import { motivoDaFalha } from './motivo-da-falha.ts';
 import {
@@ -404,7 +405,7 @@ export async function extrairQuestoes(texto: string): Promise<ExtracaoBruta> {
   );
 
   const extraidos: ExtracaoBruta[] = [];
-  const avisos: string[] = [];
+  const falhas: FalhaDeLote[] = [];
 
   resultados.forEach((r, i) => {
     if (r.status === 'fulfilled') {
@@ -412,10 +413,12 @@ export async function extrairQuestoes(texto: string): Promise<ExtracaoBruta> {
       return;
     }
     const motivo = r.reason instanceof Error ? r.reason.message : String(r.reason);
-    avisos.push(
-      `Questões ${lotes[i].primeira} a ${lotes[i].ultima} não foram extraídas: ${motivo}`,
-    );
+    falhas.push({ primeira: lotes[i].primeira, ultima: lotes[i].ultima, motivo });
   });
+
+  // Causa de configuração derruba TODOS os lotes igual: sem agrupar, a mesma
+  // frase apareceria uma vez por lote e viraria parede de texto.
+  const avisos = resumirFalhas(falhas);
 
   // Todos falharam: não há prova nenhuma para salvar, então o erro sobe.
   if (extraidos.length === 0) throw new LlmError(avisos.join(' '));

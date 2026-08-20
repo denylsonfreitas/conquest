@@ -123,6 +123,17 @@ describe('extração em lotes', () => {
     await expect(extrairQuestoes(provaFalsa(70))).rejects.toThrow(/não foram extraídas/);
   });
 
+  it('mesma causa em todos os lotes não repete a frase quatro vezes', async () => {
+    // Configuração errada derruba todos os lotes igual. Repetir o recado por
+    // lote transformava duas linhas numa parede de texto.
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response('{}', { status: 503 })));
+
+    const erro = await extrairQuestoes(provaFalsa(70)).catch((e: Error) => e.message);
+
+    expect(String(erro).split('sobrecarregado')).toHaveLength(2);
+    expect(String(erro)).toContain('1 a 20, 21 a 40, 41 a 60, 61 a 70');
+  });
+
   it('leva os cabeçalhos anteriores como candidatos de matéria', async () => {
     vi.stubGlobal('fetch', (_url: string, init: { body: string }) => {
       corpos.push(init.body);

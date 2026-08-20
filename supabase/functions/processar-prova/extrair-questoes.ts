@@ -43,6 +43,12 @@ const MAX_TOKENS_SAIDA = 65_536;
 // mensagem acusava sobrecarga — mandando procurar um problema que não existe.
 const STATUS_SEM_RESPOSTA = 599;
 
+// Responder 200 não é o mesmo que responder o combinado. Modelo gratuito que
+// ignora response_format devolve prosa com status de sucesso; antes isso
+// derrubava a extração inteira sem tentar o elo seguinte.
+const STATUS_TRUNCADA = 597;
+const STATUS_ILEGIVEL = 598;
+
 // A resposta deixou de ser um array de questões e virou um objeto com dois:
 // o texto-base sai UMA vez e as questões apontam para ele. Repeti-lo dentro de
 // cada questão custaria alguns milhares de tokens por prova e abriria espaço
@@ -238,7 +244,7 @@ interface Falha {
   provedor: Provedor;
 }
 
-async function chamarComCadeia(texto: string): Promise<{ provedor: Provedor; json: unknown }> {
+async function chamarComCadeia(texto: string): Promise<ExtracaoBruta> {
   const configurada = lerCadeia(
     lerEnv('EXTRACAO_CADEIA') ?? lerEnv('GEMINI_MODELOS') ?? lerEnv('GEMINI_MODELO'),
   );
@@ -269,9 +275,18 @@ async function chamarComCadeia(texto: string): Promise<{ provedor: Provedor; jso
 
       try {
         const resposta = await chamarProvedor(provedor, texto, restante);
-        if (resposta.ok) return { provedor, json: await resposta.json() };
-        status = resposta.status;
-        corpo = await resposta.text();
+
+        if (resposta.ok) {
+          const util = lerExtracaoUtilizavel(provedor, await resposta.json());
+          if ('extracao' in util) return util.extracao;
+          // Respondeu, mas não serve: conta como falha DESTE elo para que o
+          // seguinte tenha sua chance, em vez de encerrar tudo.
+          status = util.status;
+          corpo = util.motivo;
+        } else {
+          status = resposta.status;
+          corpo = await resposta.text();
+        }
       } catch (e) {
         // Só prazo e rede viram falha do elo. Qualquer outra exceção é bug
         // NOSSO, e disfarçá-la de indisponibilidade esconderia a causa: o
@@ -336,30 +351,34 @@ function dormir(ms: number): Promise<void> {
   return new Promise((resolver) => setTimeout(resolver, ms));
 }
 
-export async function extrairQuestoes(texto: string): Promise<ExtracaoBruta> {
-  garantirSemMarcaDagua(texto);
+/**
+ * Uma resposta só serve se der para ler dela as questões. Truncada, vazia ou
+ * fora do formato combinado são desfechos diferentes com a mesma consequência:
+ * este elo não entregou, e o próximo merece a chance. Devolver o motivo em vez
+ * de lançar é o que permite isso.
+ */
+type Utilizavel = { extracao: ExtracaoBruta } | { status: number; motivo: string };
 
-  const { provedor, json } = await chamarComCadeia(texto);
+function lerExtracaoUtilizavel(provedor: Provedor, json: unknown): Utilizavel {
   const resposta = lerResposta(provedor, json);
 
   if (resposta.truncou) {
-    throw new LlmError(
-      'A resposta do modelo foi truncada por limite de tokens. A prova pode precisar ser processada em partes.',
-    );
+    return { status: STATUS_TRUNCADA, motivo: `parada em ${resposta.motivoDaParada}` };
   }
-
   if (!resposta.conteudo) {
-    throw new LlmError(`O modelo não retornou conteúdo (parada: ${resposta.motivoDaParada}).`);
+    return { status: STATUS_ILEGIVEL, motivo: `sem conteúdo (${resposta.motivoDaParada})` };
   }
 
-  let corpo: unknown;
   try {
-    corpo = JSON.parse(resposta.conteudo);
+    return { extracao: lerExtracao(JSON.parse(resposta.conteudo)) };
   } catch {
-    throw new LlmError('A extração não retornou JSON válido.');
+    return { status: STATUS_ILEGIVEL, motivo: 'a resposta não veio no JSON combinado' };
   }
+}
 
-  return lerExtracao(corpo);
+export async function extrairQuestoes(texto: string): Promise<ExtracaoBruta> {
+  garantirSemMarcaDagua(texto);
+  return chamarComCadeia(texto);
 }
 
 // Aceita o formato antigo (array de questões) além do novo, para que uma

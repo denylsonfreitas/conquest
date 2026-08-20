@@ -28,14 +28,16 @@ const modeloDe = (url: string) => {
 
 let chamados: string[] = [];
 let esperas: number[] = [];
+let corposEnviados: string[] = [];
 
 // Cada modelo tem sua própria fila de respostas: é o que deixa distinguir
 // "tentou de novo no primeiro" de "pulou para o segundo".
 function dublarFetch(porModelo: Record<string, (() => Response)[]>): void {
   const usados: Record<string, number> = {};
-  vi.stubGlobal('fetch', (url: string) => {
+  vi.stubGlobal('fetch', (url: string, init?: { body?: string }) => {
     const modelo = modeloDe(url);
     chamados.push(modelo);
+    corposEnviados.push(init?.body ?? '');
     const fila = porModelo[modelo] ?? [];
     const i = usados[modelo] ?? 0;
     usados[modelo] = i + 1;
@@ -54,6 +56,7 @@ function configurarModelos(lista: string): void {
 beforeEach(() => {
   chamados = [];
   esperas = [];
+  corposEnviados = [];
   configurarModelos('primeiro,segundo');
 
   // A espera é registrada e disparada na hora: o teste prova o recuo sem
@@ -349,5 +352,78 @@ describe('elo que não responde', () => {
 
     await expect(extrairQuestoes('texto')).rejects.toThrow(/Falha inesperada/);
     await expect(extrairQuestoes('texto')).rejects.toThrow(/AbortSignal/);
+  });
+});
+
+describe('elo que responde 200 mas não serve', () => {
+  const comOpenRouter = () =>
+    vi.stubGlobal('Deno', {
+      env: {
+        get: (nome: string) =>
+          ({
+            OPENROUTER_API_KEY: 'k1',
+            GEMINI_API_KEY: 'k2',
+            EXTRACAO_CADEIA: 'openrouter:deepseek/deepseek-chat-v3:free,gemini:flash',
+          })[nome],
+      },
+    });
+
+  const respostaOpenAi =
+    (conteudo: string, finish = 'stop') =>
+    () =>
+      new Response(
+        JSON.stringify({ choices: [{ message: { content: conteudo }, finish_reason: finish }] }),
+        { status: 200 },
+      );
+
+  const extracaoValida = JSON.stringify({ textos: [], questoes: [{ numero: 1 }] });
+
+  it('prosa em vez de JSON conta como falha do elo, e o seguinte assume', async () => {
+    // O caso do modelo gratuito que ignora response_format: respondia 200, a
+    // cadeia dava por encerrada e a extração morria sem tentar a alternativa.
+    comOpenRouter();
+    dublarFetch({
+      openrouter: [respostaOpenAi('Claro! Aqui estão as questões da prova:')],
+      flash: [ok],
+    });
+
+    const extracao = await extrairQuestoes('texto');
+
+    expect(extracao.questoes).toHaveLength(1);
+    expect(chamados).toEqual(['openrouter', 'flash']);
+  });
+
+  it('resposta cortada no limite também passa a bola em vez de encerrar', async () => {
+    comOpenRouter();
+    dublarFetch({
+      openrouter: [respostaOpenAi('{"questoes":[', 'length')],
+      flash: [ok],
+    });
+
+    await extrairQuestoes('texto');
+
+    expect(chamados).toEqual(['openrouter', 'flash']);
+  });
+
+  it('o id do OpenRouter com barra e dois-pontos chega inteiro ao provedor', async () => {
+    comOpenRouter();
+    dublarFetch({ openrouter: [respostaOpenAi(extracaoValida)] });
+
+    await extrairQuestoes('texto');
+
+    const corpo = JSON.parse(corposEnviados[0]);
+    expect(corpo.model).toBe('deepseek/deepseek-chat-v3:free');
+  });
+
+  it('nenhum elo entregando explica o formato, não uma sobrecarga inventada', async () => {
+    vi.stubGlobal('Deno', {
+      env: {
+        get: (nome: string) =>
+          ({ OPENROUTER_API_KEY: 'k', EXTRACAO_CADEIA: 'openrouter:x/y:free' })[nome],
+      },
+    });
+    dublarFetch({ openrouter: [respostaOpenAi('desculpe, não consigo')] });
+
+    await expect(extrairQuestoes('texto')).rejects.toThrow(/fora do formato JSON/);
   });
 });

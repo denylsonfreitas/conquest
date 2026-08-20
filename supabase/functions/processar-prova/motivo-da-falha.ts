@@ -25,6 +25,14 @@ export function motivoDaFalha(status: number, corpo: string, provedor?: string):
   // 599 é código nosso: não houve resposta dentro do tempo. Diagnóstico bem
   // diferente de "o serviço recusou por carga" — aqui o pedido provavelmente é
   // grande demais para caber numa chamada só.
+  // 597 e 598 também são códigos nossos: o elo respondeu, mas não com o que foi
+  // pedido. São os desfechos típicos de modelo gratuito que ignora o formato.
+  if (status === 597) {
+    return `${quem} cortou a resposta no limite de tokens. A prova precisa ser processada em partes. ${detalhe}`;
+  }
+  if (status === 598) {
+    return `${quem} respondeu fora do formato JSON combinado — ${corpo}. Modelos pequenos costumam ignorar o formato pedido. ${detalhe}`;
+  }
   if (status === 599) {
     return `${quem} não respondeu dentro do tempo da função. Costuma ser prova grande demais para uma chamada só. ${detalhe}`;
   }

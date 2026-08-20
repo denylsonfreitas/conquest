@@ -307,3 +307,39 @@ deixar ver que a alternativa nunca chegou a ser tentada.
 
 **Compatibilidade:** `GEMINI_MODELOS` continua sendo lido, e entrada sem prefixo
 segue valendo como Gemini.
+
+### Elo que responde 200 sem entregar
+
+Responder com sucesso não é o mesmo que responder o combinado. Um modelo
+pequeno — os gratuitos do OpenRouter em especial — ignora `response_format` e
+devolve prosa com status 200, ou corta a resposta no limite de tokens.
+
+A cadeia trata esses casos como falha **daquele elo**, não da extração: o
+seguinte assume. Antes o primeiro 200 encerrava a cadeia e o erro só aparecia
+depois, quando já não havia para quem recorrer.
+
+Os códigos são nossos, fora da faixa que os provedores usam:
+
+| Código | Significado                             |
+| ------ | --------------------------------------- |
+| 597    | resposta cortada no limite de tokens    |
+| 598    | respondeu fora do JSON combinado        |
+| 599    | não respondeu dentro do tempo da função |
+
+Nenhum deles vale repetição no mesmo elo: com `temperature: 0` a resposta seria
+a mesma, e o prazo estourado já consumiu o orçamento. Todos valem o elo seguinte.
+
+### Sobre os modelos gratuitos do OpenRouter
+
+Funcionam sem mudança de código: `openrouter` já é um provedor conhecido, e o id
+com barra e dois-pontos (`deepseek/deepseek-chat-v3:free`) atravessa o parser da
+cadeia inteiro, porque o corte é no **primeiro** dois-pontos.
+
+```
+EXTRACAO_CADEIA = "gemini:gemini-flash-latest,openrouter:deepseek/deepseek-chat-v3:free"
+```
+
+O que eles **não** resolvem é tempo: a chamada única de uma prova inteira pede
+~20k tokens de saída, e modelo gratuito costuma ser mais lento, não mais rápido.
+Enquanto a prova for uma requisição só, o limite continua sendo o orçamento de
+~110s da função — é o fatiamento que muda isso.

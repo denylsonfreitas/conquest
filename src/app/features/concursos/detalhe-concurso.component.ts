@@ -97,6 +97,7 @@ export class DetalheConcursoComponent {
   }
 
   private timerReconsulta: ReturnType<typeof setInterval> | null = null;
+  private reconsultando = false;
 
   /**
    * A resposta da Edge Function não é a única fonte do desfecho — e às vezes
@@ -120,12 +121,23 @@ export class DetalheConcursoComponent {
   }
 
   private async reconsultar(): Promise<void> {
-    const emCurso = this.provas().filter((p) => p.status === 'processando');
+    // O intervalo não espera a volta anterior. Numa rede lenta as consultas se
+    // empilhariam, cada uma sobrescrevendo a lista com uma resposta mais velha.
+    if (this.reconsultando) return;
+    this.reconsultando = true;
 
-    for (const prova of emCurso) {
-      // Falha de rede aqui é ruído passageiro: a próxima volta tenta de novo,
-      // e derrubar a tela por isso seria pior que o atraso.
-      await this.atualizarProva(prova.id).catch(() => undefined);
+    // finally e não uma atribuição no fim: se algo aqui lançasse, a trava
+    // ficaria presa e o acompanhamento morreria calado.
+    try {
+      const emCurso = this.provas().filter((p) => p.status === 'processando');
+
+      for (const prova of emCurso) {
+        // Falha de rede aqui é ruído passageiro: a próxima volta tenta de novo,
+        // e derrubar a tela por isso seria pior que o atraso.
+        await this.atualizarProva(prova.id).catch(() => undefined);
+      }
+    } finally {
+      this.reconsultando = false;
     }
 
     this.acompanharProcessamento();

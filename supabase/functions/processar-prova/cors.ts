@@ -24,10 +24,17 @@ export function cabecalhosCors(
 ): Record<string, string> {
   const permitidas = origensPermitidas(configurado);
 
-  // Sem configuração, libera geral: é o estado de desenvolvimento local, onde a
-  // porta muda a cada ferramenta. Em produção a variável é obrigatória.
+  // Sem configuração, libera só o desenvolvimento local, onde a porta muda a
+  // cada ferramenta. Antes isto devolvia "*" para qualquer origem: dizia-se que
+  // em produção a variável era obrigatória, mas nada garantia isso — perder o
+  // segredo num restore desligava a proteção sem nenhum sinal. Agora a falta de
+  // configuração falha fechada para tudo que não seja a máquina de quem edita.
   if (permitidas.length === 0) {
-    return { ...CABECALHOS_FIXOS, 'Access-Control-Allow-Origin': '*' };
+    const origem = semBarraFinal(origemDaRequisicao ?? '');
+    return {
+      ...CABECALHOS_FIXOS,
+      'Access-Control-Allow-Origin': ehLocal(origem) ? origem : 'null',
+    };
   }
 
   const origem = semBarraFinal(origemDaRequisicao ?? '');
@@ -37,4 +44,16 @@ export function cabecalhosCors(
   // da origem da chamada e bloqueia. Devolver a origem do chamador aqui seria
   // liberar qualquer site.
   return { ...CABECALHOS_FIXOS, 'Access-Control-Allow-Origin': casada ?? permitidas[0] };
+}
+
+// localhost e 127.0.0.1 em qualquer porta: é o que o `ng serve` e o Supabase
+// local usam. Qualquer outra coisa precisa estar em ORIGEM_PERMITIDA.
+function ehLocal(origem: string): boolean {
+  if (origem.length === 0) return false;
+  try {
+    const { hostname } = new URL(origem);
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+  } catch {
+    return false;
+  }
 }
